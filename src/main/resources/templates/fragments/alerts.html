@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!-- Fragment hiển thị thông báo -->
+<div th:fragment="flash-messages">
+    <div th:if="${successMsg}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong th:text="${successMsg}">Thành công!</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong th:text="${errorMsg}">Lỗi!</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</div>
+</html>

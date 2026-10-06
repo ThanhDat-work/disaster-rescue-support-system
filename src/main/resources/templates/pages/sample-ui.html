@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main-layout :: layout('UI Component Test', ~{::section})}">
+<section>
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">Trang mẫu UI Components & Forms</h2>
+            <div class="card card-shadow mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">1. Kiểm thử Bảng & Trạng thái (Table & Status Badges)</h5>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã yêu cầu</th>
+                                <th>Người gửi</th>
+                                <th>Trạng thái</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>REQ-0001</td>
+                                <td>Người dân vùng lũ</td>
+                                <!-- Test component status -->
+                                <td><span th:replace="~{fragments/components :: status-badge('PENDING')}"></span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">Từ chối</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Test Form Validation -->
+            <div class="card card-shadow">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">2. Kiểm thử Form Validation</h5>
+                </div>
+                <div class="card-body">
+                    <form action="#" method="post" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label class="form-label">Loại thiên tai <span class="text-danger">*</span></label>
+                            <select class="form-select is-invalid" required>
+                                <option value="">-- Chọn loại thiên tai --</option>
+                                <option value="1">Bão lũ</option>
+                            </select>
+                            <div class="invalid-feedback">Vui lòng chọn loại thiên tai (Validation State).</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mô tả tình huống</label>
+                            <textarea class="form-control" rows="3" placeholder="Nhập mô tả..."></textarea>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Gửi thông tin</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nhúng thử Modal Component -->
+    <div th:replace="~{fragments/components :: confirm-modal('rejectModal', 'Từ chối yêu cầu', 'Bạn có chắc muốn từ chối yêu cầu REQ-0001? Hành động này không thể hoàn tác.', '/requests/reject/1')}"></div>
+</section>
+</html>

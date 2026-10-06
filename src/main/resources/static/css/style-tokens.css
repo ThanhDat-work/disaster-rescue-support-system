@@ -1,0 +1,173 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    /* Style Tokens - Màu sắc hiện đại, độ tương phản tốt */
+    --drss-primary: #2563eb;
+    --drss-primary-hover: #1d4ed8;
+    --drss-bg-light: #f4f6f8;
+    --drss-surface: #ffffff;
+    --drss-text-main: #1e293b;
+    --drss-text-muted: #64748b;
+    
+    /* Màu mức độ khẩn cấp tinh tế hơn */
+    --urgency-low: #10b981;
+    --urgency-medium: #f59e0b;
+    --urgency-high: #f97316;
+    --urgency-critical: #ef4444;
+
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--drss-bg-light);
+    color: var(--drss-text-main);
+    letter-spacing: -0.01em;
+}
+
+/* 1. Hiệu ứng Glassmorphism cho Navbar */
+.navbar {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
+    padding: 1rem 0;
+    transition: var(--transition-smooth);
+}
+
+.navbar-brand {
+    color: var(--drss-primary) !important;
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: -0.03em;
+}
+
+.nav-link {
+    color: var(--drss-text-muted) !important;
+    font-weight: 500;
+    padding: 0.5rem 1rem !important;
+    border-radius: var(--radius-sm);
+    transition: var(--transition-smooth);
+}
+
+.nav-link:hover {
+    color: var(--drss-primary) !important;
+    background-color: rgba(37, 99, 235, 0.05);
+}
+
+/* 2. Style hiện đại cho Cards (Không gian âm & Bóng đổ mềm) */
+.card {
+    border: none;
+    border-radius: var(--radius-lg);
+    background: var(--drss-surface);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+    transition: var(--transition-smooth);
+    overflow: hidden;
+}
+
+.card:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* 3. Button mượt mà với hiệu ứng Click Scale */
+.btn {
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    padding: 0.625rem 1.25rem;
+    transition: var(--transition-smooth);
+    border: none;
+}
+
+.btn:active {
+    transform: scale(0.96);
+}
+
+.btn-primary {
+    background-color: var(--drss-primary);
+    box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);
+}
+
+.btn-primary:hover {
+    background-color: var(--drss-primary-hover);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.23);
+    transform: translateY(-1px);
+}
+
+.btn-outline-danger {
+    border: 1.5px solid #fecaca;
+    color: var(--urgency-critical);
+}
+
+.btn-outline-danger:hover {
+    background-color: #fef2f2;
+    border-color: #fca5a5;
+    color: var(--urgency-critical);
+}
+
+/* 4. Tùy chỉnh Form Input cao cấp */
+.form-control, .form-select {
+    border-radius: var(--radius-md);
+    border: 1px solid #e2e8f0;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    transition: var(--transition-smooth);
+    box-shadow: none;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--drss-primary);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.form-label {
+    font-weight: 500;
+    color: var(--drss-text-main);
+    margin-bottom: 0.5rem;
+}
+
+/* 5. Tùy chỉnh Table bo góc nguyên khối */
+.table {
+    margin-bottom: 0;
+}
+
+.table > :not(caption) > * > * {
+    padding: 1rem 1.5rem;
+    border-bottom-color: #f1f5f9;
+}
+
+.table-light {
+    --bs-table-bg: #f8fafc;
+    --bs-table-color: var(--drss-text-muted);
+}
+
+.table-light th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+/* 6. Badges dạng Pill mềm mại */
+.badge {
+    padding: 0.5em 0.8em;
+    font-weight: 600;
+    border-radius: 20px;
+    letter-spacing: 0.02em;
+}

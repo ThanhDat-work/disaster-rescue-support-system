@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!-- 1. Fragment Status Badge (Hiển thị đúng 8 trạng thái trong CSDL) -->
+<span th:fragment="status-badge(status)" th:class="${
+    status == 'PENDING' ? 'badge bg-warning text-dark' :
+    status == 'VERIFIED' ? 'badge bg-info text-dark' :
+    status == 'ASSIGNED' ? 'badge bg-primary' :
+    status == 'IN_PROGRESS' ? 'badge bg-secondary' :
+    status == 'RESCUED' ? 'badge bg-success' :
+    status == 'CLOSED' ? 'badge bg-dark' :
+    status == 'REJECTED' ? 'badge bg-danger' :
+    status == 'CANCELLED' ? 'badge bg-light text-dark border' : 'badge bg-secondary'
+}" th:text="${status}">TRẠNG THÁI</span>
+
+<!-- 2. Fragment Phân trang -->
+<nav th:fragment="pagination(pageData)">
+    <ul class="pagination justify-content-center" th:if="${pageData.totalPages > 1}">
+        <li class="page-item" th:classappend="${pageData.first} ? 'disabled'">
+            <a class="page-link" th:href="@{${#httpServletRequest.requestURI}(page=${pageData.number - 1})}">Trang trước</a>
+        </li>
+        <li class="page-item" th:each="i : ${#numbers.sequence(0, pageData.totalPages - 1)}" th:classappend="${pageData.number == i} ? 'active'">
+            <a class="page-link" th:href="@{${#httpServletRequest.requestURI}(page=${i})}" th:text="${i + 1}">1</a>
+        </li>
+        <li class="page-item" th:classappend="${pageData.last} ? 'disabled'">
+            <a class="page-link" th:href="@{${#httpServletRequest.requestURI}(page=${pageData.number + 1})}">Trang sau</a>
+        </li>
+    </ul>
+</nav>
+
+<!-- 3. Fragment Modal Xác nhận xoá/từ chối -->
+<div th:fragment="confirm-modal(modalId, title, message, formAction)" class="modal fade" th:id="${modalId}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form th:action="${formAction}" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" th:text="${title}">Xác nhận</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p th:text="${message}">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">Xác nhận</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</html>
