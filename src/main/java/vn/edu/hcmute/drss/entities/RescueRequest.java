@@ -24,8 +24,9 @@ public class RescueRequest extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "disaster_type_id", nullable = false)
-    private Long disasterTypeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "disaster_type_id", nullable = false)
+    private DisasterType disasterType;
 
     @Column(nullable = false, length = 32)
     private String urgency;

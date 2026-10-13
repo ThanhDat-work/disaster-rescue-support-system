@@ -35,7 +35,7 @@ CREATE TABLE disaster_types (
     disaster_code VARCHAR(20) NOT NULL UNIQUE,
     disaster_name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME(6) NOT NULL
 );
 
@@ -130,7 +130,7 @@ CREATE TABLE notifications (
     message TEXT NOT NULL,
     reference_type VARCHAR(50),
     reference_id BINARY(16),
-    is_read BOOLEAN DEFAULT FALSE,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
     read_at DATETIME(6),
     created_at DATETIME(6) NOT NULL,
     FOREIGN KEY (recipient_user_id) REFERENCES users(id)

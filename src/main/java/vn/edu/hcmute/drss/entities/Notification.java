@@ -18,8 +18,9 @@ public class Notification {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @Column(name = "recipient_user_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID recipientUserId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipient_user_id", nullable = false)
+    private User recipientUser;
 
     @Column(nullable = false, length = 150)
     private String title;
@@ -33,8 +34,8 @@ public class Notification {
     @Column(name = "reference_id", columnDefinition = "BINARY(16)")
     private UUID referenceId;
 
-    @Column(name = "is_read")
-    private Boolean isRead = false;
+   @Column(name = "is_read", nullable = false)
+    private Boolean isRead = false; // Fix lỗi boolean số 6
 
     @Column(name = "read_at")
     private LocalDateTime readAt;

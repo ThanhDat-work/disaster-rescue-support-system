@@ -18,11 +18,13 @@ public class MediaAsset {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @Column(name = "request_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID requestId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "request_id", nullable = false)
+    private RescueRequest request;
 
-    @Column(name = "uploader_user_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID uploaderUserId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploader_user_id", nullable = false)
+    private User uploaderUser;
 
     @Column(name = "public_id", nullable = false, unique = true, length = 255)
     private String publicId;

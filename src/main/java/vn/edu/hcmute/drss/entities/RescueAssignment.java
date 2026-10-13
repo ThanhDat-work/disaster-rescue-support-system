@@ -20,11 +20,13 @@ public class RescueAssignment extends BaseEntity {
     @Column(name = "display_code", nullable = false, unique = true, length = 20)
     private String displayCode;
 
-    @Column(name = "request_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID requestId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "request_id", nullable = false)
+    private RescueRequest request;
 
-    @Column(name = "team_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID teamId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id", nullable = false)
+    private RescueTeam team;
 
     @Column(nullable = false, length = 32)
     private String status;

@@ -25,8 +25,8 @@ public class DisasterType {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "is_active")
-    private Boolean isActive = true;
+   @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true; // Fix lỗi boolean số 6
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

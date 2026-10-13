@@ -18,8 +18,9 @@ public class StatusHistory {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @Column(name = "request_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID requestId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "request_id", nullable = false)
+    private RescueRequest request;
 
     @Column(name = "old_status", nullable = false, length = 32)
     private String oldStatus;
@@ -27,8 +28,9 @@ public class StatusHistory {
     @Column(name = "new_status", nullable = false, length = 32)
     private String newStatus;
 
-    @Column(name = "changed_by_user_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID changedByUserId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "changed_by_user_id", nullable = false)
+    private User changedByUser;
 
     @Column(columnDefinition = "TEXT")
     private String notes;
