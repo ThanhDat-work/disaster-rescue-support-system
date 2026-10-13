@@ -24,7 +24,7 @@ CREATE TABLE user_roles (
     user_id BINARY(16) NOT NULL,
     role_id BIGINT UNSIGNED NOT NULL,
     assigned_at DATETIME(6) NOT NULL,
-    revoked_at DATETIME(6),
+    revoked_at DATETIME(6) CHECK (revoked_at IS NULL OR revoked_at > assigned_at),
     PRIMARY KEY (user_id, role_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (role_id) REFERENCES roles(id)
@@ -73,7 +73,7 @@ CREATE TABLE rescue_team_members (
     user_id BINARY(16) NOT NULL,
     role VARCHAR(50) NOT NULL,
     joined_at DATETIME(6) NOT NULL,
-    left_at DATETIME(6),
+    left_at DATETIME(6) CHECK (left_at IS NULL OR left_at > joined_at),
     PRIMARY KEY (team_id, user_id),
     FOREIGN KEY (team_id) REFERENCES rescue_teams(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -86,7 +86,7 @@ CREATE TABLE rescue_assignments (
     team_id BINARY(16) NOT NULL,
     status VARCHAR(32) NOT NULL CHECK (status IN ('ASSIGNED', 'ACCEPTED', 'COMPLETED', 'CANCELLED')),
     assigned_at DATETIME(6) NOT NULL,
-    completion_time DATETIME(6),
+    completion_time DATETIME(6) CHECK (completion_time IS NULL OR completion_time >= assigned_at),
     notes TEXT,
     version BIGINT NOT NULL DEFAULT 0,
     created_at DATETIME(6) NOT NULL,
@@ -135,3 +135,9 @@ CREATE TABLE notifications (
     created_at DATETIME(6) NOT NULL,
     FOREIGN KEY (recipient_user_id) REFERENCES users(id)
 );
+
+-- Indexes phục vụ truy vấn chính
+CREATE INDEX idx_req_status_time ON rescue_requests(status, created_at);
+CREATE INDEX idx_assign_team_status ON rescue_assignments(team_id, status);
+CREATE INDEX idx_notify_recipient_read ON notifications(recipient_user_id, is_read);
+CREATE INDEX idx_history_req_time ON status_histories(request_id, created_at);
