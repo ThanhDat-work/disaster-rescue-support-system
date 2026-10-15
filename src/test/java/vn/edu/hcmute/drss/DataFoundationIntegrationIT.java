@@ -57,13 +57,25 @@ public class DataFoundationIntegrationIT {
         assertThat(assignmentData.get("asn_code")).isEqualTo("ASN-0001");
         assertThat(assignmentData.get("req_status")).isEqualTo("ASSIGNED");
 
-        // 6. Xác nhận lịch sử do coordinator thực hiện
+       // 6. Xác nhận lịch sử do coordinator thực hiện
         List<Map<String, Object>> histories = jdbcTemplate.queryForList(
-                "SELECT old_status, new_status FROM status_histories h JOIN rescue_requests r ON h.request_id = r.id WHERE r.display_code = 'REQ-0002' ORDER BY h.created_at ASC");
+                "SELECT h.old_status, h.new_status, r_role.role_name " +
+                "FROM status_histories h " +
+                "JOIN rescue_requests req ON h.request_id = req.id " +
+                "JOIN users u ON h.changed_by_user_id = u.id " +
+                "JOIN user_roles ur ON u.id = ur.user_id " +
+                "JOIN roles r_role ON ur.role_id = r_role.id " +
+                "WHERE req.display_code = 'REQ-0002' " +
+                "ORDER BY h.created_at ASC"
+        );
         assertThat(histories).hasSize(2);
+        
         assertThat(histories.get(0).get("old_status")).isEqualTo("PENDING");
         assertThat(histories.get(0).get("new_status")).isEqualTo("VERIFIED");
+        assertThat(histories.get(0).get("role_name")).isEqualTo("ROLE_COORDINATOR"); // Xác nhận role người tạo lịch sử
+
         assertThat(histories.get(1).get("old_status")).isEqualTo("VERIFIED");
         assertThat(histories.get(1).get("new_status")).isEqualTo("ASSIGNED");
+        assertThat(histories.get(1).get("role_name")).isEqualTo("ROLE_COORDINATOR"); // Xác nhận role người tạo lịch sử
     }
 }
