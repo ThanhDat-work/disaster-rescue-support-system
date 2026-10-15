@@ -11,10 +11,20 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RescueTeamMember {
-    @EmbeddedId
+   @EmbeddedId
     private RescueTeamMemberId id;
 
-    @Column(nullable = false, length = 50)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @MapsId("teamId")
+    @JoinColumn(name = "team_id")
+    private RescueTeam team;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @MapsId("userId")
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @Column(name = "role", nullable = false, length = 50)
     private String role;
 
     @Column(name = "joined_at", nullable = false)

@@ -24,10 +24,11 @@ CREATE TABLE user_roles (
     user_id BINARY(16) NOT NULL,
     role_id BIGINT UNSIGNED NOT NULL,
     assigned_at DATETIME(6) NOT NULL,
-    revoked_at DATETIME(6) CHECK (revoked_at IS NULL OR revoked_at > assigned_at),
+    revoked_at DATETIME(6),
     PRIMARY KEY (user_id, role_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (role_id) REFERENCES roles(id)
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    CONSTRAINT user_roles_chk_dates CHECK (revoked_at IS NULL OR revoked_at >= assigned_at)
 );
 
 CREATE TABLE disaster_types (
@@ -73,10 +74,11 @@ CREATE TABLE rescue_team_members (
     user_id BINARY(16) NOT NULL,
     role VARCHAR(50) NOT NULL,
     joined_at DATETIME(6) NOT NULL,
-    left_at DATETIME(6) CHECK (left_at IS NULL OR left_at > joined_at),
+    left_at DATETIME(6),
     PRIMARY KEY (team_id, user_id),
     FOREIGN KEY (team_id) REFERENCES rescue_teams(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT rescue_team_members_chk_dates CHECK (left_at IS NULL OR left_at >= joined_at)
 );
 
 CREATE TABLE rescue_assignments (
@@ -86,13 +88,14 @@ CREATE TABLE rescue_assignments (
     team_id BINARY(16) NOT NULL,
     status VARCHAR(32) NOT NULL CHECK (status IN ('ASSIGNED', 'ACCEPTED', 'COMPLETED', 'CANCELLED')),
     assigned_at DATETIME(6) NOT NULL,
-    completion_time DATETIME(6) CHECK (completion_time IS NULL OR completion_time >= assigned_at),
+    completion_time DATETIME(6),
     notes TEXT,
     version BIGINT NOT NULL DEFAULT 0,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     FOREIGN KEY (request_id) REFERENCES rescue_requests(id),
-    FOREIGN KEY (team_id) REFERENCES rescue_teams(id)
+    FOREIGN KEY (team_id) REFERENCES rescue_teams(id),
+    CONSTRAINT rescue_assignments_chk_dates CHECK (completion_time IS NULL OR completion_time >= assigned_at)
 );
 
 CREATE TABLE media_assets (
