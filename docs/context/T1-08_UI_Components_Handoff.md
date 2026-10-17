@@ -1,27 +1,41 @@
-# T1-08 UI Components Handoff
+# T1-08 — UI Components Handoff
 
-- **Updated:** 2026-10-17 (Asia/Saigon)
-- **Branch:** `feat/t1-08-ui-components`
-- **Starting HEAD:** `26d188f`
-- **Showcase URL:** `http://localhost:8080/dev/ui-showcase`
-- **Pagination examples:** `?page=0` (first), `?page=1` (middle), `?page=2` (last)
-- **Route availability:** `dev` profile only. That profile grants anonymous access to the showcase path; other paths remain authenticated.
-- **Verification:** `mvn -Dtest=UiShowcaseMvcTest test` — 1 test passed, covering rendered first/middle/last pages, preserved query contract, alerts, status badge, and modal.
-- **Database configuration:** unchanged; `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`, with no source password default.
-- **Role contract:** database/authority name `ROLE_RESCUER`; Thymeleaf navbar checks `hasRole('RESCUER')`.
+- **Cập nhật:** 2026-10-17
+- **Nhánh:** `feat/t1-08-ui-components`
+- **Route xem giao diện:** `http://localhost:8080/dev/ui-showcase`
+- **Điều kiện:** chạy ứng dụng với Spring profile `dev`.
+- **Pagination:** thử `?page=0` (đầu), `?page=1` (giữa), `?page=2` (cuối).
+- **Lưu ý:** đây là trang showcase phục vụ xem thử component, không phải trang chủ `/`.
+
+## Nội dung đã cập nhật
+
+- Làm mới showcase theo theme sáng, thêm banner ảnh có lớp phủ chữ, bố cục responsive, navbar, bảng, form và các trạng thái tương tác.
+- Alert chỉ được render khi model có `successMsg` hoặc `errorMsg`; có nút đóng và tự ẩn sau 5 giây.
+- Pagination đặt ở cuối nội dung và nhận URL/query từ controller/model.
+- Route showcase và quyền truy cập tài nguyên tĩnh được cấu hình trong profile `dev`.
+- Giữ cấu hình DB bằng `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`; không thêm mật khẩu mặc định vào source.
+- Role đội cứu hộ là `ROLE_RESCUER`; Thymeleaf dùng `hasRole('RESCUER')`.
 
 ## Fragment contracts
 
-- `layouts/main-layout :: layout(title, content)` — page title and a section fragment; page templates use native `th:replace`.
-- `fragments/components :: status-badge(status)` — request status only; never pass urgency values.
-- `fragments/components :: pagination(pageData, pageUrl, pageQuery)` — the controller/model owns the canonical path and query prefix; the fragment appends `page=N` and does not inspect the request URI.
-- `fragments/components :: confirm-modal(modalId, title, message, formAction)` — confirmation dialog containing a POST form.
-- `fragments/alerts :: flash-messages` — floating toast-style Bootstrap Alerts for `successMsg` and `errorMsg`; `main.js` closes alerts after five seconds.
+- `layouts/main-layout :: layout(title, content)` — layout native Thymeleaf; trang gọi fragment bằng `th:replace`, không dùng `layout:decorate`.
+- `fragments/components :: status-badge(status)` — chỉ nhận request status; `CRITICAL` là urgency, không phải status.
+- `fragments/components :: pagination(pageData, pageUrl, pageQuery)` — controller/model cung cấp URL và query prefix; fragment thêm tham số `page`, không đọc request URI.
+- `fragments/components :: confirm-modal(modalId, title, message, formAction)` — modal xác nhận có form POST.
+- `fragments/alerts :: flash-messages` — hiển thị Bootstrap Alert dạng floating khi có flash message; `main.js` cho phép đóng và tự ẩn sau 5 giây. Đây là Alert, không phải Toast component.
 
-## Render evidence
+## Kiểm tra và bằng chứng
 
-The MockMvc smoke test renders all three pagination states using the actual Thymeleaf page and fragments. Browser screenshot files for Chrome and Edge at desktop and mobile sizes remain outstanding: this session's browser automation reports no available browsers, and Edge launch through the connected UI surface is unavailable. Chrome is not installed in the detected standard location. Capture the four browser screenshots when those browser surfaces are available and add them under `docs/context/evidence/t1-08/`.
+- Smoke test hiện có: `src/test/java/vn/edu/hcmute/drss/UiShowcaseMvcTest.java`.
+- Trước các chỉnh sửa giao diện gần nhất, test này đã chạy thành công. Sau lần cập nhật theme sáng/banner và điều kiện chỉ render alert khi có message, **chưa chạy lại**; cần chạy `mvn -Dtest=UiShowcaseMvcTest test` để xác nhận trạng thái mới.
+- Chưa có ảnh chụp Chrome/Edge ở desktop/mobile trong repo. Khi chụp, lưu tại `docs/context/evidence/t1-08/` và bổ sung tên file cùng kích thước viewport vào mục này.
 
-## Next action
+## Cách mở showcase
 
-Run the focused test or `mvn verify`, then capture desktop/mobile screenshots in Chrome and Edge and append their filenames and final commit ID here.
+Chạy ứng dụng với profile `dev`, sau đó mở `http://localhost:8080/dev/ui-showcase`. Nếu trang vẫn hiện giao diện cũ, tải lại không dùng cache bằng `Ctrl+F5`.
+
+## Việc còn lại
+
+1. Chạy lại `UiShowcaseMvcTest` sau các thay đổi mới nhất.
+2. Chụp và lưu bốn ảnh Chrome/Edge ở desktop/mobile nếu môi trường có các trình duyệt đó.
+3. Cập nhật handoff với kết quả kiểm tra, ảnh bằng chứng và commit ID sau khi tạo commit.
