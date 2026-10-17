@@ -3,7 +3,6 @@
       th:replace="~{layouts/main-layout :: layout('UI Component Test', ~{::section})}">
 <section class="showcase-stack">
     <header class="page-heading hero-banner">
-        <img class="hero-photo" src="https://media.defense.gov/2017/Aug/31/2001801655/-1/-1/0/170830-Z-VT419-001.JPG" alt="Đội cứu hộ di chuyển thuyền qua khu dân cư ngập lụt" fetchpriority="high">
         <div class="hero-copy">
             <p class="page-eyebrow">Disaster response · DRSS</p>
             <h1>Khi thiên tai ập đến,<br><em>chúng tôi có mặt.</em></h1>
@@ -13,7 +12,6 @@
             <div class="signal-top"><span><span class="showcase-meta-dot"></span> Trạng thái hệ thống</span><span class="signal-code">DRSS / 01</span></div>
             <div class="signal-main"><strong>Sẵn sàng</strong><span>tiếp nhận yêu cầu</span></div>
         </aside>
-        <a class="hero-credit" href="https://www.afsoc.af.mil/News/Article-Display/Article/1297119/special-tactics-saves-lives-in-hurricane-harvey-aftermath/" target="_blank" rel="noreferrer">Ảnh: U.S. Air National Guard</a>
     </header>
 
     <section class="card table-card">
@@ -27,7 +25,7 @@
                 <tbody><tr>
                     <td class="fw-semibold" th:text="${pageData.content[0]}">REQ-0001</td>
                     <td>Người dân vùng lũ</td>
-                    <td th:replace="~{fragments/components :: status-badge('VERIFIED')}"></td>
+                    <td><span th:replace="~{fragments/components :: status-badge('VERIFIED')}"></span></td>
                     <td><button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">Từ chối</button></td>
                 </tr></tbody>
             </table>
@@ -38,7 +36,7 @@
         <section class="card form-panel">
             <div class="card-header"><div class="table-headline"><span class="heading-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><div><h2 class="h5 mb-0">Tạo yêu cầu cứu trợ</h2><p>Chia sẻ tình huống để đội điều phối có thể phản hồi</p></div></div></div>
             <div class="card-body">
-              <form action="#" method="post" class="needs-validation" novalidate>
+              <form th:action="@{/dev/ui-showcase/demo/request}" method="post" class="needs-validation" novalidate>
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="disasterType" class="form-label">Loại thiên tai <span class="text-danger">*</span></label>
@@ -62,6 +60,9 @@
                             Gửi thông tin
                         </button>
                     </div>
+                    <div class="col-12 d-flex justify-content-end">
+                        <button class="btn btn-outline-danger btn-sm" type="submit" th:formaction="@{/dev/ui-showcase/demo/error}">Xem lỗi demo</button>
+                    </div>
                 </div>
               </form>
             </div>
@@ -76,7 +77,7 @@
         </aside>
     </div>
 
-    <div th:replace="~{fragments/components :: confirm-modal('rejectModal', 'Từ chối yêu cầu', 'Bạn có chắc muốn từ chối yêu cầu này? Hành động này không thể hoàn tác.', '/requests/reject/1')}"></div>
+    <div th:replace="~{fragments/components :: confirm-modal('rejectModal', 'Từ chối yêu cầu', 'Bạn có chắc muốn từ chối yêu cầu demo này? Không có dữ liệu nghiệp vụ nào bị thay đổi.', '/dev/ui-showcase/demo/reject')}"></div>
     <div th:replace="~{fragments/components :: pagination(${pageData}, ${pageUrl}, ${pageQuery})}"></div>
 </section>
 </html>

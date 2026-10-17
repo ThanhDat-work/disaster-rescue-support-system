@@ -18,7 +18,7 @@ The project uses native Thymeleaf fragments. Do not use `layout:decorate` or the
 </html>
 ```
 
-`main-layout.html` renders the navbar, flash messages, page content, Bootstrap bundle, and `main.js`. The navbar role checks use `hasRole('RESCUER')`; Spring Security adds `ROLE_` automatically, matching the database role name `ROLE_RESCUER`.
+`main-layout.html` renders the navbar, flash messages, page content, Bootstrap bundle, and `main.js`. Bootstrap 5.3.2 remains pinned to jsDelivr with SRI and `crossorigin="anonymous"`; custom fonts and the showcase hero do not hotlink external assets. The navbar role checks use `hasRole('RESCUER')`; Spring Security adds `ROLE_` automatically, matching the database role name `ROLE_RESCUER`.
 
 ## 2. Status and urgency
 
@@ -27,8 +27,10 @@ Request **status** and **urgency** are separate fields. Status values are `PENDI
 Always render request statuses through the shared fragment; do not write status badge markup or inline colors:
 
 ```html
-<td th:replace="~{fragments/components :: status-badge(${request.status})}"></td>
+<td><span th:replace="~{fragments/components :: status-badge(${request.status})}"></span></td>
 ```
+
+The cell stays in the table; the fragment replaces only the nested `span`.
 
 Show urgency separately, with text that identifies the urgency field (for example `Khẩn cấp: CRITICAL`). Do not pass urgency values to `status-badge`.
 
@@ -42,7 +44,7 @@ Put tables inside `.table-responsive`, usually within a `.card`, and use `.table
 
 ## 5. Confirmation modal
 
-Reuse `confirm-modal(modalId, title, message, formAction)` from `fragments/components.html`. Trigger it with matching `data-bs-toggle="modal"` and `data-bs-target="#modalId"`; include the fragment once on the page. Pass a server-owned action URL and keep destructive actions as POST forms. Do not duplicate modal markup inline.
+Reuse `confirm-modal(modalId, title, message, formAction)` from `fragments/components.html`. Trigger it with matching `data-bs-toggle="modal"` and `data-bs-target="#modalId"`; include the fragment once on the page. Pass a server-owned action URL and keep destructive actions as POST forms. Do not duplicate modal markup inline. The `dev` showcase uses only `/dev/ui-showcase/demo/**` POST handlers; those handlers demonstrate redirects and flash messages and do not change application data. Never copy these demo URLs into a business page.
 
 ```html
 <button type="button" class="btn btn-outline-danger"
@@ -66,4 +68,4 @@ Controllers set `successMsg` or `errorMsg` as flash attributes after a redirect.
 
 ## 8. Showcase and verification
 
-With the `dev` profile active, open `http://localhost:8080/dev/ui-showcase` (pages: `?page=0`, `?page=1`, `?page=2`). The route is disabled outside `dev`. The showcase demonstrates layout, alerts, table/status badge, form validation, modal, and pagination.
+With the `dev` profile active, open `http://localhost:8080/dev/ui-showcase` (pages: `?page=0` through `?page=4`; the default is the first page and out-of-range requests are clamped). The route and its isolated security chain are scoped to `/dev/**` and disabled outside `dev`. The form posts to `/dev/ui-showcase/demo/request`; its success flash appears after redirect. The “Xem lỗi demo” button posts to `/dev/ui-showcase/demo/error` and displays an error flash. The confirmation modal posts to `/dev/ui-showcase/demo/reject`. These are demonstrations only and do not touch business data. The showcase demonstrates layout, success/error alerts, table/status badge, form validation, modal, and pagination. The form and aside use two columns above 768px and stack below that breakpoint. `.table-responsive` keeps horizontal scrolling at every viewport width.

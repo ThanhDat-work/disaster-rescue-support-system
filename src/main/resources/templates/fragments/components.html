@@ -10,7 +10,7 @@
     status == 'RESCUED' ? 'status-rescued' :
     status == 'CLOSED' ? 'status-closed' :
     status == 'REJECTED' ? 'status-rejected' :
-    status == 'CANCELLED' ? 'status-cancelled' : 'status-closed')
+    status == 'CANCELLED' ? 'status-cancelled' : 'status-unknown')
 }" th:text="${status}">TRẠNG THÁI</span>
 
 <!-- 2. Fragment Phân trang -->
@@ -21,7 +21,7 @@
             <span class="page-link" th:if="${pageData.first}">Trang trước</span>
         </li>
         <li class="page-item" th:each="i : ${#numbers.sequence(0, pageData.totalPages - 1)}" th:classappend="${pageData.number == i} ? 'active'">
-            <a class="page-link" th:href="${pageUrl + pageQuery + 'page=' + i}" th:text="${i + 1}">1</a>
+            <a class="page-link" th:href="${pageUrl + pageQuery + 'page=' + i}" th:text="${i + 1}" th:attr="aria-current=${pageData.number == i ? 'page' : null}">1</a>
         </li>
         <li class="page-item" th:classappend="${pageData.last} ? 'disabled'">
             <a class="page-link" th:if="${!pageData.last}" th:href="${pageUrl + pageQuery + 'page=' + (pageData.number + 1)}" aria-label="Trang sau">Trang sau</a>
@@ -37,7 +37,7 @@
             <form th:action="${formAction}" method="post">
                 <div class="modal-header">
                     <h5 class="modal-title" th:text="${title}">Xác nhận</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
                 <div class="modal-body">
                     <p th:text="${message}">Bạn có chắc chắn muốn thực hiện hành động này?</p>
