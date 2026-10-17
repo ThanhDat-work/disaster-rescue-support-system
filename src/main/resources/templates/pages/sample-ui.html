@@ -1,66 +1,82 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layouts/main-layout :: layout('UI Component Test', ~{::section})}">
-<section>
-    <div class="row">
-        <div class="col-12">
-            <h2 class="mb-4">Trang mẫu UI Components & Forms</h2>
-            <div class="card card-shadow mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">1. Kiểm thử Bảng & Trạng thái (Table & Status Badges)</h5>
-                </div>
-                <div class="card-body table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Mã yêu cầu</th>
-                                <th>Người gửi</th>
-                                <th>Trạng thái</th>
-                                <th>Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>REQ-0001</td>
-                                <td>Người dân vùng lũ</td>
-                                <!-- Test component status -->
-                                <td><span th:replace="~{fragments/components :: status-badge('PENDING')}"></span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">Từ chối</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Test Form Validation -->
-            <div class="card card-shadow">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">2. Kiểm thử Form Validation</h5>
-                </div>
-                <div class="card-body">
-                    <form action="#" method="post" class="needs-validation" novalidate>
-                        <div class="mb-3">
-                            <label class="form-label">Loại thiên tai <span class="text-danger">*</span></label>
-                            <select class="form-select is-invalid" required>
-                                <option value="">-- Chọn loại thiên tai --</option>
-                                <option value="1">Bão lũ</option>
-                            </select>
-                            <div class="invalid-feedback">Vui lòng chọn loại thiên tai (Validation State).</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Mô tả tình huống</label>
-                            <textarea class="form-control" rows="3" placeholder="Nhập mô tả..."></textarea>
-                        </div>
-                        <button class="btn btn-primary" type="submit">Gửi thông tin</button>
-                    </form>
-                </div>
-            </div>
+<section class="showcase-stack">
+    <header class="page-heading hero-banner">
+        <img class="hero-photo" src="https://media.defense.gov/2017/Aug/31/2001801655/-1/-1/0/170830-Z-VT419-001.JPG" alt="Đội cứu hộ di chuyển thuyền qua khu dân cư ngập lụt" fetchpriority="high">
+        <div class="hero-copy">
+            <p class="page-eyebrow">Disaster response · DRSS</p>
+            <h1>Khi thiên tai ập đến,<br><em>chúng tôi có mặt.</em></h1>
+            <p class="page-subtitle">Tiếp nhận tín hiệu cầu cứu. Kết nối đúng người, đúng nguồn lực, vào đúng thời điểm.</p>
         </div>
+        <aside class="hero-signal" aria-label="Thông tin môi trường mẫu">
+            <div class="signal-top"><span><span class="showcase-meta-dot"></span> Trạng thái hệ thống</span><span class="signal-code">DRSS / 01</span></div>
+            <div class="signal-main"><strong>Sẵn sàng</strong><span>tiếp nhận yêu cầu</span></div>
+        </aside>
+        <a class="hero-credit" href="https://www.afsoc.af.mil/News/Article-Display/Article/1297119/special-tactics-saves-lives-in-hurricane-harvey-aftermath/" target="_blank" rel="noreferrer">Ảnh: U.S. Air National Guard</a>
+    </header>
+
+    <section class="card table-card">
+        <div class="card-header d-flex align-items-center justify-content-between gap-3">
+            <div class="table-headline"><span class="heading-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6.5h16M4 12h16M4 17.5h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="18" cy="17.5" r="2" stroke="currentColor" stroke-width="1.7"/></svg></span><div><h2 class="h5 mb-0">Yêu cầu cứu nạn gần đây</h2><p>Theo dõi trạng thái tiếp nhận và xử lý</p></div></div>
+            <span class="showcase-meta"><span class="showcase-meta-dot"></span> 01 kết quả</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light"><tr><th scope="col">Mã yêu cầu</th><th scope="col">Người gửi</th><th scope="col">Trạng thái</th><th scope="col">Hành động</th></tr></thead>
+                <tbody><tr>
+                    <td class="fw-semibold" th:text="${pageData.content[0]}">REQ-0001</td>
+                    <td>Người dân vùng lũ</td>
+                    <td th:replace="~{fragments/components :: status-badge('VERIFIED')}"></td>
+                    <td><button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">Từ chối</button></td>
+                </tr></tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="form-grid">
+        <section class="card form-panel">
+            <div class="card-header"><div class="table-headline"><span class="heading-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><div><h2 class="h5 mb-0">Tạo yêu cầu cứu trợ</h2><p>Chia sẻ tình huống để đội điều phối có thể phản hồi</p></div></div></div>
+            <div class="card-body">
+              <form action="#" method="post" class="needs-validation" novalidate>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="disasterType" class="form-label">Loại thiên tai <span class="text-danger">*</span></label>
+                        <select id="disasterType" class="form-select is-invalid" required aria-describedby="disasterTypeError">
+                            <option value="">-- Chọn loại thiên tai --</option><option value="1">Bão lũ</option>
+                        </select>
+                        <div class="invalid-feedback" id="disasterTypeError">Vui lòng chọn loại thiên tai để tiếp tục.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="requestAddress" class="form-label">Địa chỉ sự cố</label>
+                        <input id="requestAddress" class="form-control" placeholder="Số nhà, đường, phường/xã">
+                        <p class="field-hint mb-0">Cung cấp vị trí cụ thể để đội cứu hộ tìm đến nhanh hơn.</p>
+                    </div>
+                    <div class="col-12">
+                        <label for="requestDescription" class="form-label">Mô tả tình huống</label>
+                        <textarea id="requestDescription" class="form-control" rows="3" placeholder="Mô tả ngắn tình huống và hỗ trợ cần thiết..."></textarea>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end">
+                        <button class="btn btn-primary" type="submit">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            Gửi thông tin
+                        </button>
+                    </div>
+                </div>
+              </form>
+            </div>
+        </section>
+        <aside class="form-aside">
+            <div>
+                <span class="aside-kicker">Quy trình cứu hộ</span>
+                <h3 class="aside-title">Thông tin rõ ràng giúp phản hồi nhanh hơn.</h3>
+                <p class="aside-copy">Chia sẻ vị trí, loại sự cố và tình trạng hiện tại. Điều phối viên sẽ tiếp nhận và xác minh yêu cầu.</p>
+            </div>
+            <ol class="aside-steps"><li><span>01</span> Tiếp nhận tín hiệu</li><li><span>02</span> Xác minh thông tin</li><li><span>03</span> Điều phối đội cứu hộ</li></ol>
+        </aside>
     </div>
 
-    <!-- Nhúng thử Modal Component -->
-    <div th:replace="~{fragments/components :: confirm-modal('rejectModal', 'Từ chối yêu cầu', 'Bạn có chắc muốn từ chối yêu cầu REQ-0001? Hành động này không thể hoàn tác.', '/requests/reject/1')}"></div>
+    <div th:replace="~{fragments/components :: confirm-modal('rejectModal', 'Từ chối yêu cầu', 'Bạn có chắc muốn từ chối yêu cầu này? Hành động này không thể hoàn tác.', '/requests/reject/1')}"></div>
+    <div th:replace="~{fragments/components :: pagination(${pageData}, ${pageUrl}, ${pageQuery})}"></div>
 </section>
 </html>

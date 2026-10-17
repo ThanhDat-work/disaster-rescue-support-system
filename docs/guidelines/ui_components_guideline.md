@@ -1,120 +1,69 @@
-# DRSS - Hướng dẫn sử dụng UI Components
-**Người soạn:** Phan Nhật Vy (UI/UX)
-**Dự án:** Disaster Rescue Support System (DRSS)
+# DRSS UI Components Guideline
 
-Tài liệu này cung cấp các đoạn mã HTML/Thymeleaf chuẩn mực để các thành viên (Backend) tái sử dụng giao diện, đảm bảo tính đồng bộ, hiện đại (Glassmorphism) và chuẩn Responsive trên toàn hệ thống.
+**Project:** Disaster Rescue Support System (DRSS)
+**Source of truth:** `src/main/resources/templates/layouts/main-layout.html` and the fragments under `templates/fragments/`.
 
----
+## 1. Page layout and navigation
 
-## 1. Tích hợp Khung trang gốc (Layout & Navbar)
-Tất cả các trang HTML mới đều phải kế thừa `main-layout.html`. Thanh điều hướng (Navbar) sẽ tự động hiển thị và phân quyền theo tác nhân đang đăng nhập.
+The project uses native Thymeleaf fragments. Do not use `layout:decorate` or the Thymeleaf Layout Dialect; that dependency is not installed. Start each page by replacing its root with the shared layout and pass the page section as the layout content:
 
 ```html
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layouts/main-layout}">
-<head>
-    <title>Tên Trang Của Bạn | DRSS</title>
-</head>
-<body>
-    <div layout:fragment="content">
-        <!-- Viết mã HTML riêng của trang vào đây -->
-        
-        <div class="card mb-4">
-            <div class="card-header">
-                Tiêu đề nội dung
-            </div>
-            <div class="card-body">
-                Nội dung bên trong...
-            </div>
-        </div>
-        
-    </div>
-</body>
+      th:replace="~{layouts/main-layout :: layout('Request list', ~{::section})}">
+<section>
+    <h1>Request list</h1>
+    <!-- page content -->
+</section>
 </html>
 ```
 
-## 2. Nút bấm tương tác (Buttons)
-Các nút bấm đã được cấu hình hiệu ứng nảy (scale click) và bóng đổ mềm trong `style-tokens.css`. Tránh tự viết CSS inline cho nút.
+`main-layout.html` renders the navbar, flash messages, page content, Bootstrap bundle, and `main.js`. The navbar role checks use `hasRole('RESCUER')`; Spring Security adds `ROLE_` automatically, matching the database role name `ROLE_RESCUER`.
 
-*   **Hành động chính (Lưu, Xác nhận, Gửi):**
-    ```html
-    <button type="submit" class="btn btn-primary">Xác nhận gửi</button>
-    ```
-*   **Hành động phụ (Hủy, Đóng):**
-    ```html
-    <button type="button" class="btn btn-outline-secondary">Hủy bỏ</button>
-    ```
-*   **Hành động cảnh báo/Hủy bỏ (Từ chối, Xóa):**
-    ```html
-    <button type="button" class="btn btn-outline-danger">Từ chối</button>
-    ```
+## 2. Status and urgency
 
-## 3. Form và Bắt lỗi (Validation State)
-Form đã được thiết kế tối giản. Khi backend trả về lỗi, hãy thêm class `is-invalid` vào thẻ `input`/`select` và cung cấp thẻ `div.invalid-feedback` ngay bên dưới.
+Request **status** and **urgency** are separate fields. Status values are `PENDING`, `VERIFIED`, `ASSIGNED`, `IN_PROGRESS`, `RESCUED`, `CLOSED`, `REJECTED`, and `CANCELLED`. `CRITICAL` is an urgency value, never a request status. `RESOLVED` is not a supported status.
+
+Always render request statuses through the shared fragment; do not write status badge markup or inline colors:
 
 ```html
-<div class="mb-3">
-    <label for="disasterType" class="form-label">Loại thiên tai <span class="text-danger">*</span></label>
-    <select class="form-select is-invalid" id="disasterType" name="disasterType">
-        <option value="" disabled selected>-- Chọn một --</option>
-        <option value="FLOOD">Bão lụt</option>
-    </select>
-    <div class="invalid-feedback">
-        Vui lòng chọn loại thiên tai.
-    </div>
-</div>
+<td th:replace="~{fragments/components :: status-badge(${request.status})}"></td>
 ```
 
-## 4. Nhãn trạng thái (Status Badges)
-Sử dụng các class và biến màu Semantic để hiển thị trạng thái của các Yêu cầu cứu nạn. Đã được bo tròn dạng Pill mềm mại.
+Show urgency separately, with text that identifies the urgency field (for example `Khẩn cấp: CRITICAL`). Do not pass urgency values to `status-badge`.
 
-*   **PENDING (Chờ xử lý - Vàng):**
-    ```html
-    <span class="badge" style="background-color: var(--urgency-medium); color: #fff;">PENDING</span>
-    ```
-*   **IN_PROGRESS (Đang xử lý - Cam):**
-    ```html
-    <span class="badge" style="background-color: var(--urgency-high); color: #fff;">IN_PROGRESS</span>
-    ```
-*   **CRITICAL (Khẩn cấp - Đỏ):**
-    ```html
-    <span class="badge" style="background-color: var(--urgency-critical); color: #fff;">CRITICAL</span>
-    ```
-*   **RESCUED/RESOLVED (Đã giải quyết - Xanh lá):**
-    ```html
-    <span class="badge" style="background-color: var(--urgency-low); color: #fff;">RESCUED</span>
-    ```
+## 3. Buttons and forms
 
-## 5. Bảng dữ liệu (Data Table)
-Luôn đặt table vào trong `div.table-responsive` và bọc trong một `.card` để tránh gãy layout trên giao diện điện thoại.
+Use Bootstrap button classes and the shared tokens. Use `btn-primary` for the main action, `btn-outline-secondary` for cancel/back, and `btn-outline-danger` for destructive actions. For validation errors, mark the input with `is-invalid` and put `.invalid-feedback` directly after it.
+
+## 4. Data tables
+
+Put tables inside `.table-responsive`, usually within a `.card`, and use `.table.table-hover.align-middle`. This keeps wide data usable on small screens.
+
+## 5. Confirmation modal
+
+Reuse `confirm-modal(modalId, title, message, formAction)` from `fragments/components.html`. Trigger it with matching `data-bs-toggle="modal"` and `data-bs-target="#modalId"`; include the fragment once on the page. Pass a server-owned action URL and keep destructive actions as POST forms. Do not duplicate modal markup inline.
 
 ```html
-<div class="card">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th scope="col">Mã yêu cầu</th>
-                    <th scope="col">Người gửi</th>
-                    <th scope="col">Trạng thái</th>
-                    <th scope="col">Hành động</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>REQ-0001</td>
-                    <td>Nguyễn Văn A</td>
-                    <td>
-                        <span class="badge" style="background-color: var(--urgency-medium); color: #fff;">PENDING</span>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-danger">Từ chối</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+<button type="button" class="btn btn-outline-danger"
+        data-bs-toggle="modal" data-bs-target="#rejectModal">Từ chối</button>
+<div th:replace="~{fragments/components :: confirm-modal('rejectModal', 'Từ chối yêu cầu', 'Xác nhận từ chối?', '/requests/reject/1')}"></div>
 ```
+
+## 6. Pagination
+
+Use `pagination(pageData, pageUrl, pageQuery)` from `fragments/components.html`. The controller supplies the `Page` model, the canonical path, and a query prefix that preserves the page's filter/sort contract and ends with `&` (or is `?` when there are no other parameters). The fragment appends `page=N`; it must not inspect the servlet request URI.
+
+```html
+<nav th:replace="~{fragments/components :: pagination(${pageData}, ${pageUrl}, ${pageQuery})}"></nav>
+```
+
+The first and last links are rendered disabled at their boundaries. Keep pagination above and below long tables when useful.
+
+## 7. Flash messages
+
+Controllers set `successMsg` or `errorMsg` as flash attributes after a redirect. The shared `flash-messages` fragment renders them as floating, toast-style notifications with a pulse indicator and blurred surface. They use Bootstrap Alert markup and `main.js` closes `.alert-dismissible` alerts after five seconds.
+
+## 8. Showcase and verification
+
+With the `dev` profile active, open `http://localhost:8080/dev/ui-showcase` (pages: `?page=0`, `?page=1`, `?page=2`). The route is disabled outside `dev`. The showcase demonstrates layout, alerts, table/status badge, form validation, modal, and pagination.

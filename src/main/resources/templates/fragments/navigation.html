@@ -1,9 +1,13 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<nav th:fragment="navbar" class="navbar navbar-expand-lg sticky-top mb-5">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/">DRSS - Cứu Nạn</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+<nav th:fragment="navbar" class="navbar navbar-expand-lg sticky-top app-navbar">
+    <div class="container app-nav-container">
+        <a class="navbar-brand brand-lockup" href="/" aria-label="DRSS - Hỗ trợ cứu nạn thiên tai">
+            <span class="brand-mark" aria-hidden="true"><svg width="25" height="25" viewBox="0 0 24 24" fill="none"><path d="M12 2.75 20 6v5.1c0 5.06-3.2 8.47-8 10.15-4.8-1.68-8-5.1-8-10.15V6l8-3.25Z" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v10M7 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+            <span class="brand-copy"><strong>DRSS</strong><small>Hỗ trợ cứu nạn thiên tai</small></span>
+        </a>
+        <div class="system-status d-none d-lg-flex" role="status"><span class="status-pulse"></span> Hệ thống sẵn sàng</div>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Mở menu">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
@@ -25,7 +29,7 @@
                 </li>
 
                 <!-- Menu cho Đội cứu hộ -->
-                <li class="nav-item" sec:authorize="hasRole('RESCUE_TEAM')">
+                <li class="nav-item" sec:authorize="hasRole('RESCUER')">
                     <a class="nav-link" href="/team/tasks">Nhiệm vụ được giao</a>
                 </li>
 
@@ -45,11 +49,11 @@
                 </li>
                 <li class="nav-item" sec:authorize="isAuthenticated()">
                     <form th:action="@{/logout}" method="post">
-                        <button class="btn btn-outline-light btn-sm mt-1" type="submit">Đăng xuất</button>
+                        <button class="btn btn-outline-secondary btn-sm nav-action mt-1" type="submit">Đăng xuất</button>
                     </form>
                 </li>
                 <li class="nav-item" sec:authorize="!isAuthenticated()">
-                    <a class="nav-link" href="/login">Đăng nhập</a>
+                    <a class="btn btn-primary btn-sm nav-login" href="/login">Đăng nhập <span aria-hidden="true">→</span></a>
                 </li>
             </ul>
         </div>
