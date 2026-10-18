@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!-- 1. Fragment Status Badge (Hiển thị đúng 8 trạng thái trong CSDL) -->
+<span th:fragment="status-badge(status)" th:class="${'badge status-badge ' +
+    (status == 'PENDING' ? 'status-pending' :
+    status == 'VERIFIED' ? 'status-verified' :
+    status == 'ASSIGNED' ? 'status-assigned' :
+    status == 'IN_PROGRESS' ? 'status-in-progress' :
+    status == 'RESCUED' ? 'status-rescued' :
+    status == 'CLOSED' ? 'status-closed' :
+    status == 'REJECTED' ? 'status-rejected' :
+    status == 'CANCELLED' ? 'status-cancelled' : 'status-unknown')
+}" th:text="${status}">TRẠNG THÁI</span>
+
+<!-- 2. Fragment Phân trang -->
+<nav th:fragment="pagination(pageData, pageUrl, pageQuery)" aria-label="Phân trang">
+    <ul class="pagination justify-content-center" th:if="${pageData.totalPages > 1}">
+        <li class="page-item" th:classappend="${pageData.first} ? 'disabled'">
+            <a class="page-link" th:if="${!pageData.first}" th:href="${pageUrl + pageQuery + 'page=' + (pageData.number - 1)}" aria-label="Trang trước">Trang trước</a>
+            <span class="page-link" th:if="${pageData.first}">Trang trước</span>
+        </li>
+        <li class="page-item" th:each="i : ${#numbers.sequence(0, pageData.totalPages - 1)}" th:classappend="${pageData.number == i} ? 'active'">
+            <a class="page-link" th:href="${pageUrl + pageQuery + 'page=' + i}" th:text="${i + 1}" th:attr="aria-current=${pageData.number == i ? 'page' : null}">1</a>
+        </li>
+        <li class="page-item" th:classappend="${pageData.last} ? 'disabled'">
+            <a class="page-link" th:if="${!pageData.last}" th:href="${pageUrl + pageQuery + 'page=' + (pageData.number + 1)}" aria-label="Trang sau">Trang sau</a>
+            <span class="page-link" th:if="${pageData.last}">Trang sau</span>
+        </li>
+    </ul>
+</nav>
+
+<!-- 3. Fragment Modal Xác nhận xoá/từ chối -->
+<div th:fragment="confirm-modal(modalId, title, message, formAction)" class="modal fade" th:id="${modalId}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form th:action="${formAction}" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" th:text="${title}">Xác nhận</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <p th:text="${message}">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">Xác nhận</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</html>

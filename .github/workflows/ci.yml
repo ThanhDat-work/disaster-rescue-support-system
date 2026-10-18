@@ -22,7 +22,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_DATABASE: drss_db
-          MYSQL_ROOT_PASSWORD: 123456
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
         ports:
           - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
@@ -38,4 +38,8 @@ jobs:
       - name: Make wrapper executable
         run: chmod +x ./mvnw
       - name: Build and Test
-        run: ./mvnw clean verify "-Dspring.profiles.active=it" "-DDB_URL=jdbc:mysql://127.0.0.1:3306/drss_db" "-DDB_USERNAME=root" "-DDB_PASSWORD=123456"
+        env:
+          DB_URL: jdbc:mysql://127.0.0.1:3306/drss_db
+          DB_USERNAME: root
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: ./mvnw clean verify "-Dspring.profiles.active=it"
