@@ -537,6 +537,7 @@ Lưu tối thiểu:
 - Thời điểm xác minh
 - Thời điểm sử dụng
 - Thời điểm tạo
+- Optimistic-lock version để ngăn xác minh hoặc consume token đồng thời.
 
 ### 19.3 Bảng auth_rate_limits
 
@@ -550,6 +551,7 @@ Lưu tối thiểu:
 - Thời điểm bị khóa đến
 - Thời điểm thất bại gần nhất
 - Thời điểm cập nhật
+- Optimistic-lock version để tránh mất lượt đếm khi có request đồng thời.
 
 Migration phải có:
 
