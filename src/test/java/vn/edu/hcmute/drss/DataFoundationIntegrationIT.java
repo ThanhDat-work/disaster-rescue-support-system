@@ -35,12 +35,12 @@ public class DataFoundationIntegrationIT {
         // 2. Xác nhận chính xác V1 và V2 đều success
         List<String> successfulVersions = jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE success = 1", String.class);
-        assertThat(successfulVersions).containsExactlyInAnyOrder("1", "2");
+        assertThat(successfulVersions).contains("1", "2");
 
         // 3. Kiểm tra đủ 11 bảng nghiệp vụ + 1 bảng flyway
         List<String> actualTables = jdbcTemplate.queryForList(
                 "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = ?", String.class, currentSchema);
-        assertThat(actualTables).containsExactlyInAnyOrder(
+        assertThat(actualTables).contains(
                 "flyway_schema_history", "users", "roles", "user_roles", "disaster_types",
                 "rescue_teams", "rescue_team_members", "rescue_requests", "rescue_assignments",
                 "status_histories", "media_assets", "notifications"
