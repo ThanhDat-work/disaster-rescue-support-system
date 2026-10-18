@@ -16,7 +16,7 @@
 - `.\mvnw.cmd clean test`: PASS — 7 tests, 0 failures, 0 errors.
 - GitHub Actions `CI Workflow / build`: PASS on `609b82c`.
 - GitHub Actions `Build and Test`: PASS on `609b82c`.
-- Manual browser review at 390 × 844: global horizontal overflow, mobile navbar, invalid and valid form submissions, independent error demo, modal cancel/confirm behavior, and success/error alerts with five-second auto-close all PASS.
+- Manual browser review at 390 × 844: no global horizontal overflow; mobile navbar, invalid and valid form submissions, independent error demo, modal cancel/confirm behavior, and success/error alerts with five-second auto-close all PASS.
 - Mobile screenshot: `evidence/t1-08/mobile-Edge-390x844.png` — viewport-only image at 390 × 844, without DevTools. Horizontal scrolling inside `.table-responsive` is expected; the full page has no horizontal overflow.
 
 ## Shared infrastructure notes
