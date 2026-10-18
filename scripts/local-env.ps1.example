@@ -1,0 +1,21 @@
+# Copy this file to scripts/local-env.ps1 before editing.
+# The real local-env.ps1 file is ignored by Git.
+# Never commit or share the real values below.
+
+$env:DB_URL = 'jdbc:mysql://127.0.0.1:3306/ten_database_dev'
+$env:DB_USERNAME = 'root'
+$env:DB_PASSWORD = 'mat_khau_mysql_thuc_te'
+
+$env:SERVER_PORT = '8080'
+
+$env:MAIL_USERNAME = 'tai_khoan_gui_mail@gmail.com'
+$env:MAIL_APP_PASSWORD = 'gmail_app_password'
+$env:MAIL_FROM = 'tai_khoan_gui_mail@gmail.com'
+
+$env:JWT_SECRET = 'gia_tri_jwt_vua_tao'
+$env:OTP_HMAC_SECRET = 'gia_tri_otp_vua_tao'
+
+$env:APP_BASE_URL = 'http://localhost:8080'
+$env:AUTH_COOKIE_SECURE = 'false'
+
+Write-Host 'DRSS local environment variables loaded for this PowerShell process.'
