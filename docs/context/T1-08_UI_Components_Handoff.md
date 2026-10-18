@@ -1,48 +1,33 @@
 # T1-08 — UI Components Handoff
 
-- **Cập nhật:** 2026-10-18
-- **Nhánh:** `feat/t1-08-ui-components`
-- **Commit nền hiện tại:** `7b948be6cf2e2a0f450a89d0cbec382419e223d8` (`handoff`). 
-- **Route showcase:** `http://localhost:8080/dev/ui-showcase` (profile `dev`).
-- **Pagination:** mặc định `page=0`; bộ dữ liệu có 5 phần tử, trang 0 đến 4; page âm/quá giới hạn được giới hạn về trang hợp lệ.
+- Updated: 2026-10-18
+- Branch: `feat/t1-08-ui-components`
+- Review base: `0fe01ffaa30ff7b284c4acdfd2a18a4c20fc02bd` (`Fix T1-08 UI showcase review findings`)
+- Current changes are in the workspace and have not been committed. The commit hash and CI result for these changes do not exist yet.
+- Showcase route: `http://localhost:8080/dev/ui-showcase` (requires the `dev` profile).
 
-## Thay đổi và xử lý feedback
+## Review round 2 fixes
 
-1. **Badge trong bảng:** `sample-ui.html` giữ `<td>` và thay nội dung bằng fragment bên trong `<span>`. Guideline dùng cùng cách; MVC test xác nhận cấu trúc cell.
-2. **Form, modal và alerts:** form gửi đến endpoint demo trong `/dev/ui-showcase`; modal dùng endpoint demo riêng. Các POST demo redirect bằng flash attributes để hiển thị success/error alert. Test xác nhận submit, redirect, success alert, error alert và không dùng endpoint nghiệp vụ `/requests/reject/1`.
-3. **Responsive CSS:** bổ sung layout cho `form-grid`, `form-panel`, `form-aside` và thành phần con; form chuyển một cột ở breakpoint tablet. `.table-responsive` cuộn ngang ở mọi viewport khi cần; bỏ `body overflow-x: hidden`. Đã chụp Edge desktop, tablet, mobile. Bảng rộng hơn màn hình nhỏ và cuộn bên trong vùng bảng.
-4. **Security:** filter chain showcase chỉ match `/dev/**`, có `@Order(1)` và chỉ tồn tại trong profile `dev`. MVC test kiểm tra route demo; profile test xác nhận controller không được đăng ký khi thiếu `dev`. URL nghiệp vụ không bị chain showcase nhận.
-5. **Pagination:** trang mặc định là 0; danh sách, `totalElements` và số trang thống nhất là 5. Test bao phủ trang đầu, giữa, cuối, page âm và page ngoài phạm vi.
-6. **Tài nguyên và accessibility:** bỏ hero image hotlink và Google Fonts `@import`; thêm SRI/crossorigin cho Bootstrap CDN; nút đóng modal có `aria-label`; trang hiện tại có `aria-current="page"`; status không hợp lệ có badge trung tính.
+- The disaster type select is required and has a `name`. Native browser constraint validation blocks the main form before POST when it is empty. The `invalid` event adds Bootstrap's `is-invalid` styling only after an invalid submit; a valid change clears the styling.
+- The “Xem lỗi demo” submit button has `formnovalidate`, so it still posts to `/dev/ui-showcase/demo/error` independently of the required select. The valid main form posts to `/dev/ui-showcase/demo/request`.
+- The UI guideline now distinguishes showcase browser validation from DTO/server-side validation required for real business operations.
+- The existing page continues to use isolated `/dev/**` demo endpoints, responsive table scrolling, pagination, modal, and flash alerts.
 
-Không sửa schema, migration, entity, repository hay cấu hình database của T1-07; không thêm H2 hoặc mật khẩu mặc định. Giữ nguyên `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, role `ROLE_RESCUER` và Thymeleaf `hasRole('RESCUER')`. CI workflow lấy `DB_PASSWORD` từ GitHub Actions secret.
+## Verification status
 
-## Kiểm tra đã chạy
+- Review base `0fe01ff` previously passed `clean test` and branch CI according to the supplied review. Those results do not verify the uncommitted changes here.
+- Required rerunnable Windows PowerShell command: `.\mvnw.cmd clean test`.
+- After committing and pushing the fixes, check GitHub Actions on that exact commit; CI must not be described as passing before then.
+- Browser evidence must be captured against the updated code. Record invalid-submit blocked, valid-submit success alert, independent error demo, modal and auto-close behavior, and mobile page width (`scrollWidth = clientWidth = 390`). Keep screenshots at the actual 390×844 viewport without cropping that could imply horizontal overflow.
+- Manual browser validation and CI for the current workspace changes: pending.
 
-Tất cả lệnh dùng Maven Wrapper và repository Maven cục bộ trong workspace.
+## Shared infrastructure notes
 
-| Lệnh | Kết quả |
-|---|---|
-| `MAVEN_OPTS="-Dmaven.repo.local=.maven-repository" .\mvnw.cmd "-Dtest=UiShowcaseMvcTest" test` | PASS — 5 tests, 0 failures/errors |
-| `MAVEN_OPTS="-Dmaven.repo.local=.maven-repository" .\mvnw.cmd clean test` | PASS — 7 tests, 0 failures/errors |
-| `MAVEN_OPTS="-Dmaven.repo.local=.maven-repository" .\mvnw.cmd clean verify "-Dspring.profiles.active=it"` | PASS — 9 tests tổng cộng; 2 MySQL integration tests, 0 failures/errors; Flyway schema version 2, không cần migration |
+- `.github/workflows/ci.yml` runs Maven verification against MySQL in GitHub Actions; it is shared CI infrastructure, so changes there should be explained and scoped carefully.
+- `.gitignore` keeps local configuration/secrets and generated artifacts out of version control; it is shared repository configuration.
+- `mvnw.cmd` is the Windows Maven Wrapper entry point used for reproducible local commands; it is shared build infrastructure.
+- Spring Boot does not load `.env` by itself. Database environment variables must be set in the PowerShell process or loaded into that process by an external tool. Never record secret values here.
 
-`MAVEN_OPTS` trỏ Maven đến cache dependency cục bộ của workspace trong môi trường này. Ba biến môi trường DB được nạp từ `.env` tại máy chạy, không ghi giá trị vào handoff.
+## Scope
 
-## Ảnh trình duyệt
-
-Chụp bằng Microsoft Edge `155.0.4283.45` (headless), theo kích thước ảnh/viewport dưới đây:
-
-- Desktop, 1440×1100: [desktop-Edge-1440x1100.png](evidence/t1-08/desktop-Edge-1440x1100.png)
-- Tablet, 820×1180: [tablet-Edge-820x1180.png](evidence/t1-08/tablet-Edge-820x1180.png)
-- Mobile, 390×844: [mobile-Edge-390x844.png](evidence/t1-08/mobile-Edge-390x844.png)
-
-POST demo, redirect, flash alert và phân trang đã được thực thi qua MockMvc; modal/form markup và endpoint đích được kiểm tra. Chưa thực hiện click thủ công trong cửa sổ trình duyệt.
-
-## Còn cần hoàn tất trước khi approve/merge
-
-- Thay đổi hiện ở workspace, chưa có commit mới do quyền ghi vào `.git/index` bị hệ thống từ chối (`Permission denied`). Commit nền vẫn là `7b948be6cf2e2a0f450a89d0cbec382419e223d8`.
-- GitHub Actions chưa được xác nhận trên thay đổi này vì chưa có commit/push mới. Đảm bảo repository secret `DB_PASSWORD` đã được thiết lập, sau đó commit/push branch và kiểm tra workflow PASS.
-- Có thể mở showcase trên Edge/Chrome và click thử form, modal, đóng alert, pagination; kiểm tra cuộn bảng ở mobile để xác nhận tương tác trực tiếp.
-
-Không approve hoặc merge cho đến khi các xác minh GitHub và browser trên được hoàn thành.
+No T1-07 schema, migration, entity, repository, or database contract changes are part of this UI validation fix. Confirm with `git diff --name-only` before handoff/merge.

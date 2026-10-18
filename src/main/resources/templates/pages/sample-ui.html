@@ -36,11 +36,11 @@
         <section class="card form-panel">
             <div class="card-header"><div class="table-headline"><span class="heading-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><div><h2 class="h5 mb-0">Tạo yêu cầu cứu trợ</h2><p>Chia sẻ tình huống để đội điều phối có thể phản hồi</p></div></div></div>
             <div class="card-body">
-              <form th:action="@{/dev/ui-showcase/demo/request}" method="post" class="needs-validation" novalidate>
+              <form th:action="@{/dev/ui-showcase/demo/request}" method="post" class="needs-validation">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="disasterType" class="form-label">Loại thiên tai <span class="text-danger">*</span></label>
-                        <select id="disasterType" class="form-select is-invalid" required aria-describedby="disasterTypeError">
+                        <select id="disasterType" name="disasterType" class="form-select" required aria-describedby="disasterTypeError">
                             <option value="">-- Chọn loại thiên tai --</option><option value="1">Bão lũ</option>
                         </select>
                         <div class="invalid-feedback" id="disasterTypeError">Vui lòng chọn loại thiên tai để tiếp tục.</div>
@@ -61,7 +61,7 @@
                         </button>
                     </div>
                     <div class="col-12 d-flex justify-content-end">
-                        <button class="btn btn-outline-danger btn-sm" type="submit" th:formaction="@{/dev/ui-showcase/demo/error}">Xem lỗi demo</button>
+                        <button class="btn btn-outline-danger btn-sm" type="submit" formnovalidate th:formaction="@{/dev/ui-showcase/demo/error}">Xem lỗi demo</button>
                     </div>
                 </div>
               </form>

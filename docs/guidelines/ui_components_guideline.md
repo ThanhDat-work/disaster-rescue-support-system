@@ -36,7 +36,9 @@ Show urgency separately, with text that identifies the urgency field (for exampl
 
 ## 3. Buttons and forms
 
-Use Bootstrap button classes and the shared tokens. Use `btn-primary` for the main action, `btn-outline-secondary` for cancel/back, and `btn-outline-danger` for destructive actions. For validation errors, mark the input with `is-invalid` and put `.invalid-feedback` directly after it.
+Use Bootstrap button classes and the shared tokens. Use `btn-primary` for the main action, `btn-outline-secondary` for cancel/back, and `btn-outline-danger` for destructive actions. Add native constraints such as `required` to fields and let the browser block invalid form submissions. Do not set `novalidate` unless JavaScript explicitly calls `checkValidity()` and prevents invalid submission. Add `is-invalid` only after an invalid submit attempt, and put `.invalid-feedback` directly after the field. An alternate demo submit action that must work independently can use `formnovalidate`.
+
+This is client-side showcase behavior only. Real business operations must also validate request DTOs and enforce rules server-side; browser validation is not a security or data-integrity boundary.
 
 ## 4. Data tables
 
@@ -68,4 +70,4 @@ Controllers set `successMsg` or `errorMsg` as flash attributes after a redirect.
 
 ## 8. Showcase and verification
 
-With the `dev` profile active, open `http://localhost:8080/dev/ui-showcase` (pages: `?page=0` through `?page=4`; the default is the first page and out-of-range requests are clamped). The route and its isolated security chain are scoped to `/dev/**` and disabled outside `dev`. The form posts to `/dev/ui-showcase/demo/request`; its success flash appears after redirect. The “Xem lỗi demo” button posts to `/dev/ui-showcase/demo/error` and displays an error flash. The confirmation modal posts to `/dev/ui-showcase/demo/reject`. These are demonstrations only and do not touch business data. The showcase demonstrates layout, success/error alerts, table/status badge, form validation, modal, and pagination. The form and aside use two columns above 768px and stack below that breakpoint. `.table-responsive` keeps horizontal scrolling at every viewport width.
+With the `dev` profile active, open `http://localhost:8080/dev/ui-showcase` (pages: `?page=0` through `?page=4`; the default is the first page and out-of-range requests are clamped). The route and its isolated security chain are scoped to `/dev/**` and disabled outside `dev`. Submitting the main form without a disaster type is blocked by native browser validation and shows the field error; a valid submit posts to `/dev/ui-showcase/demo/request` and its success flash appears after redirect. The “Xem lỗi demo” button uses `formnovalidate` and posts independently to `/dev/ui-showcase/demo/error`. The confirmation modal posts to `/dev/ui-showcase/demo/reject`. These are demonstrations only and do not touch business data. The showcase demonstrates layout, success/error alerts, table/status badge, form validation, modal, and pagination. The form and aside use two columns above 768px and stack below that breakpoint. `.table-responsive` keeps horizontal scrolling at every viewport width.

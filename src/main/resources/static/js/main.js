@@ -1,4 +1,27 @@
 document.addEventListener("DOMContentLoaded", function () {
+  // Native browser validation blocks invalid submits; reflect its state in Bootstrap styling.
+  document.querySelectorAll("form.needs-validation").forEach(function (form) {
+    form.addEventListener("invalid", function (event) {
+      event.target.classList.add("is-invalid");
+      event.target.setAttribute("aria-invalid", "true");
+    }, true);
+
+    form.addEventListener("input", function (event) {
+      const field = event.target;
+      if (field.willValidate && field.checkValidity()) {
+        field.classList.remove("is-invalid");
+        field.removeAttribute("aria-invalid");
+      }
+    });
+    form.addEventListener("change", function (event) {
+      const field = event.target;
+      if (field.willValidate && field.checkValidity()) {
+        field.classList.remove("is-invalid");
+        field.removeAttribute("aria-invalid");
+      }
+    });
+  });
+
   // Khởi tạo tất cả Bootstrap Tooltips
   var tooltipTriggerList = [].slice.call(
     document.querySelectorAll('[data-bs-toggle="tooltip"]'),
