@@ -2,6 +2,7 @@
 
 - **Status:** Approved
 - **Approved date:** 2026-10-18
+- **Last clarified:** 2026-10-19 — Password reset grant sử dụng `HttpSession`.
 - **Task:** T2-01
 - **GitHub issue:** #4
 - **Baseline commit:** `4922092`
@@ -309,6 +310,52 @@ Quy tắc:
 - OTP đúng tạo quyền đặt lại mật khẩu có hiệu lực 10 phút.
 - Trạng thái xác minh được giữ phía server, không tin dữ liệu xác minh do client gửi.
 - OTP sai, hết hạn, đã dùng hoặc quá số lần thử trả thông báo chung.
+
+### 11.2.1 Trạng thái reset phía server
+
+T2-01 sử dụng `HttpSession` để quản lý luồng đặt lại mật khẩu.
+
+Trước khi xác minh OTP:
+
+- Session giữ email đã chuẩn hóa để duy trì luồng reset.
+- Email không được đưa vào URL hoặc hidden field làm nguồn xác thực.
+- Với email không tồn tại, giao diện và điều hướng vẫn giống email tồn tại nhằm chống dò tìm tài khoản.
+
+Sau khi OTP `PASSWORD_RESET` được xác minh thành công:
+
+- Server đổi session ID để giảm nguy cơ session fixation.
+- Session lưu UUID của `verification_tokens` đã được xác minh.
+- Không lưu OTP rõ, OTP digest, mật khẩu hoặc JWT trong session.
+- Email tạm dùng ở bước trước được xóa khỏi session khi không còn cần thiết.
+- Quyền đặt lại mật khẩu tồn tại 10 phút kể từ `verified_at`.
+- Mỗi lần mở hoặc gửi form mật khẩu mới, server phải đọc lại token từ database và kiểm tra:
+  - Purpose là `PASSWORD_RESET`.
+  - `verified_at` đã có giá trị.
+  - Chưa có `consumed_at`.
+  - Thời điểm hiện tại chưa vượt quá `verified_at + 10 phút`.
+  - Token thuộc đúng user của luồng reset.
+
+Khi đặt lại mật khẩu thành công:
+
+- Cập nhật password hash.
+- Tăng `users.auth_version`.
+- Đặt `consumed_at` cho reset token.
+- Ba thay đổi trên phải nằm trong cùng transaction.
+- Xóa toàn bộ trạng thái reset khỏi session.
+- Không tự động đăng nhập người dùng.
+
+Khi grant hết hạn, token không hợp lệ hoặc session không còn tồn tại:
+
+- Xóa trạng thái reset khỏi session.
+- Không cho truy cập trang nhập mật khẩu mới.
+- Yêu cầu người dùng bắt đầu lại luồng quên mật khẩu.
+- Chỉ trả thông báo chung, không làm lộ trạng thái tài khoản hoặc token.
+
+Giới hạn của T2-01:
+
+- Session được quản lý bởi ứng dụng Spring Boot hiện tại.
+- Nếu server khởi động lại, trạng thái reset đang thực hiện có thể mất và người dùng phải bắt đầu lại.
+- Khi triển khai nhiều instance, session cần được chuyển sang kho dùng chung như Redis; nội dung này nằm ngoài phạm vi T2-01.
 
 ### 11.3 Bước 3 — Nhập mật khẩu mới
 
@@ -625,6 +672,11 @@ Tối thiểu phải có automated test cho:
 - Reset thành công tăng `auth_version`.
 - JWT cũ bị từ chối sau reset.
 - Không tự động đăng nhập sau reset.
+- Session khác không sử dụng được quyền reset đã xác minh.
+- Reset grant hết hiệu lực sau 10 phút.
+- Reset grant bị xóa khỏi session sau khi hoàn thành.
+- Token đã verified nhưng chưa consumed không được cấp quyền cho session khác.
+- Server restart hoặc session mất yêu cầu người dùng bắt đầu lại luồng reset.
 
 ### Rate limiting
 
