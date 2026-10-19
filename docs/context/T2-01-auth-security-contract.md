@@ -491,9 +491,15 @@ Ngoại lệ:
 - CSRF token được quản lý bằng session.
 - Session chỉ phục vụ CSRF và trạng thái tạm của luồng reset; authentication chính vẫn sử dụng JWT cookie.
 - Request thiếu hoặc sai CSRF token trả `403`.
-- Authentication sử dụng `SessionCreationPolicy.STATELESS`; `SecurityContext` không được lưu trong `HttpSession`.
-- `STATELESS` chỉ áp dụng cho authentication. `HttpSession` vẫn được sử dụng riêng cho `HttpSessionCsrfTokenRepository` và password-reset grant.
-- Cấu hình này tránh việc JWT authentication được dựng lại trên mỗi request làm kích hoạt lại session-authentication strategy và vô hiệu CSRF token vừa render.
+
+### Làm rõ về JWT, HttpSession và CSRF
+
+- Authentication của ứng dụng là stateless theo hành vi: mỗi request được xác thực lại từ JWT và không lưu `SecurityContext` trong `HttpSession`.
+- Chuỗi bảo mật ứng dụng tắt `SessionManagementConfigurer` để không cài `SessionManagementFilter`.
+- Việc này ngăn JWT authentication bị hiểu nhầm là một lần đăng nhập mới ở mỗi request, vốn làm thay session ID và CSRF token sau khi trang đã bắt đầu render.
+- CSRF protection vẫn được bật cho các request thay đổi dữ liệu.
+- `HttpSession` vẫn được sử dụng độc lập để lưu CSRF token và trạng thái password-reset grant.
+- Việc tắt quản lý phiên đăng nhập của Spring Security không đồng nghĩa với tắt `HttpSession` hoặc tắt CSRF.
 
 ## 16. RBAC
 

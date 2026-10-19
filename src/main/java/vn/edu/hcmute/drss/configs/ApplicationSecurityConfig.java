@@ -4,7 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -54,11 +54,20 @@ public class ApplicationSecurityConfig {
                                 new NullSecurityContextRepository()
                         )
                 )
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
-                )
+                /*
+                * Không dùng Spring Security để quản lý phiên đăng nhập.
+                *
+                * Authentication được dựng lại từ JWT ở mỗi request và không được lưu
+                * trong HttpSession vì SecurityContextRepository là Null.
+                *
+                * Tắt SessionManagementConfigurer cũng ngăn SessionManagementFilter
+                * xem JWT authentication là một lần đăng nhập mới rồi thay session ID
+                * và CSRF token ở mỗi request.
+                *
+                * HttpSession vẫn được phép tồn tại độc lập cho CSRF token và
+                * password-reset grant.
+                */
+                .sessionManagement(AbstractHttpConfigurer::disable)
                 /*
                  * Không lưu request đích vào session vì sau đăng nhập,
                  * ứng dụng tự điều hướng theo role đã chốt.

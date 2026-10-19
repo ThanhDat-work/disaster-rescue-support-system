@@ -13,6 +13,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.web.FilterChainProxy;
+import org.springframework.security.web.session.SessionManagementFilter;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.context.ActiveProfiles;
@@ -61,6 +63,9 @@ class ApplicationSecurityConfigTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private FilterChainProxy springSecurityFilterChain;
 
     @MockitoBean
     private JwtAuthenticationService authenticationService;
@@ -322,6 +327,17 @@ class ApplicationSecurityConfigTest {
                         HttpHeaders.SET_COOKIE,
                         containsString("Max-Age=0")
                 ));
+    }
+
+    @Test
+    void jwtSecurityChainDoesNotInstallSessionManagementFilter() {
+        assertThat(
+                springSecurityFilterChain.getFilters("/")
+        )
+                .isNotNull()
+                .noneMatch(
+                        SessionManagementFilter.class::isInstance
+                );
     }
 
     private void allowToken(
