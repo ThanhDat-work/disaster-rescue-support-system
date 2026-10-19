@@ -50,9 +50,10 @@ class UiShowcaseMvcTest {
     }
 
     @Test
-    void devSecurityChainDoesNotCaptureBusinessRoutes() throws Exception {
+    void devSecurityChainDoesNotPermitBusinessRoutes() throws Exception {
         mockMvc.perform(get("/requests/reject/1"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/auth/login"));
     }
 
     @Test
