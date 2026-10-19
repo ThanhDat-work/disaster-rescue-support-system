@@ -114,7 +114,10 @@
             </form>
           </li>
           <li class="nav-item" sec:authorize="!isAuthenticated()">
-            <a class="btn btn-primary btn-sm nav-login" href="/auth/login"
+            <a class="nav-link" th:href="@{/auth/register}">Đăng ký</a>
+          </li>
+          <li class="nav-item" sec:authorize="!isAuthenticated()">
+            <a class="btn btn-primary btn-sm nav-login" th:href="@{/auth/login}"
               >Đăng nhập <span aria-hidden="true">→</span></a
             >
           </li>

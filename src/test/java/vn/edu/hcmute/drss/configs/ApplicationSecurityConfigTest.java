@@ -61,7 +61,9 @@ class ApplicationSecurityConfigTest {
             throws Exception {
         mockMvc.perform(get("/auth/login"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("login"));
+                .andExpect(content().string(containsString(
+                        "action=\"/auth/login\""
+                )));
     }
 
     @Test
@@ -303,11 +305,6 @@ class ApplicationSecurityConfigTest {
 
     @RestController
     static class SecurityTestRoutesController {
-
-        @GetMapping("/auth/login")
-        String login() {
-            return "login";
-        }
 
         @GetMapping({
                 "/requests/test",

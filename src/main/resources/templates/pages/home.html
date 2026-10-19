@@ -1,0 +1,34 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layouts/main-layout :: layout('Trang chủ', ~{::section})}"
+>
+  <section class="auth-page">
+    <div class="auth-card auth-card-wide">
+      <div class="auth-copy">
+        <span class="aside-kicker">Disaster Rescue Support System</span>
+        <h1>Hỗ trợ đúng người,<br />đúng thời điểm.</h1>
+        <p>
+          DRSS kết nối người dân, điều phối viên và đội cứu hộ trong một quy
+          trình có thể theo dõi.
+        </p>
+        <div class="auth-actions">
+          <a class="btn btn-primary" th:href="@{/auth/register}"
+            >Tạo tài khoản</a
+          >
+          <a class="btn btn-outline-secondary" th:href="@{/auth/login}"
+            >Đăng nhập</a
+          >
+        </div>
+      </div>
+      <aside class="auth-aside">
+        <span class="auth-step">DRSS / AUTH</span>
+        <h2>Nền tảng xác thực đã sẵn sàng.</h2>
+        <p>
+          Tài khoản được kích hoạt bằng OTP; phiên đăng nhập dùng JWT trong
+          cookie HttpOnly.
+        </p>
+      </aside>
+    </div>
+  </section>
+</html>

@@ -2,7 +2,7 @@
 
 - **Status:** Approved
 - **Approved date:** 2026-10-18
-- **Last clarified:** 2026-10-19 — Password reset grant sử dụng `HttpSession`; rate-limit subject key sử dụng secret HMAC riêng; xác thực thành công chỉ xóa bộ đếm subject riêng, không xóa IP-wide.
+- **Last clarified:** 2026-10-19 — Password reset grant sử dụng `HttpSession`; rate-limit subject key sử dụng secret HMAC riêng; xác thực thành công chỉ xóa bộ đếm subject riêng, không xóa IP-wide; login T2-01 redirect về `/`; resend OTP hỗ trợ activation và password reset.
 - **Task:** T2-01
 - **GitHub issue:** #4
 - **Baseline commit:** `4922092`
@@ -190,6 +190,13 @@ Quy trình:
 - Chỉ sau khi mật khẩu đúng mới được thông báo tài khoản chưa kích hoạt hoặc đã bị vô hiệu hóa.
 - Không trả lời rằng một email cụ thể có tồn tại hay không.
 - Không ghi nguyên nhân chi tiết nhạy cảm vào response phía client.
+
+### 8.2 Điều hướng sau đăng nhập
+
+- Trong T2-01, đăng nhập thành công điều hướng về trang chủ công khai `/`.
+- Controller giữ quyết định redirect trong một method riêng; service đăng nhập không phụ thuộc route giao diện.
+- Khi các màn hình nghiệp vụ theo role hoàn thiện, nhóm có thể bổ sung saved-request để quay lại route người dùng vừa truy cập hoặc chọn landing page theo role.
+- T2-01 chưa bật saved-request; `NullRequestCache` tiếp tục được sử dụng để tránh thay đổi ngầm trạng thái session.
 
 ## 9. JWT
 
@@ -393,6 +400,13 @@ Quy tắc:
 - Tối đa 10 yêu cầu từ cùng IP trong 15 phút.
 - OTP mới làm OTP cũ mất hiệu lực.
 - Phản hồi chung, không cho biết email có tồn tại hay không.
+
+### 12.1 Xác định purpose và email
+
+- Endpoint hỗ trợ cả `ACCOUNT_ACTIVATION` và `PASSWORD_RESET`.
+- Với kích hoạt, email được nhận từ DTO và được chuẩn hóa ở server.
+- Với reset mật khẩu, purpose có thể được gửi từ form nhưng email chỉ được lấy từ trạng thái reset trong `HttpSession`; server không tin email do client gửi cho luồng này.
+- Purpose không hợp lệ hoặc session reset không tồn tại đều bị từ chối bằng thông báo chung.
 
 ## 13. Rate limiting
 
