@@ -9,3 +9,4 @@ app:
     otp-hmac-secret: integration-otp-secret-at-least-32-bytes-bbbb
     base-url: http://localhost:8080
     mail-from: integration-test@example.invalid
+    rate-limit-hmac-secret: integration-rate-limit-secret-at-least-32-cccc

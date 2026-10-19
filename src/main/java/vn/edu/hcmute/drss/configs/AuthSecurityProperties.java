@@ -10,6 +10,7 @@ import java.time.Duration;
 public record AuthSecurityProperties(
         String jwtSecret,
         String otpHmacSecret,
+        String rateLimitHmacSecret,
         String issuer,
         Duration accessTokenTtl,
         String cookieName,
@@ -24,13 +25,20 @@ public record AuthSecurityProperties(
 
     public AuthSecurityProperties {
         jwtSecret = requireSecret(jwtSecret, "JWT secret");
-        otpHmacSecret = requireSecret(otpHmacSecret, "OTP HMAC secret");
+        otpHmacSecret = requireSecret(
+                otpHmacSecret,
+                "OTP HMAC secret"
+        );
+        rateLimitHmacSecret = requireSecret(
+                rateLimitHmacSecret,
+                "Rate-limit HMAC secret"
+        );
 
-        if (jwtSecret.equals(otpHmacSecret)) {
-            throw new IllegalArgumentException(
-                    "JWT secret and OTP HMAC secret must be different"
-            );
-        }
+        requireDistinctSecrets(
+                jwtSecret,
+                otpHmacSecret,
+                rateLimitHmacSecret
+        );
 
         issuer = requireText(issuer, "JWT issuer");
         cookieName = requireText(cookieName, "JWT cookie name");
@@ -47,6 +55,21 @@ public record AuthSecurityProperties(
         if (otpMaxAttempts <= 0) {
             throw new IllegalArgumentException(
                     "OTP maximum attempts must be greater than zero"
+            );
+        }
+    }
+
+    private static void requireDistinctSecrets(
+            String jwtSecret,
+            String otpHmacSecret,
+            String rateLimitHmacSecret
+    ) {
+        if (jwtSecret.equals(otpHmacSecret)
+                || jwtSecret.equals(rateLimitHmacSecret)
+                || otpHmacSecret.equals(rateLimitHmacSecret)) {
+            throw new IllegalArgumentException(
+                    "JWT, OTP HMAC, and rate-limit HMAC secrets "
+                            + "must be different"
             );
         }
     }

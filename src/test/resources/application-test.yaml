@@ -15,3 +15,4 @@ app:
     otp-hmac-secret: test-only-otp-secret-at-least-32-bytes-bbbb
     base-url: http://localhost:8080
     mail-from: test-only@example.invalid
+    rate-limit-hmac-secret: test-only-rate-limit-secret-at-least-32-cccc

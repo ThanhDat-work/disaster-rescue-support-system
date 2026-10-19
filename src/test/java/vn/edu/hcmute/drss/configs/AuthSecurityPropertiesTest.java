@@ -15,11 +15,15 @@ class AuthSecurityPropertiesTest {
     private static final String VALID_OTP_SECRET =
             "otp-secret-for-tests-abcdefghij1234567890";
 
+    private static final String VALID_RATE_LIMIT_SECRET =
+            "rate-limit-secret-for-tests-abcdefgh1234567890";
+
     @Test
     void acceptsValidSecurityConfiguration() {
         AuthSecurityProperties properties = createProperties(
                 VALID_JWT_SECRET,
                 VALID_OTP_SECRET,
+                VALID_RATE_LIMIT_SECRET,
                 Duration.ofMinutes(30),
                 Duration.ofMinutes(5),
                 5,
@@ -34,6 +38,8 @@ class AuthSecurityPropertiesTest {
         assertThat(properties.otpTtl())
                 .isEqualTo(Duration.ofMinutes(5));
         assertThat(properties.otpMaxAttempts()).isEqualTo(5);
+        assertThat(properties.rateLimitHmacSecret())
+                .isEqualTo(VALID_RATE_LIMIT_SECRET);
     }
 
     @Test
@@ -41,6 +47,7 @@ class AuthSecurityPropertiesTest {
         assertThatThrownBy(() -> createProperties(
                 "too-short",
                 VALID_OTP_SECRET,
+                VALID_RATE_LIMIT_SECRET,
                 Duration.ofMinutes(30),
                 Duration.ofMinutes(5),
                 5,
@@ -56,6 +63,7 @@ class AuthSecurityPropertiesTest {
         assertThatThrownBy(() -> createProperties(
                 VALID_JWT_SECRET,
                 VALID_JWT_SECRET,
+                VALID_RATE_LIMIT_SECRET,
                 Duration.ofMinutes(30),
                 Duration.ofMinutes(5),
                 5,
@@ -70,6 +78,7 @@ class AuthSecurityPropertiesTest {
         assertThatThrownBy(() -> createProperties(
                 VALID_JWT_SECRET,
                 VALID_OTP_SECRET,
+                VALID_RATE_LIMIT_SECRET,
                 Duration.ZERO,
                 Duration.ofMinutes(5),
                 5,
@@ -84,6 +93,7 @@ class AuthSecurityPropertiesTest {
         assertThatThrownBy(() -> createProperties(
                 VALID_JWT_SECRET,
                 VALID_OTP_SECRET,
+                VALID_RATE_LIMIT_SECRET,
                 Duration.ofMinutes(30),
                 Duration.ofMinutes(5),
                 0,
@@ -98,6 +108,7 @@ class AuthSecurityPropertiesTest {
         assertThatThrownBy(() -> createProperties(
                 VALID_JWT_SECRET,
                 VALID_OTP_SECRET,
+                VALID_RATE_LIMIT_SECRET,
                 Duration.ofMinutes(30),
                 Duration.ofMinutes(5),
                 5,
@@ -107,9 +118,41 @@ class AuthSecurityPropertiesTest {
                 .hasMessageContaining("HTTP or HTTPS");
     }
 
+    @Test
+    void rejectsShortRateLimitSecret() {
+        assertThatThrownBy(() -> createProperties(
+                VALID_JWT_SECRET,
+                VALID_OTP_SECRET,
+                "too-short",
+                Duration.ofMinutes(30),
+                Duration.ofMinutes(5),
+                5,
+                "http://localhost:8080"
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Rate-limit HMAC secret")
+                .hasMessageContaining("32");
+    }
+
+    @Test
+    void rejectsReusingOtpSecretForRateLimiting() {
+        assertThatThrownBy(() -> createProperties(
+                VALID_JWT_SECRET,
+                VALID_OTP_SECRET,
+                VALID_OTP_SECRET,
+                Duration.ofMinutes(30),
+                Duration.ofMinutes(5),
+                5,
+                "http://localhost:8080"
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must be different");
+    }
+
     private AuthSecurityProperties createProperties(
             String jwtSecret,
             String otpHmacSecret,
+            String rateLimitHmacSecret,
             Duration accessTokenTtl,
             Duration otpTtl,
             int otpMaxAttempts,
@@ -118,6 +161,7 @@ class AuthSecurityPropertiesTest {
         return new AuthSecurityProperties(
                 jwtSecret,
                 otpHmacSecret,
+                rateLimitHmacSecret,
                 "drss",
                 accessTokenTtl,
                 "DRSS_ACCESS_TOKEN",

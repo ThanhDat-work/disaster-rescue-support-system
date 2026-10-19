@@ -2,7 +2,7 @@
 
 - **Status:** Approved
 - **Approved date:** 2026-10-18
-- **Last clarified:** 2026-10-19 — Password reset grant sử dụng `HttpSession`.
+- **Last clarified:** 2026-10-19 — Password reset grant sử dụng `HttpSession`; rate-limit subject key sử dụng secret HMAC riêng.
 - **Task:** T2-01
 - **GitHub issue:** #4
 - **Baseline commit:** `4922092`
@@ -435,6 +435,10 @@ Quy tắc:
 - Subject key được tạo từ dữ liệu chuẩn hóa và HMAC.
 - Không ghi email, IP đầy đủ hoặc secret vào log cảnh báo.
 - Rate limit phải có test cho ngưỡng, thời gian khóa, tăng mức phạt và reset sau thành công.
+- `subject_key` được tạo bằng HMAC-SHA256 với `RATE_LIMIT_HMAC_SECRET`.
+- `RATE_LIMIT_HMAC_SECRET` không được dùng chung với JWT hoặc OTP.
+- Chuỗi đầu vào HMAC phải có version và domain separation, bao gồm action, scope và subject đã chuẩn hóa.
+- Giá trị lưu trong database là chuỗi hexadecimal 64 ký tự; email và IP rõ không được lưu trong `auth_rate_limits`.
 
 ## 14. Chống dò tìm tài khoản
 
@@ -534,6 +538,7 @@ Các secret bắt buộc:
 - `MAIL_FROM`
 - `JWT_SECRET`
 - `OTP_HMAC_SECRET`
+- `RATE_LIMIT_HMAC_SECRET`
 
 Cấu hình môi trường:
 
@@ -541,7 +546,7 @@ Cấu hình môi trường:
 
 Quy tắc:
 
-- `JWT_SECRET` và `OTP_HMAC_SECRET` phải khác nhau.
+- `JWT_SECRET`, `OTP_HMAC_SECRET` và `RATE_LIMIT_HMAC_SECRET` phải khác nhau từng đôi một.
 - Secret phải có tối thiểu 32 byte ngẫu nhiên.
 - Không có secret mặc định trong profile chạy thật.
 - Ứng dụng phải fail fast nếu thiếu secret bắt buộc ở môi trường không phải test.

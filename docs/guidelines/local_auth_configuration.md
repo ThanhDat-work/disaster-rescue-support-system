@@ -14,6 +14,8 @@ JWT, OTP và Gmail của DRSS mà không đưa secret vào Git.
 - Hai secret JWT và OTP phải khác nhau và có ít nhất 32 byte.
 - Không sử dụng mật khẩu đăng nhập Gmail làm SMTP password.
 - Môi trường triển khai phải dùng nơi lưu secret của nền tảng hosting.
+- Mỗi thành viên tự tạo JWT secret, OTP HMAC secret và rate-limit HMAC secret riêng.
+- Ba secret phải khác nhau từng đôi một và có ít nhất 32 byte.
 
 ## Thiết lập lần đầu
 
@@ -40,6 +42,7 @@ Chạy trong PowerShell:
 
     $jwtSecret = New-DrssSecret
     $otpSecret = New-DrssSecret
+    $rateLimitSecret = New-DrssSecret
 
 Không đưa kết quả của hai biến này vào Git hoặc nội dung bàn giao.
 
@@ -73,8 +76,9 @@ Chỉ kiểm tra biến đã tồn tại, không in giá trị:
         'MAIL_FROM',
         'JWT_SECRET',
         'OTP_HMAC_SECRET',
+        'RATE_LIMIT_HMAC_SECRET',
         'APP_BASE_URL',
-        'AUTH_COOKIE_SECURE'
+        'AUTH_COOKIE_SECURE',
     )
 
     foreach ($name in $requiredVariables) {

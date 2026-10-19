@@ -45,6 +45,7 @@ app:
   auth:
     jwt-secret: ${JWT_SECRET}
     otp-hmac-secret: ${OTP_HMAC_SECRET}
+    rate-limit-hmac-secret: ${RATE_LIMIT_HMAC_SECRET}
     issuer: drss
     access-token-ttl: 30m
     cookie-name: DRSS_ACCESS_TOKEN
