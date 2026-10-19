@@ -51,6 +51,8 @@ Tài liệu này làm rõ chi tiết triển khai nhưng không thay đổi mụ
 - Mật khẩu, OTP, JWT và secret không được ghi vào log.
 - Không sửa `V1__Init_Schema.sql` hoặc `V2__Insert_Seed_Data.sql`.
 - Mọi thay đổi database của T2-01 phải nằm trong migration `V3`.
+- Các trường persistence dùng `LocalDateTime` phải lấy thời gian theo cùng múi giờ JVM với Hibernate `@CreationTimestamp`.
+- JWT tiếp tục dùng `Instant`; thay đổi múi giờ của bean `Clock` không thay đổi thời điểm tuyệt đối của `iat` hoặc `exp`.
 
 ## 4. Đăng ký tài khoản
 
@@ -182,7 +184,7 @@ Quy trình:
 6. Lấy các role chưa bị thu hồi.
 7. Phát hành JWT.
 8. Ghi JWT vào HttpOnly cookie.
-9. Điều hướng về trang phù hợp với role.
+9. Điều hướng về trang chủ `/` theo mục 8.2.
 
 ### 8.1 Phản hồi đăng nhập
 
@@ -515,22 +517,10 @@ Ngoại lệ:
 
 ### 16.3 Điều hướng sau đăng nhập
 
-Nếu user có nhiều role, thứ tự ưu tiên điều hướng là:
-
-1. `ROLE_ADMIN`
-2. `ROLE_COORDINATOR`
-3. `ROLE_RESCUER`
-4. `ROLE_CITIZEN`
-
-Thiếu authentication:
-
-- Trang web chuyển về `/auth/login`.
-- API trả `401` nếu được bổ sung trong phạm vi sau.
-
-Đã đăng nhập nhưng thiếu quyền:
-
-- Trả `403`.
-- Giao diện web hiển thị trang lỗi phù hợp.
+- T2-01 điều hướng mọi đăng nhập thành công về trang chủ công khai `/` theo mục 8.2.
+- Thứ tự ưu tiên landing page theo role chưa được triển khai trong T2-01.
+- Khi các trang nghiệp vụ hoàn thiện, nhóm có thể bổ sung saved-request hoặc landing page theo role bằng một task riêng mà không thay đổi service đăng nhập.
+- Nếu bổ sung landing page theo role, thứ tự dự kiến là `ROLE_ADMIN`, `ROLE_COORDINATOR`, `ROLE_RESCUER`, rồi `ROLE_CITIZEN`.
 
 ## 17. Gmail
 

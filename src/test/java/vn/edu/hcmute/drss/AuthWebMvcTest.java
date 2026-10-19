@@ -363,6 +363,19 @@ class AuthWebMvcTest {
                 ));
     }
 
+    @Test
+    void missingResetSessionCannotOpenNewPasswordPage()
+            throws Exception {
+        mockMvc.perform(get("/auth/reset-password/new"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl(
+                        "/auth/forgot-password"
+                ))
+                .andExpect(flash().attributeExists("errorMsg"));
+
+        verify(resetService, never()).isGrantValid(any());
+    }
+
     private MockHttpSession startResetFlow() throws Exception {
         when(resetService.requestReset(EMAIL, IP))
                 .thenReturn(PasswordResetRequestResult.accepted());

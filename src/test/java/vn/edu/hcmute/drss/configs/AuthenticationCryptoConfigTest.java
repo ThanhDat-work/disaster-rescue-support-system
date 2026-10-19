@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -118,6 +119,26 @@ class AuthenticationCryptoConfigTest {
     }
 
     @Test
+    void jwtDecoderRejectsExpiredToken() {
+        Instant issuedAt = clock.instant()
+                .minusSeconds(600)
+                .truncatedTo(ChronoUnit.SECONDS);
+
+        Jwt encoded = jwtEncoder.encode(
+                JwtEncoderParameters.from(
+                        JwsHeader.with(MacAlgorithm.HS256)
+                                .type("JWT")
+                                .build(),
+                        createClaims("drss", issuedAt)
+                )
+        );
+
+        assertThatThrownBy(() ->
+                jwtDecoder.decode(encoded.getTokenValue())
+        ).isInstanceOf(JwtValidationException.class);
+    }
+
+    @Test
     void jwtDecoderRejectsTamperedSignature() {
         Instant issuedAt = clock.instant()
                 .truncatedTo(ChronoUnit.SECONDS);
@@ -149,6 +170,11 @@ class AuthenticationCryptoConfigTest {
         assertThatThrownBy(() ->
                 jwtDecoder.decode(tamperedToken)
         ).isInstanceOf(JwtException.class);
+    }
+
+    @Test
+    void applicationClockMatchesJvmZoneForLocalDateTimePersistence() {
+        assertThat(clock.getZone()).isEqualTo(ZoneId.systemDefault());
     }
 
     private JwtClaimsSet createClaims(
