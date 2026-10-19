@@ -29,6 +29,7 @@ import vn.edu.hcmute.drss.repositories.UserRepository;
 import vn.edu.hcmute.drss.repositories.UserRoleRepository;
 import vn.edu.hcmute.drss.repositories.VerificationTokenRepository;
 import vn.edu.hcmute.drss.services.GmailOtpEmailService;
+import vn.edu.hcmute.drss.exceptions.OtpMailDeliveryException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,6 +40,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -67,6 +71,8 @@ class AuthenticationFlowIntegrationIT {
     private static final String SECOND_IP = "203.0.113.82";
     private static final String COOKIE_NAME =
             "DRSS_ACCESS_TOKEN";
+    private static final String GENERIC_REGISTRATION_MESSAGE =
+            "Nếu thông tin hợp lệ, mã kích hoạt đã được gửi tới email của bạn.";
 
     @Autowired
     private MockMvc mockMvc;
@@ -92,7 +98,7 @@ class AuthenticationFlowIntegrationIT {
     @BeforeEach
     void setUp() {
         cleanIntegrationData();
-        clearInvocations(emailService);
+        reset(emailService);
     }
 
     @AfterEach
@@ -349,6 +355,63 @@ class AuthenticationFlowIntegrationIT {
                 ));
 
         verifyNoInteractions(emailService);
+    }
+
+    @Test
+    void registrationMailFailureKeepsPersistenceAndGenericResponse()
+            throws Exception {
+        doThrow(new OtpMailDeliveryException(
+                new IllegalStateException("test-only mail failure")
+        )).when(emailService).sendOtp(
+                eq(FLOW_EMAIL),
+                eq(VerificationTokenPurpose.ACCOUNT_ACTIVATION),
+                anyString()
+        );
+
+        mockMvc.perform(post("/auth/register")
+                        .with(csrf())
+                        .with(request -> {
+                            request.setRemoteAddr(FLOW_IP);
+                            return request;
+                        })
+                        .param("fullName", "T2-01 Mail Failure Citizen")
+                        .param("email", FLOW_EMAIL)
+                        .param("phoneNumber", "0901234567")
+                        .param("password", ORIGINAL_PASSWORD)
+                        .param("confirmPassword", ORIGINAL_PASSWORD))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/auth/verify-otp"))
+                .andExpect(flash().attribute(
+                        "successMsg",
+                        GENERIC_REGISTRATION_MESSAGE
+                ));
+
+        User user = userRepository
+                .findByEmailIgnoreCase(FLOW_EMAIL)
+                .orElseThrow();
+
+        assertThat(user.getStatus()).isEqualTo("INACTIVE");
+        assertThat(passwordEncoder.matches(
+                ORIGINAL_PASSWORD,
+                user.getPasswordHash()
+        )).isTrue();
+
+        assertThat(userRoleRepository
+                .findAllByUserAndRevokedAtIsNull(user))
+                .extracting(userRole ->
+                        userRole.getRole().getRoleName()
+                )
+                .containsExactly("ROLE_CITIZEN");
+
+        VerificationToken token = tokenRepository
+                .findFirstByUserAndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(
+                        user,
+                        VerificationTokenPurpose.ACCOUNT_ACTIVATION
+                )
+                .orElseThrow();
+
+        assertThat(token.getTokenDigest()).hasSize(64);
+        assertThat(token.getConsumedAt()).isNull();
     }
 
     private String registerAndCaptureActivationOtp()

@@ -32,6 +32,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -55,6 +56,8 @@ class AuthWebMvcTest {
 
     private static final String EMAIL = "citizen@example.com";
     private static final String IP = "203.0.113.30";
+    private static final String GENERIC_REGISTRATION_MESSAGE =
+            "Nếu thông tin hợp lệ, mã kích hoạt đã được gửi tới email của bạn.";
     private static final UUID TOKEN_ID = UUID.fromString(
             "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
     );
@@ -107,15 +110,20 @@ class AuthWebMvcTest {
 
     @Test
     void invalidRegistrationNeverCallsService() throws Exception {
+        String password = "Do not echo password 987654";
+        String confirmation = "Do not echo confirmation 123456";
+
         mockMvc.perform(post("/auth/register")
                         .with(csrf())
                         .param("fullName", "")
                         .param("email", "invalid")
                         .param("phoneNumber", "1")
-                        .param("password", "short")
-                        .param("confirmPassword", "different"))
+                        .param("password", password)
+                        .param("confirmPassword", confirmation))
                 .andExpect(status().isOk())
-                .andExpect(model().attributeHasErrors("registrationRequest"));
+                .andExpect(model().attributeHasErrors("registrationRequest"))
+                .andExpect(content().string(not(containsString(password))))
+                .andExpect(content().string(not(containsString(confirmation))));
 
         verify(registrationService, never())
                 .register(any(RegistrationRequest.class), anyString());
@@ -141,7 +149,37 @@ class AuthWebMvcTest {
                         .param("confirmPassword", "secure password 123"))
                 .andExpect(status().isFound())
                 .andExpect(redirectedUrl("/auth/verify-otp"))
-                .andExpect(flash().attributeExists("successMsg"));
+                .andExpect(flash().attribute(
+                        "successMsg",
+                        GENERIC_REGISTRATION_MESSAGE
+                ));
+    }
+
+    @Test
+    void registrationMailFailureUsesSameGenericResponse()
+            throws Exception {
+        when(registrationService.register(
+                any(RegistrationRequest.class),
+                anyString()
+        )).thenReturn(RegistrationResult.emailDeliveryFailed());
+
+        mockMvc.perform(post("/auth/register")
+                        .with(csrf())
+                        .with(request -> {
+                            request.setRemoteAddr(IP);
+                            return request;
+                        })
+                        .param("fullName", "Citizen Test")
+                        .param("email", EMAIL)
+                        .param("phoneNumber", "0901234567")
+                        .param("password", "secure password 123")
+                        .param("confirmPassword", "secure password 123"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/auth/verify-otp"))
+                .andExpect(flash().attribute(
+                        "successMsg",
+                        GENERIC_REGISTRATION_MESSAGE
+                ));
     }
 
     @Test
@@ -199,6 +237,8 @@ class AuthWebMvcTest {
 
     @Test
     void invalidLoginUsesGenericMessage() throws Exception {
+        String submittedPassword = "Do not echo login password 123";
+
         when(loginService.login(
                 any(LoginRequest.class),
                 anyString()
@@ -207,11 +247,14 @@ class AuthWebMvcTest {
         mockMvc.perform(post("/auth/login")
                         .with(csrf())
                         .param("email", EMAIL)
-                        .param("password", "wrong password 123"))
+                        .param("password", submittedPassword))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(
                         "Email hoặc mật khẩu không đúng."
-                )));
+                )))
+                .andExpect(content().string(not(containsString(
+                        submittedPassword
+                ))));
     }
 
     @Test

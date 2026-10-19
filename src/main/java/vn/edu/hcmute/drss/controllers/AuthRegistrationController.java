@@ -28,6 +28,8 @@ import vn.edu.hcmute.drss.services.RegistrationResult;
 @RequestMapping("/auth")
 public class AuthRegistrationController {
 
+    private static final String GENERIC_REGISTRATION_MESSAGE =
+            "Nếu thông tin hợp lệ, mã kích hoạt đã được gửi tới email của bạn.";
     private final AccountRegistrationService registrationService;
     private final AccountActivationService activationService;
     private final OtpResendService resendService;
@@ -80,17 +82,10 @@ public class AuthRegistrationController {
         );
 
         return switch (result.status()) {
-            case ACCEPTED -> {
+            case ACCEPTED, EMAIL_DELIVERY_FAILED -> {
                 redirectAttributes.addFlashAttribute(
                         "successMsg",
-                        "Nếu thông tin hợp lệ, mã kích hoạt đã được gửi tới email của bạn."
-                );
-                yield "redirect:/auth/verify-otp";
-            }
-            case EMAIL_DELIVERY_FAILED -> {
-                redirectAttributes.addFlashAttribute(
-                        "errorMsg",
-                        "Thông tin đã được ghi nhận nhưng chưa thể gửi email. Vui lòng thử gửi lại OTP."
+                        GENERIC_REGISTRATION_MESSAGE
                 );
                 yield "redirect:/auth/verify-otp";
             }

@@ -150,6 +150,7 @@ OTP của purpose này không được sử dụng cho purpose khác.
 - Tài khoản vẫn giữ trạng thái `INACTIVE`.
 - Người dùng có thể yêu cầu gửi lại OTP sau cooldown.
 - Không ghi OTP hoặc Gmail App Password vào log lỗi.
+- Phản hồi bên ngoài phải giống trường hợp đăng ký được tiếp nhận bình thường; không hiển thị trạng thái gửi Gmail để tránh bị lợi dụng dò tìm tài khoản.
 
 ## 7. Kích hoạt tài khoản
 
