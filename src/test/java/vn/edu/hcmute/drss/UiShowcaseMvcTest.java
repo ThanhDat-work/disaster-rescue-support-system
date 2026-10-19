@@ -18,9 +18,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import vn.edu.hcmute.drss.support.NoDatabaseRepositoryMocks;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles({"test", "dev"})
+@NoDatabaseRepositoryMocks
 class UiShowcaseMvcTest {
     @Autowired
     private MockMvc mockMvc;

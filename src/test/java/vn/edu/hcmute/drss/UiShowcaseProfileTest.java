@@ -8,8 +8,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 
+import vn.edu.hcmute.drss.support.NoDatabaseRepositoryMocks;
+
 @SpringBootTest
 @ActiveProfiles("test")
+@NoDatabaseRepositoryMocks
 class UiShowcaseProfileTest {
     @Autowired
     private ApplicationContext applicationContext;
