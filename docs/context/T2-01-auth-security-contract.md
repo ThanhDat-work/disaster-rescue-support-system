@@ -491,6 +491,9 @@ Ngoại lệ:
 - CSRF token được quản lý bằng session.
 - Session chỉ phục vụ CSRF và trạng thái tạm của luồng reset; authentication chính vẫn sử dụng JWT cookie.
 - Request thiếu hoặc sai CSRF token trả `403`.
+- Authentication sử dụng `SessionCreationPolicy.STATELESS`; `SecurityContext` không được lưu trong `HttpSession`.
+- `STATELESS` chỉ áp dụng cho authentication. `HttpSession` vẫn được sử dụng riêng cho `HttpSessionCsrfTokenRepository` và password-reset grant.
+- Cấu hình này tránh việc JWT authentication được dựng lại trên mỗi request làm kích hoạt lại session-authentication strategy và vô hiệu CSRF token vừa render.
 
 ## 16. RBAC
 

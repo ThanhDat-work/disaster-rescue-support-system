@@ -42,12 +42,13 @@ public class ApplicationSecurityConfig {
 
         return http
                 /*
-                 * Authentication không được lưu vào HttpSession.
-                 * Mỗi request phải được xác thực lại từ JWT cookie.
-                 *
-                 * HttpSession vẫn có thể được dùng bởi CSRF và
-                 * password-reset grant.
-                 */
+                * Authentication hoàn toàn dựa trên JWT và được dựng lại
+                * ở từng request, không lưu SecurityContext trong HttpSession.
+                *
+                * STATELESS chỉ áp dụng cho trạng thái authentication.
+                * HttpSession vẫn được HttpSessionCsrfTokenRepository và
+                * password-reset grant sử dụng độc lập.
+                */
                 .securityContext(securityContext ->
                         securityContext.securityContextRepository(
                                 new NullSecurityContextRepository()
@@ -55,7 +56,7 @@ public class ApplicationSecurityConfig {
                 )
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
-                                SessionCreationPolicy.IF_REQUIRED
+                                SessionCreationPolicy.STATELESS
                         )
                 )
                 /*

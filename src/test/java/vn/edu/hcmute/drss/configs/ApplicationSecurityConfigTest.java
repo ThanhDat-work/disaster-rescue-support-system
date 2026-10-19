@@ -13,6 +13,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -26,9 +28,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -49,6 +54,10 @@ class ApplicationSecurityConfigTest {
 
     private static final String COOKIE_NAME =
             "DRSS_ACCESS_TOKEN";
+    private static final Pattern CSRF_INPUT_PATTERN =
+        Pattern.compile(
+                "name=\"_csrf\"[^>]*value=\"([^\"]+)\""
+        );
 
     @Autowired
     private MockMvc mockMvc;
@@ -257,6 +266,61 @@ class ApplicationSecurityConfigTest {
                 .andExpect(header().string(
                         HttpHeaders.SET_COOKIE,
                         containsString("SameSite=Lax")
+                ));
+    }
+
+    @Test
+    void jwtAuthenticatedPageKeepsRenderedCsrfValidForLogout()
+            throws Exception {
+        String token = "citizen-browser-token";
+
+        allowToken(token, "ROLE_CITIZEN");
+
+        jakarta.servlet.http.Cookie jwtCookie =
+                new jakarta.servlet.http.Cookie(
+                        COOKIE_NAME,
+                        token
+                );
+
+        MvcResult homeResult = mockMvc.perform(
+                        get("/")
+                                .cookie(jwtCookie)
+                )
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        containsString("Đăng xuất")
+                ))
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession)
+                homeResult.getRequest().getSession(false);
+
+        assertThat(session).isNotNull();
+
+        Matcher csrfMatcher = CSRF_INPUT_PATTERN.matcher(
+                homeResult.getResponse().getContentAsString()
+        );
+
+        assertThat(csrfMatcher.find()).isTrue();
+
+        String renderedCsrfToken = csrfMatcher.group(1);
+
+        mockMvc.perform(
+                        post("/auth/logout")
+                                .session(session)
+                                .cookie(jwtCookie)
+                                .param(
+                                        "_csrf",
+                                        renderedCsrfToken
+                                )
+                )
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl(
+                        "/auth/login?logout"
+                ))
+                .andExpect(header().string(
+                        HttpHeaders.SET_COOKIE,
+                        containsString("Max-Age=0")
                 ));
     }
 
