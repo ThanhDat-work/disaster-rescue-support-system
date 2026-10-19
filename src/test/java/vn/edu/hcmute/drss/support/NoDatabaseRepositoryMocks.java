@@ -2,6 +2,9 @@ package vn.edu.hcmute.drss.support;
 
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import vn.edu.hcmute.drss.repositories.AuthRateLimitRepository;
+import vn.edu.hcmute.drss.repositories.RoleRepository;
+import vn.edu.hcmute.drss.repositories.UserRepository;
+import vn.edu.hcmute.drss.repositories.UserRoleRepository;
 import vn.edu.hcmute.drss.repositories.VerificationTokenRepository;
 
 import java.lang.annotation.Documented;
@@ -15,7 +18,10 @@ import java.lang.annotation.Target;
 @Documented
 @MockitoBean(types = {
         VerificationTokenRepository.class,
-        AuthRateLimitRepository.class
+        AuthRateLimitRepository.class,
+        UserRepository.class,
+        RoleRepository.class,
+        UserRoleRepository.class
 })
 public @interface NoDatabaseRepositoryMocks {
 }
