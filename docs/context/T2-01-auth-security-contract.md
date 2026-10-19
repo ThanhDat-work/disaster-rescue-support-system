@@ -2,7 +2,7 @@
 
 - **Status:** Approved
 - **Approved date:** 2026-10-18
-- **Last clarified:** 2026-10-19 — Password reset grant sử dụng `HttpSession`; rate-limit subject key sử dụng secret HMAC riêng.
+- **Last clarified:** 2026-10-19 — Password reset grant sử dụng `HttpSession`; rate-limit subject key sử dụng secret HMAC riêng; xác thực thành công chỉ xóa bộ đếm subject riêng, không xóa IP-wide.
 - **Task:** T2-01
 - **GitHub issue:** #4
 - **Baseline commit:** `4922092`
@@ -418,7 +418,7 @@ Quy tắc:
 5. Các mức tiếp theo tăng gấp đôi.
 6. Thời gian khóa tối đa là 24 giờ.
 7. Request gửi trong lúc đang bị khóa bị từ chối nhưng không tiếp tục kéo dài thời gian khóa.
-8. Đăng nhập hoặc xác minh thành công xóa bộ đếm và mức phạt liên quan.
+8. Đăng nhập hoặc xác minh thành công chỉ xóa bộ đếm subject riêng theo mục 13.5; không xóa bộ đếm IP-wide.
 9. Nếu không có thất bại mới trong 24 giờ, mức phạt được đưa về ban đầu.
 
 ### 13.3 Chống khóa tài khoản bởi bên thứ ba
@@ -439,6 +439,15 @@ Quy tắc:
 - `RATE_LIMIT_HMAC_SECRET` không được dùng chung với JWT hoặc OTP.
 - Chuỗi đầu vào HMAC phải có version và domain separation, bao gồm action, scope và subject đã chuẩn hóa.
 - Giá trị lưu trong database là chuỗi hexadecimal 64 ký tự; email và IP rõ không được lưu trong `auth_rate_limits`.
+
+### 13.5 Reset bộ đếm sau xác thực thành công
+
+- Đăng nhập thành công xóa bộ đếm và mức phạt `LOGIN + EMAIL_IP` của đúng email đã chuẩn hóa và IP hiện tại.
+- Đăng nhập thành công không xóa bộ đếm `LOGIN + IP`.
+- Xác minh OTP thành công xử lý hoặc consume token tương ứng nhưng không xóa bộ đếm `VERIFY_ACTIVATION + IP` hoặc `VERIFY_RESET + IP`.
+- Bộ đếm IP-wide được giữ lại để một tài khoản thành công không thể xóa dấu vết tấn công đang diễn ra trên cùng IP.
+- Bộ đếm IP-wide tự được xử lý theo cửa sổ 15 phút, `blocked_until`, hình phạt tăng dần và quy tắc không có thất bại mới trong 24 giờ.
+- Reset rate limit không thay đổi trạng thái nghiệp vụ của user và không tự động chuyển user thành `BANNED`.
 
 ## 14. Chống dò tìm tài khoản
 
