@@ -47,6 +47,6 @@ public class RescueRequest extends BaseEntity {
     private String description;
 
     @Version
-    @Column(nullable = false)
+    @Column(name = "version", nullable = false)
     private Long version = 0L; // Khóa lạc quan (Optimistic Lock)
 }

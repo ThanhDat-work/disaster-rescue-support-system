@@ -2,7 +2,7 @@
 # The real local-env.ps1 file is ignored by Git.
 # Never commit or share the real values below.
 
-$env:DB_URL = 'jdbc:mysql://127.0.0.1:3306/ten_database_dev'
+$env:DB_URL = 'jdbc:mysql://127.0.0.1:3306/drss_t2_04_duy'
 $env:DB_USERNAME = 'root'
 $env:DB_PASSWORD = 'mat_khau_mysql_thuc_te'
 

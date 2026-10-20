@@ -41,6 +41,6 @@ public class RescueAssignment extends BaseEntity {
     private String notes;
 
     @Version
-    @Column(nullable = false)
+    @Column(name = "version", nullable = false)
     private Long version = 0L;
 }
