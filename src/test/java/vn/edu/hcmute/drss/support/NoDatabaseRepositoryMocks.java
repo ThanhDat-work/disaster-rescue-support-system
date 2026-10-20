@@ -3,6 +3,7 @@ package vn.edu.hcmute.drss.support;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import vn.edu.hcmute.drss.repositories.AuthRateLimitRepository;
 import vn.edu.hcmute.drss.repositories.RescueAssignmentRepository;
+import vn.edu.hcmute.drss.repositories.RescueRequestRepository;
 import vn.edu.hcmute.drss.repositories.RescueTeamMemberRepository;
 import vn.edu.hcmute.drss.repositories.RoleRepository;
 import vn.edu.hcmute.drss.repositories.StatusHistoryRepository;
@@ -26,6 +27,7 @@ import java.lang.annotation.Target;
         RoleRepository.class,
         UserRoleRepository.class,
         RescueAssignmentRepository.class,
+        RescueRequestRepository.class,
         RescueTeamMemberRepository.class,
         StatusHistoryRepository.class
 })
