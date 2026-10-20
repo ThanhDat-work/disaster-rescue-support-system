@@ -1,0 +1,164 @@
+<!doctype html>
+<html
+  lang="vi"
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layouts/main-layout :: layout(
+    'Nhiệm vụ cứu hộ',
+    ~{::section}
+  )}"
+>
+  <section class="showcase-stack">
+    <header class="page-heading">
+      <p class="page-eyebrow">Đội cứu hộ · DRSS</p>
+      <h1>Nhiệm vụ được giao</h1>
+      <p class="page-subtitle">
+        Theo dõi các yêu cầu đã được điều phối cho đội của bạn.
+      </p>
+    </header>
+
+    <section
+      class="card"
+      th:if="${#lists.isEmpty(assignments)}"
+      aria-live="polite"
+    >
+      <div class="card-body text-center py-5">
+        <h2 class="h5">Chưa có nhiệm vụ</h2>
+        <p class="text-secondary mb-0">
+          Hiện tại đội của bạn chưa được phân công yêu cầu cứu hộ nào.
+        </p>
+      </div>
+    </section>
+
+    <section
+      class="card table-card"
+      th:unless="${#lists.isEmpty(assignments)}"
+    >
+      <div
+        class="card-header d-flex align-items-center
+               justify-content-between gap-3"
+      >
+        <div>
+          <h2 class="h5 mb-1">Danh sách phân công</h2>
+          <p class="mb-0 text-secondary">
+            Chọn một nhiệm vụ để xem chi tiết hoặc cập nhật tiến độ.
+          </p>
+        </div>
+
+        <span
+          class="badge text-bg-light"
+          th:text="${#lists.size(assignments) + ' nhiệm vụ'}"
+        >
+          0 nhiệm vụ
+        </span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Mã phân công</th>
+              <th scope="col">Yêu cầu</th>
+              <th scope="col">Đội phụ trách</th>
+              <th scope="col">Độ khẩn cấp</th>
+              <th scope="col">Trạng thái</th>
+              <th scope="col">Thời điểm giao</th>
+              <th scope="col">
+                <span class="visually-hidden">Hành động</span>
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr th:each="assignment : ${assignments}">
+
+
+                <td
+                class="fw-semibold"
+                th:text="${assignment.displayCode}"
+              >
+                ASN-0001
+              </td>
+
+<td>
+                <div
+                  class="fw-semibold"
+                  th:text="${assignment.request.displayCode}"
+                >
+                  REQ-0001
+                </div>
+                <small
+                  class="text-secondary"
+                  th:text="${assignment.request.address}"
+                >
+                  Địa chỉ cứu hộ
+                </small>
+              </td>
+
+ <td>
+  <div
+    class="fw-semibold"
+    th:text="${assignment.team.teamName}"
+  >
+                    Đội cứu hộ
+                </div>
+                <small
+                    class="text-secondary"
+                    th:text="${assignment.team.displayCode}"
+                >
+                    TEAM-001
+                </small>
+                </td>
+
+              <td>
+                <span
+                  class="badge"
+                  th:classappend="${
+                    assignment.request.urgency == 'CRITICAL'
+                      ? ' text-bg-danger'
+                      : assignment.request.urgency == 'HIGH'
+                        ? ' text-bg-warning'
+                        : assignment.request.urgency == 'MEDIUM'
+                          ? ' text-bg-primary'
+                          : ' text-bg-secondary'
+                  }"
+                  th:text="${assignment.request.urgency}"
+                >
+                  HIGH
+                </span>
+              </td>
+
+              <td>
+                <span
+                  th:replace="~{fragments/components
+                    :: status-badge(${assignment.request.status})}"
+                ></span>
+              </td>
+
+              <td
+                th:text="${
+                  #temporals.format(
+                    assignment.assignedAt,
+                    'dd/MM/yyyy HH:mm'
+                  )
+                }"
+              >
+                20/10/2026 10:00
+              </td>
+
+              <td class="text-end">
+                <a
+                  class="btn btn-sm btn-outline-primary"
+                  th:href="@{/team/tasks/{id}(
+                    id=${assignment.id}
+                  )}"
+                >
+                  Xem chi tiết
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+</html>

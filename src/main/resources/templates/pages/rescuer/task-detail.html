@@ -1,0 +1,272 @@
+<!doctype html>
+<html
+  lang="vi"
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layouts/main-layout :: layout(
+    'Chi tiết nhiệm vụ',
+    ~{::section}
+  )}"
+>
+  <section class="showcase-stack">
+    <header
+      class="page-heading d-flex flex-wrap
+             justify-content-between align-items-start gap-3"
+    >
+      <div>
+        <p class="page-eyebrow">Đội cứu hộ · DRSS</p>
+        <h1
+          th:text="${
+            'Nhiệm vụ ' + assignment.displayCode
+          }"
+        >
+          Nhiệm vụ ASN-0001
+        </h1>
+        <p class="page-subtitle">
+          Kiểm tra thông tin trước khi cập nhật tiến độ cứu hộ.
+        </p>
+      </div>
+
+      <a
+        class="btn btn-outline-secondary"
+        th:href="@{/team/tasks}"
+      >
+        Quay lại danh sách
+      </a>
+    </header>
+
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <section class="card h-100">
+          <div class="card-header">
+            <h2 class="h5 mb-0">Thông tin yêu cầu</h2>
+          </div>
+
+          <div class="card-body">
+            <dl class="row mb-0">
+              <dt class="col-sm-4">Mã yêu cầu</dt>
+              <dd
+                class="col-sm-8"
+                th:text="${assignment.request.displayCode}"
+              >
+                REQ-0001
+              </dd>
+
+              <dt class="col-sm-4">Trạng thái</dt>
+              <dd class="col-sm-8">
+                <span
+                  th:replace="~{fragments/components
+                    :: status-badge(${assignment.request.status})}"
+                ></span>
+              </dd>
+
+              <dt class="col-sm-4">Độ khẩn cấp</dt>
+              <dd
+                class="col-sm-8"
+                th:text="${assignment.request.urgency}"
+              >
+                HIGH
+              </dd>
+
+              <dt class="col-sm-4">Địa chỉ</dt>
+              <dd
+                class="col-sm-8"
+                th:text="${assignment.request.address}"
+              >
+                Địa chỉ cứu hộ
+              </dd>
+
+              <dt class="col-sm-4">Mô tả</dt>
+              <dd
+                class="col-sm-8 text-break"
+                th:text="${
+                  #strings.isEmpty(assignment.request.description)
+                    ? 'Không có mô tả.'
+                    : assignment.request.description
+                }"
+              >
+                Nội dung mô tả
+              </dd>
+
+              <dt class="col-sm-4">Thời điểm giao</dt>
+              <dd
+                class="col-sm-8"
+                th:text="${
+                  #temporals.format(
+                    assignment.assignedAt,
+                    'dd/MM/yyyy HH:mm'
+                  )
+                }"
+              >
+                20/10/2026 10:00
+              </dd>
+            </dl>
+          </div>
+        </section>
+      </div>
+
+      <div class="col-lg-5">
+        <section class="card mb-4">
+          <div class="card-header">
+            <h2 class="h5 mb-0">Đội phụ trách</h2>
+          </div>
+
+          <div class="card-body">
+            <p class="mb-1">
+              <strong th:text="${assignment.team.teamName}">
+                Đội cứu hộ
+              </strong>
+            </p>
+
+            <p class="text-secondary mb-1">
+              Đội trưởng:
+              <span th:text="${assignment.team.leaderName}">
+                Nguyễn Văn A
+              </span>
+            </p>
+
+            <p class="text-secondary mb-0">
+              Liên hệ:
+              <span th:text="${assignment.team.contactNumber}">
+                0900000000
+              </span>
+            </p>
+          </div>
+        </section>
+
+        <section
+          class="card"
+          th:if="${
+            assignment.request.status == 'ASSIGNED'
+            and assignment.status == 'ASSIGNED'
+          }"
+        >
+          <div class="card-header">
+            <h2 class="h5 mb-0">Bắt đầu nhiệm vụ</h2>
+          </div>
+
+          <div class="card-body">
+            <form
+              th:action="@{/team/tasks/{id}/start(
+                id=${assignment.id}
+              )}"
+              method="post"
+            >
+              <input
+                type="hidden"
+                th:name="${_csrf.parameterName}"
+                th:value="${_csrf.token}"
+              />
+
+              <div class="mb-3">
+                <label class="form-label" for="startNotes">
+                  Ghi chú ban đầu
+                </label>
+
+                <textarea
+                  class="form-control"
+                  id="startNotes"
+                  name="notes"
+                  rows="3"
+                  maxlength="1000"
+                  placeholder="Thông tin chuẩn bị hoặc tình hình hiện tại"
+                ></textarea>
+              </div>
+
+              <button class="btn btn-primary w-100" type="submit">
+                Bắt đầu cứu hộ
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <section
+          class="card"
+          th:if="${
+            assignment.request.status == 'IN_PROGRESS'
+            and assignment.status == 'ACCEPTED'
+          }"
+        >
+          <div class="card-header">
+            <h2 class="h5 mb-0">Hoàn tất nhiệm vụ</h2>
+          </div>
+
+          <div class="card-body">
+            <form
+              th:action="@{/team/tasks/{id}/complete(
+                id=${assignment.id}
+              )}"
+              method="post"
+            >
+              <input
+                type="hidden"
+                th:name="${_csrf.parameterName}"
+                th:value="${_csrf.token}"
+              />
+
+              <div class="mb-3">
+                <label class="form-label" for="completionNotes">
+                  Kết quả cứu hộ
+                  <span class="text-danger">*</span>
+                </label>
+
+                <textarea
+                  class="form-control"
+                  id="completionNotes"
+                  name="notes"
+                  rows="4"
+                  maxlength="1000"
+                  required
+                  aria-describedby="completionNotesHelp"
+                ></textarea>
+
+                <div
+                  class="form-text"
+                  id="completionNotesHelp"
+                >
+                  Ghi lại kết quả trước khi hoàn tất nhiệm vụ.
+                </div>
+              </div>
+
+              <button class="btn btn-success w-100" type="submit">
+                Xác nhận hoàn tất
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <section
+          class="card"
+          th:if="${
+            assignment.request.status == 'RESCUED'
+            or assignment.status == 'COMPLETED'
+          }"
+        >
+          <div class="card-body">
+            <h2 class="h5">Nhiệm vụ đã hoàn tất</h2>
+
+            <p class="text-secondary mb-2">
+              Yêu cầu đã được chuyển sang trạng thái RESCUED.
+            </p>
+
+            <p
+              class="mb-0"
+              th:if="${assignment.completionTime != null}"
+            >
+              Hoàn tất lúc:
+              <strong
+                th:text="${
+                  #temporals.format(
+                    assignment.completionTime,
+                    'dd/MM/yyyy HH:mm'
+                  )
+                }"
+              >
+                20/10/2026 11:00
+              </strong>
+            </p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+</html>

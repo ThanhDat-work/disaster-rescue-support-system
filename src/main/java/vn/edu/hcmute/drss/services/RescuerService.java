@@ -1,0 +1,215 @@
+package vn.edu.hcmute.drss.services;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import vn.edu.hcmute.drss.entities.RescueAssignment;
+import vn.edu.hcmute.drss.entities.RescueRequest;
+import vn.edu.hcmute.drss.entities.RescueTeamMember;
+import vn.edu.hcmute.drss.entities.StatusHistory;
+import vn.edu.hcmute.drss.repositories.RescueAssignmentRepository;
+import vn.edu.hcmute.drss.repositories.RescueTeamMemberRepository;
+import vn.edu.hcmute.drss.repositories.StatusHistoryRepository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+public class RescuerService {
+
+    private static final String REQUEST_ASSIGNED = "ASSIGNED";
+    private static final String REQUEST_IN_PROGRESS = "IN_PROGRESS";
+    private static final String REQUEST_RESCUED = "RESCUED";
+
+    private static final String ASSIGNMENT_ASSIGNED = "ASSIGNED";
+    private static final String ASSIGNMENT_ACCEPTED = "ACCEPTED";
+    private static final String ASSIGNMENT_COMPLETED = "COMPLETED";
+
+    private final RescueAssignmentRepository assignmentRepository;
+    private final RescueTeamMemberRepository teamMemberRepository;
+    private final StatusHistoryRepository statusHistoryRepository;
+
+    public RescuerService(
+            RescueAssignmentRepository assignmentRepository,
+            RescueTeamMemberRepository teamMemberRepository,
+            StatusHistoryRepository statusHistoryRepository
+    ) {
+        this.assignmentRepository = assignmentRepository;
+        this.teamMemberRepository = teamMemberRepository;
+        this.statusHistoryRepository = statusHistoryRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<RescueAssignment> getAssignmentsForUser(UUID userId) {
+        requireUserId(userId);
+        return assignmentRepository.findAssignmentsByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public RescueAssignment getAssignmentDetail(
+            UUID assignmentId,
+            UUID userId
+    ) {
+        return requireAccessibleAssignment(assignmentId, userId);
+    }
+
+    @Transactional
+    public void startRescue(
+            UUID assignmentId,
+            UUID userId,
+            String notes
+    ) {
+        RescueAssignment assignment =
+                requireAccessibleAssignment(assignmentId, userId);
+
+        RescueTeamMember membership =
+                requireActiveMembership(assignment, userId);
+
+        RescueRequest request = assignment.getRequest();
+
+        if (!REQUEST_ASSIGNED.equals(request.getStatus())
+                || !ASSIGNMENT_ASSIGNED.equals(assignment.getStatus())) {
+            throw new IllegalStateException(
+                    "Chỉ có thể bắt đầu nhiệm vụ đang ở trạng thái ASSIGNED."
+            );
+        }
+
+        request.setStatus(REQUEST_IN_PROGRESS);
+        assignment.setStatus(ASSIGNMENT_ACCEPTED);
+
+        StatusHistory history = createHistory(
+request,
+                membership,
+                REQUEST_ASSIGNED,
+                REQUEST_IN_PROGRESS,
+                normalizeOptionalNotes(
+                        notes,
+                        "Đội cứu hộ bắt đầu thực hiện nhiệm vụ."
+                )
+        );
+
+        assignmentRepository.save(assignment);
+        statusHistoryRepository.save(history);
+    }
+
+    @Transactional
+    public void completeRescue(
+            UUID assignmentId,
+            UUID userId,
+            String notes
+    ) {
+        RescueAssignment assignment =
+                requireAccessibleAssignment(assignmentId, userId);
+
+        RescueTeamMember membership =
+                requireActiveMembership(assignment, userId);
+
+        RescueRequest request = assignment.getRequest();
+        String normalizedNotes = requireCompletionNotes(notes);
+
+        if (!REQUEST_IN_PROGRESS.equals(request.getStatus())
+                || !ASSIGNMENT_ACCEPTED.equals(assignment.getStatus())) {
+            throw new IllegalStateException(
+                    "Chỉ có thể hoàn tất nhiệm vụ đang được thực hiện."
+            );
+        }
+
+        LocalDateTime completedAt = LocalDateTime.now();
+
+        request.setStatus(REQUEST_RESCUED);
+        assignment.setStatus(ASSIGNMENT_COMPLETED);
+        assignment.setCompletionTime(completedAt);
+        assignment.setNotes(normalizedNotes);
+
+        StatusHistory history = createHistory(
+                request,
+                membership,
+                REQUEST_IN_PROGRESS,
+                REQUEST_RESCUED,
+                normalizedNotes
+        );
+
+        assignmentRepository.save(assignment);
+        statusHistoryRepository.save(history);
+    }
+
+    private RescueAssignment requireAccessibleAssignment(
+            UUID assignmentId,
+            UUID userId
+    ) {
+        if (assignmentId == null) {
+            throw new IllegalArgumentException(
+                    "Mã phân công không được để trống."
+            );
+        }
+
+        requireUserId(userId);
+
+        return assignmentRepository.findByIdAndUserId(
+                        assignmentId,
+                        userId
+                )
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Không tìm thấy nhiệm vụ hoặc bạn không có quyền "
+                                + "truy cập nhiệm vụ này."
+                ));
+    }
+
+    private RescueTeamMember requireActiveMembership(
+            RescueAssignment assignment,
+            UUID userId
+    ) {
+        return teamMemberRepository.findActiveMembership(
+                        userId,
+                        assignment.getTeam().getId()
+                )
+                .orElseThrow(() -> new SecurityException(
+                        "Bạn không còn thuộc đội cứu hộ được phân công."
+                ));
+    }
+
+    private StatusHistory createHistory(
+            RescueRequest request,
+RescueTeamMember membership,
+            String oldStatus,
+            String newStatus,
+            String notes
+    ) {
+        StatusHistory history = new StatusHistory();
+        history.setRequest(request);
+        history.setOldStatus(oldStatus);
+        history.setNewStatus(newStatus);
+        history.setChangedByUser(membership.getUser());
+        history.setNotes(notes);
+        return history;
+    }
+
+    private void requireUserId(UUID userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException(
+                    "Người dùng xác thực không hợp lệ."
+            );
+        }
+    }
+
+    private String normalizeOptionalNotes(
+            String notes,
+            String defaultValue
+    ) {
+        if (notes == null || notes.isBlank()) {
+            return defaultValue;
+        }
+
+        return notes.trim();
+    }
+
+    private String requireCompletionNotes(String notes) {
+        if (notes == null || notes.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Ghi chú hoàn tất không được để trống."
+            );
+        }
+
+        return notes.trim();
+    }
+}
