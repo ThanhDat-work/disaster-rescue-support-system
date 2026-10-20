@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main-layout :: layout('Gửi yêu cầu cứu nạn', ~{::section})}">
+<section>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div><p class="text-uppercase small fw-bold text-danger mb-1">Người dân</p><h1 class="h2 mb-1">Gửi yêu cầu cứu nạn</h1><p class="text-secondary mb-0">Thông tin vị trí chính xác giúp đội cứu hộ tiếp cận nhanh hơn.</p></div>
+        <a class="btn btn-outline-secondary" th:href="@{/requests}">Yêu cầu của tôi</a>
+    </div>
+    <form th:action="@{/requests}" th:object="${createCitizenRequest}" method="post" class="card shadow-sm">
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-6"><label class="form-label" for="disasterTypeId">Loại thiên tai</label><select id="disasterTypeId" class="form-select" th:field="*{disasterTypeId}" required><option value="">Chọn loại thiên tai</option><option th:each="type : ${disasterTypes}" th:value="${type.id}" th:text="${type.disasterName}"></option></select><div class="invalid-feedback d-block" th:errors="*{disasterTypeId}"></div></div>
+                <div class="col-md-6"><label class="form-label" for="urgency">Mức độ khẩn cấp</label><select id="urgency" class="form-select" th:field="*{urgency}" required><option value="">Chọn mức độ</option><option value="LOW">Thấp</option><option value="MEDIUM">Trung bình</option><option value="HIGH">Cao</option><option value="CRITICAL">Nguy cấp</option></select><div class="invalid-feedback d-block" th:errors="*{urgency}"></div></div>
+                <div class="col-12"><label class="form-label" for="address">Địa chỉ/vị trí</label><input id="address" class="form-control" th:field="*{address}" maxlength="500"><div class="invalid-feedback d-block" th:errors="*{address}"></div></div>
+                <div class="col-md-6"><label class="form-label" for="latitude">Vĩ độ (nếu biết)</label><input id="latitude" class="form-control" type="number" step="any" min="-90" max="90" th:field="*{latitude}"><div class="invalid-feedback d-block" th:errors="*{latitude}"></div></div>
+                <div class="col-md-6"><label class="form-label" for="longitude">Kinh độ (nếu biết)</label><input id="longitude" class="form-control" type="number" step="any" min="-180" max="180" th:field="*{longitude}"><div class="invalid-feedback d-block" th:errors="*{longitude}"></div></div>
+                <div class="col-12"><label class="form-label" for="description">Mô tả tình huống</label><textarea id="description" class="form-control" rows="4" th:field="*{description}" maxlength="10000" placeholder="Số người cần hỗ trợ, tình trạng hiện tại..."></textarea><div class="invalid-feedback d-block" th:errors="*{description}"></div></div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-4"><button class="btn btn-primary" type="submit">Gửi yêu cầu</button><a class="btn btn-outline-secondary" th:href="@{/requests}">Quay lại</a></div>
+        </div>
+    </form>
+</section>
+</html>

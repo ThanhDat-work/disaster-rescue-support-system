@@ -4,6 +4,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import vn.edu.hcmute.drss.repositories.AuthRateLimitRepository;
 import vn.edu.hcmute.drss.repositories.RescueAssignmentRepository;
 import vn.edu.hcmute.drss.repositories.RescueTeamMemberRepository;
+import vn.edu.hcmute.drss.repositories.RescueRequestRepository;
+import vn.edu.hcmute.drss.repositories.DisasterTypeRepository;
+import vn.edu.hcmute.drss.repositories.MediaAssetRepository;
 import vn.edu.hcmute.drss.repositories.RoleRepository;
 import vn.edu.hcmute.drss.repositories.StatusHistoryRepository;
 import vn.edu.hcmute.drss.repositories.UserRepository;
@@ -27,6 +30,9 @@ import java.lang.annotation.Target;
         UserRoleRepository.class,
         RescueAssignmentRepository.class,
         RescueTeamMemberRepository.class,
+        RescueRequestRepository.class,
+        DisasterTypeRepository.class,
+        MediaAssetRepository.class,
         StatusHistoryRepository.class
 })
 public @interface NoDatabaseRepositoryMocks {
