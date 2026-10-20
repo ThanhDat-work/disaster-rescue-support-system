@@ -1,0 +1,77 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layouts/main-layout :: layout('Kích hoạt tài khoản', ~{::section})}"
+>
+  <section class="auth-page">
+    <div class="auth-card auth-card-compact">
+      <header class="auth-header">
+        <span class="auth-step">02 · Xác minh email</span>
+        <h1>Kích hoạt tài khoản</h1>
+        <p>Nhập email và mã OTP 6 chữ số được gửi tới hộp thư của bạn.</p>
+      </header>
+      <form
+        th:action="@{/auth/verify-otp}"
+        th:object="${activationRequest}"
+        method="post"
+        class="needs-validation auth-form"
+      >
+        <input type="hidden" name="purpose" value="ACCOUNT_ACTIVATION" />
+        <div
+          class="auth-form-error"
+          th:if="${#fields.hasGlobalErrors()}"
+          th:each="error : ${#fields.globalErrors()}"
+          th:text="${error}"
+        >
+          Xác minh thất bại.
+        </div>
+        <div>
+          <label class="form-label" for="email">Email</label>
+          <input
+            class="form-control"
+            th:classappend="${#fields.hasErrors('email')} ? ' is-invalid'"
+            id="email"
+            type="email"
+            th:field="*{email}"
+            maxlength="150"
+            required
+          />
+          <div class="invalid-feedback" th:errors="*{email}">
+            Email không hợp lệ.
+          </div>
+        </div>
+        <div>
+          <label class="form-label" for="otp">Mã OTP</label>
+          <input
+            class="form-control auth-otp"
+            th:classappend="${#fields.hasErrors('otp')} ? ' is-invalid'"
+            id="otp"
+            th:field="*{otp}"
+            inputmode="numeric"
+            pattern="[0-9]{6}"
+            maxlength="6"
+            autocomplete="one-time-code"
+            required
+          />
+          <div class="invalid-feedback" th:errors="*{otp}">
+            OTP không hợp lệ.
+          </div>
+        </div>
+        <div class="auth-actions">
+          <button class="btn btn-primary" type="submit">Kích hoạt</button>
+          <button
+            class="btn btn-outline-secondary"
+            type="submit"
+            formnovalidate
+            th:formaction="@{/auth/resend-otp}"
+          >
+            Gửi lại OTP
+          </button>
+        </div>
+      </form>
+      <p class="auth-switch">
+        <a th:href="@{/auth/login}">Quay lại đăng nhập</a>
+      </p>
+    </div>
+  </section>
+</html>

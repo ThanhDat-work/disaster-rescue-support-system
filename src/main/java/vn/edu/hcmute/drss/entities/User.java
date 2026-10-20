@@ -33,4 +33,7 @@ public class User extends BaseEntity {
 
     @Column(nullable = false, length = 32)
     private String status; // Sẽ dùng Validation kiểm tra: ACTIVE, INACTIVE, BANNED
+
+    @Column(name = "auth_version", nullable = false)
+    private int authVersion;
 }

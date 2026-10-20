@@ -37,3 +37,6 @@ build/
 .env
 .env.*
 !.env.example
+
+# Local DRSS environment configuration containing secrets
+scripts/local-env.ps1
