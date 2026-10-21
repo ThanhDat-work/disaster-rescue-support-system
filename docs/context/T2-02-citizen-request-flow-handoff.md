@@ -1,51 +1,170 @@
-# T2-02 — Bàn giao luồng yêu cầu cứu nạn của người dân
+# T2-02 - Citizen Rescue Request Flow Handoff
 
-- Cập nhật: 2026-10-21
-- Nhánh: `feat/t2-02-citizen-request-flow`
-- Trạng thái: đã hoàn tất kiểm tra local theo xác nhận của người thực hiện; 
+- **Status:** Ready for review
+- **Updated:** 2026-10-21
+- **Task:** T2-02
+- **Branch:** `feat/t2-02-citizen-request-flow`
+- **Code merge commit:** `ab5e48106ae0088e241dd701e5d51b926ba6ee40`
+- **Merged main baseline:** `f2c7462d35f3eb84af01b7e7c0833549d2ada0b1`
+- **Contract:** `docs/context/T2-02-citizen-request-flow-contract.md`
 
-## Contract đã triển khai
+## 1. Delivered Scope
 
-- Các route: `GET /requests`, `GET /requests/new`, `POST /requests`, `GET /requests/{requestId}`, `POST /requests/{requestId}/cancel`.
-- Tất cả route tiếp tục nằm dưới matcher `/requests/**` hiện có, yêu cầu quyền `ROLE_CITIZEN`. Không thay đổi cấu hình authentication chain. Form làm thay đổi dữ liệu dùng POST và CSRF của Spring Security.
-- `CreateCitizenRequest` chỉ nhận loại thiên tai, mức khẩn cấp, địa chỉ, tọa độ và mô tả. DTO không nhận owner, trạng thái hoặc mã hiển thị.
-- `CitizenRequestController` lấy UUID chủ sở hữu từ `AuthenticatedUserPrincipal`; `CitizenRequestService` dùng UUID này khi tạo yêu cầu, kiểm tra quyền sở hữu và truy vấn danh sách có phân trang.
-- Service đặt trạng thái yêu cầu mới là `PENDING` và sinh mã `REQ-` gồm 16 ký tự thập lục phân ngẫu nhiên. Ràng buộc duy nhất trong database là lớp bảo vệ cuối cùng khi mã bị trùng.
-- Danh sách người dân sắp xếp theo `createdAt DESC, id DESC`, kích thước trang cố định là 10. Số trang âm được xem là trang 0; số trang vượt quá phạm vi được đưa về trang cuối. Repository lọc dữ liệu theo chủ sở hữu đã xác thực.
-- Chi tiết, lịch sử và media chưa bị xóa chỉ được tải sau khi xác minh quyền sở hữu. Yêu cầu không tồn tại và yêu cầu thuộc người khác trả cùng một thông báo không tìm thấy.
-- Yêu cầu mới không có dòng lịch sử trạng thái giả. Lịch sử chỉ ghi các lần chuyển trạng thái thực tế, phù hợp với state machine và dữ liệu seed hiện có.
-- Người dân được hủy yêu cầu ở trạng thái `PENDING` hoặc `VERIFIED`, trước khi phân công đội cứu hộ. Thao tác ghi trạng thái cũ sang `CANCELLED`, người thực hiện đã xác thực và lý do hủy vào `StatusHistory.notes` trong cùng transaction. `RescueRequest.version` hỗ trợ optimistic locking và được flush trước khi transaction hoàn tất.
+T2-02 delivers the citizen vertical slice for rescue requests:
 
-## Quyết định và điểm contract còn mở
+- Create a rescue request from active disaster types.
+- List the authenticated citizen's requests with bounded pagination.
+- View owner-scoped request details, real status history, and existing media.
+- Cancel owner requests only while `PENDING` or `VERIFIED`.
+- Enforce JWT-cookie authentication, `ROLE_CITIZEN`, and CSRF.
+- Preserve optimistic locking and append one real cancellation history row.
+- Provide desktop, tablet, and mobile responsive UI states.
 
-- Chính sách hủy được chốt theo lựa chọn của người dùng ngày 2026-10-21: cho phép citizen hủy `PENDING` và `VERIFIED`; không cho tự hủy từ `ASSIGNED` trở đi. Khi đã phân công, người dân cần liên hệ điều phối viên để tránh tự giải phóng yêu cầu trong khi đội cứu hộ có thể đang được điều động. Nếu sau này cần hủy yêu cầu đã phân công, phải có luồng điều phối và cập nhật assignment đồng bộ.
-- Chưa tìm thấy upload service hoặc contract liên kết media. Khi có sẵn, trang chi tiết sẽ hiển thị media của yêu cầu; thay đổi này không thêm upload hay lưu binary.
-- Không thêm migration. Schema V1 hiện tại đã có các trường, constraint và `RescueRequest.version` được sử dụng. T2-01 bổ sung V3.
-- Địa chỉ, tọa độ và mô tả vẫn là các trường không bắt buộc vì schema cho phép giá trị null và chưa có business contract được cung cấp quy định khác. Tọa độ được kiểm tra giới hạn nếu người dùng nhập.
+## 2. Routes
 
-## Các file đã thay đổi
+- `GET /requests`
+- `GET /requests/new`
+- `POST /requests`
+- `GET /requests/{requestId}`
+- `POST /requests/{requestId}/cancel`
 
-- Thêm `CitizenRequestController`, `CitizenRequestService`, DTO tạo/hủy yêu cầu và các trang Thymeleaf tạo, danh sách, chi tiết.
-- Thêm query phân trang yêu cầu theo chủ sở hữu, lấy loại thiên tai đang hoạt động, lấy lịch sử theo thứ tự thời gian và lấy media chưa bị xóa.
-- Cập nhật liên kết menu người dân dùng chung để trỏ đến `/requests`.
-- Thêm unit test cho service và MVC test; đăng ký các repository mới trong annotation mock repository dùng cho test không cần database.
+All routes remain under the existing `/requests/**` security matcher and require
+`ROLE_CITIZEN`. Anonymous users are redirected to login. Authenticated users
+without the citizen role receive 403.
 
-## Kết quả xác minh
+## 3. Security and Ownership
 
-- Java: Temurin 17.0.20.1; Maven Wrapper cũng báo Java 17.
-- `./mvnw.cmd test`: PASS — 164 test, 0 lỗi thất bại, 0 lỗi chạy.
-- `git diff --check`: PASS.
-- MySQL/Flyway/Hibernate `clean verify`: PASS theo xác nhận của người thực hiện trên database integration riêng `drss_t202_it`.
-- Kiểm tra thủ công trình duyệt: PASS theo xác nhận của người thực hiện; luồng tạo, danh sách, chi tiết/lịch sử và hủy đã được kiểm tra.
-- Responsive mobile/desktop: PASS theo xác nhận của người thực hiện.
-- GitHub Actions: CHƯA XÁC NHẬN; cần kiểm tra workflow trên commit T2-02 đã push.
-- Commit/push: người thực hiện đã commit. 
+- Owner UUID comes only from `AuthenticatedUserPrincipal.userId()`.
+- Client-supplied owner, status, or display-code values are ignored.
+- List queries are filtered by authenticated owner in the repository.
+- Detail, history, media, and cancellation recheck ownership in the service.
+- Missing requests and other-owner requests return the same generic not-found
+  behavior to avoid request enumeration.
+- Data-changing requests require valid CSRF tokens.
 
-## Bàn giao cho T2-03/T2-04
+## 4. Creation Rules
 
-- Chủ sở hữu yêu cầu luôn là UUID của principal đã xác thực; không nhận danh tính chủ sở hữu từ form hoặc query parameter.
-- Tạo yêu cầu sinh trạng thái `PENDING` và không ghi sự kiện lịch sử khởi tạo giả.
-- Mã hiển thị theo định dạng `REQ-` cộng 16 ký tự thập lục phân viết hoa; khóa duy nhất trong database đảm bảo không trùng.
-- Danh sách và chi tiết của người dân phải giới hạn theo chủ sở hữu. Tái sử dụng `RescueRequestRepository.findByUser_IdOrderByCreatedAtDescIdDesc` cho danh sách phân trang.
-- Mọi cập nhật trạng thái phải giữ nguyên cơ chế optimistic locking và thêm đúng một bản ghi `StatusHistory` trong cùng transaction.
-- Người dân được hủy `PENDING` và `VERIFIED`; không được tự hủy từ `ASSIGNED` trở đi. Mọi thay đổi chính sách sau này cần đồng bộ việc giải phóng assignment và ghi lịch sử trong cùng transaction.
+- New status is always `PENDING`.
+- Urgency is limited to `LOW`, `MEDIUM`, `HIGH`, or `CRITICAL`.
+- Disaster type must exist and be active.
+- Optional text fields are trimmed and blank values become null.
+- Display code is `REQ-` plus 16 uppercase hexadecimal characters.
+- Collision generation is bounded to 10 attempts; the database unique
+  constraint remains the final concurrency guard.
+- Creation does not add a fake `PENDING -> PENDING` history row.
+
+## 5. Listing and Detail
+
+- Page size is 10.
+- Negative pages map to page 0.
+- Overflow pages map to the final available page.
+- Ordering is `createdAt DESC, id DESC`.
+- History ordering is `createdAt ASC, id ASC`.
+- Only media rows with `deleted_at IS NULL` are returned.
+- Citizen navigation contains one create link and one list link; the obsolete
+  `/requests/my-requests` link was removed after merging current main.
+
+## 6. Cancellation
+
+- Allowed old statuses: `PENDING`, `VERIFIED`.
+- Rejected statuses: `ASSIGNED`, `IN_PROGRESS`, `RESCUED`, `CLOSED`,
+  `REJECTED`, and `CANCELLED`.
+- Reason is required, trimmed, and limited to 2,000 characters at both DTO and
+  service boundaries.
+- Successful cancellation changes status to `CANCELLED` and writes exactly one
+  `StatusHistory` row with the actual old status, owner, and reason.
+- Repeated cancellation is rejected without a duplicate history row.
+- `RescueRequest.version` and transaction flush reject stale concurrent writes.
+
+## 7. Media Boundary
+
+T2-02 displays existing non-deleted media only. When a request has no media, the
+media section is intentionally not rendered, so no empty frame appears.
+
+Upload, object storage, file validation/scanning, and upload lifecycle are not
+implemented because no upload/storage contract exists in the current scope.
+They require a separate approved task before implementation.
+
+## 8. Main Synchronization
+
+The feature branch merged current main commit `f2c7462`, which contains T3-01.
+The following overlapping files were resolved by preserving both feature sets:
+
+- `DisasterTypeRepository`
+- `RescueRequestRepository`
+- `NoDatabaseRepositoryMocks`
+- shared navigation
+
+Repository methods from both T2-02 and T3-01 remain present exactly once.
+Flyway migrations V1 through V4 are the resulting database baseline. T2-02 adds
+no new migration.
+
+## 9. Automated Verification
+
+All of the following passed on Java 17:
+
+- Targeted `CitizenRequestServiceTest` and
+  `CitizenRequestControllerMvcTest`.
+- Full Maven unit-test suite.
+- `mvnw clean verify` with the `it` profile and MySQL.
+- Dedicated `CitizenRequestFlowIntegrationIT` using a real JWT cookie, CSRF,
+  seeded MySQL data, ownership checks, cancellation transaction checks, and an
+  optimistic-lock conflict.
+- `git diff --check` for both working and staged merge changes.
+- GitHub Actions `CI Workflow / Build and Test` on code commit `ab5e481`.
+
+Automated negative paths include validation, missing CSRF, wrong role, missing
+request, other owner, invalid urgency/type, pagination boundaries, display-code
+collision, blank/oversized cancellation reason, invalid cancellation states,
+repeated cancellation, and stale entity version.
+
+## 10. Manual Browser Verification
+
+Reviewer-observed manual verification passed for:
+
+- Anonymous redirect to login.
+- Authenticated non-citizen forbidden response.
+- Empty request-list state.
+- Cross-owner detail and cancellation protection.
+- Create-form validation.
+- Valid create and generated `PENDING` request.
+- List, detail, and real history rendering.
+- Blank cancellation rejection.
+- Valid cancellation and success alert.
+- Repeated cancellation protection.
+- No cancellation action for an `ASSIGNED` request.
+- Desktop, tablet, and mobile responsive layouts.
+- No duplicate citizen navigation and no obsolete request-list route.
+
+## 11. Important Files
+
+- `CitizenRequestController`
+- `CitizenRequestService`
+- `CreateCitizenRequest`
+- `CancelCitizenRequest`
+- citizen request form/list/detail templates
+- owner-scoped repository methods for requests, histories, and media
+- `CitizenRequestServiceTest`
+- `CitizenRequestControllerMvcTest`
+- `CitizenRequestFlowIntegrationIT`
+- `T2-02-citizen-request-flow-contract.md`
+
+## 12. Downstream Contract
+
+- Downstream request workflows must keep owner identity server-controlled.
+- State changes must preserve optimistic locking and append the real transition
+  to `StatusHistory` in the same transaction.
+- Citizen self-cancellation remains limited to `PENDING` and `VERIFIED`.
+- Any future cancellation after assignment must coordinate assignment release
+  and request history atomically.
+- Media upload must not be added without an approved storage/security contract.
+
+## 13. Final Review Gate
+
+- Code merge commit pushed: PASS.
+- Code commit GitHub Actions: PASS.
+- Automated MySQL verification: PASS.
+- Manual browser and responsive verification: PASS.
+- Working tree after code push: CLEAN.
+- Remaining action after this handoff commit: confirm its documentation-only CI,
+  complete PR review, and merge the PR.
