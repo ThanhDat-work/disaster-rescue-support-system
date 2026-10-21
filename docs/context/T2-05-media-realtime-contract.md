@@ -6,7 +6,7 @@
 - **Base commit:** `65b8bd3`
 - **Dependencies:** T2-02, T2-03, T2-04
 - **Artifact/Trace IDs:** `MEDIA-01`, `WS-01`, `SD-10`
-- **Last clarified:** 2026-10-21 — Citizen create upload uses non-transactional orchestration, transactional DB persistence and durable compensating cleanup tasks.
+- **Last clarified:** 2026-10-21 — Media persistence đã hoàn thiện; realtime dùng private user destinations, notification cùng transaction và WebSocket dispatch sau commit.
 
 ## 1. Nguồn quyết định
 
@@ -138,13 +138,25 @@ Mỗi `media_assets` lưu tối thiểu:
 ## 11. WebSocket authorization
 
 - Handshake xác thực bằng JWT HttpOnly cookie hiện tại.
-- Personal destination: `/user/queue/notifications`.
-- Coordinator topic chỉ dành cho coordinator còn quyền hiện tại.
-- Team topic chỉ dành cho active member của đúng team.
+- Personal destination của citizen: `/user/queue/notifications`.
+- Coordinator destination: `/user/queue/coordinator/notifications`, chỉ user còn `ACTIVE` và còn `ROLE_COORDINATOR` được subscribe.
+- Team destination: `/user/queue/teams/{teamId}/notifications`, chỉ active member của đúng team được subscribe.
+- Coordinator/team destination đều được Spring phân giải thành private user queue; không broadcast notification ID qua shared topic.
 - Client không được gửi business command qua broker.
 - Forged team destination phải bị từ chối.
 - Payload chỉ chứa notification ID, loại sự kiện, reference ID, title/message an toàn và timestamp.
 - Payload không chứa địa chỉ chi tiết, tọa độ, số điện thoại, media URL, JWT hoặc dữ liệu nhạy cảm.
+
+### 11.1 As-built checkpoint 05.3
+
+- `Notification` có `event_type` riêng; `reference_type` tiếp tục biểu diễn loại aggregate.
+- Recipient được truy vấn lại từ database trong transaction tạo notification.
+- Mỗi recipient có một row và một immutable delivery event.
+- Listener dùng `@TransactionalEventListener(phase = AFTER_COMMIT)`.
+- `SimpMessagingTemplate.convertAndSendToUser(...)` sử dụng UUID user làm principal name.
+- Client chỉ được subscribe destination đã cho phép; mọi STOMP `MESSAGE` từ client bị từ chối.
+- Subscription coordinator kiểm tra role hiện tại; subscription team kiểm tra `user.status = ACTIVE` và `left_at IS NULL`.
+- Payload không chứa địa chỉ, tọa độ, số điện thoại, URL media, JWT hoặc secret.
 
 ## 12. Cấu hình và secret
 

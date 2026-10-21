@@ -29,6 +29,8 @@ class CitizenRequestMediaPersistenceServiceTest {
     private CitizenRequestService citizenRequests;
     @Mock
     private MediaAssetRepository mediaAssets;
+    @Mock
+    private BusinessNotificationService notifications;
 
     private CitizenRequestMediaPersistenceService service;
     private UUID userId;
@@ -38,7 +40,7 @@ class CitizenRequestMediaPersistenceServiceTest {
     @BeforeEach
     void setUp() {
         service = new CitizenRequestMediaPersistenceService(
-                citizenRequests, mediaAssets
+                citizenRequests, mediaAssets, notifications
         );
         userId = UUID.randomUUID();
         form = new CreateCitizenRequest();
@@ -56,6 +58,7 @@ class CitizenRequestMediaPersistenceServiceTest {
         verify(mediaAssets, never()).saveAllAndFlush(
                 org.mockito.ArgumentMatchers.any()
         );
+        verify(notifications).notifyNewRequest(request);
     }
 
     @Test
@@ -79,6 +82,7 @@ class CitizenRequestMediaPersistenceServiceTest {
         ArgumentCaptor<Iterable<MediaAsset>> capture =
                 ArgumentCaptor.forClass(Iterable.class);
         verify(mediaAssets).saveAllAndFlush(capture.capture());
+        verify(notifications).notifyNewRequest(request);
 
         MediaAsset asset = capture.getValue().iterator().next();
         assertThat(asset.getRequest()).isSameAs(request);

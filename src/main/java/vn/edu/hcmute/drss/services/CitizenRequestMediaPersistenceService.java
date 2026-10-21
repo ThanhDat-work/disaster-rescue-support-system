@@ -19,13 +19,16 @@ public class CitizenRequestMediaPersistenceService {
 
     private final CitizenRequestService citizenRequests;
     private final MediaAssetRepository mediaAssets;
+    private final BusinessNotificationService notifications;
 
     public CitizenRequestMediaPersistenceService(
-            CitizenRequestService citizenRequests,
-            MediaAssetRepository mediaAssets
+        CitizenRequestService citizenRequests,
+        MediaAssetRepository mediaAssets,
+        BusinessNotificationService notifications
     ) {
         this.citizenRequests = citizenRequests;
         this.mediaAssets = mediaAssets;
+        this.notifications = notifications;
     }
 
     @Transactional
@@ -39,21 +42,21 @@ public class CitizenRequestMediaPersistenceService {
                 ? List.of()
                 : List.copyOf(uploadedMedia);
 
-        if (uploaded.isEmpty()) {
-            return request;
+        if (!uploaded.isEmpty()) {
+            User uploader = Objects.requireNonNull(
+                    request.getUser(),
+                    "Created request must have an owner"
+            );
+
+            List<MediaAsset> assets = new ArrayList<>(uploaded.size());
+            for (UploadedMedia item : uploaded) {
+                assets.add(toEntity(request, uploader, item));
+            }
+
+            mediaAssets.saveAllAndFlush(assets);
         }
 
-        User uploader = Objects.requireNonNull(
-                request.getUser(),
-                "Created request must have an owner"
-        );
-
-        List<MediaAsset> assets = new ArrayList<>(uploaded.size());
-        for (UploadedMedia item : uploaded) {
-            assets.add(toEntity(request, uploader, item));
-        }
-
-        mediaAssets.saveAllAndFlush(assets);
+        notifications.notifyNewRequest(request);
         return request;
     }
 

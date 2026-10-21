@@ -38,19 +38,22 @@ public class CitizenRequestService {
     private final StatusHistoryRepository histories;
     private final MediaAssetRepository media;
     private final UserRepository users;
+    private final BusinessNotificationService notifications;
 
     public CitizenRequestService(
             RescueRequestRepository requests,
             DisasterTypeRepository disasterTypes,
             StatusHistoryRepository histories,
             MediaAssetRepository media,
-            UserRepository users
+            UserRepository users,
+            BusinessNotificationService notifications
     ) {
         this.requests = requests;
         this.disasterTypes = disasterTypes;
         this.histories = histories;
         this.media = media;
         this.users = users;
+        this.notifications = notifications;
     }
 
     @Transactional(readOnly = true)
@@ -147,6 +150,11 @@ public class CitizenRequestService {
         history.setNotes(normalizedReason);
         histories.save(history);
         requests.flush();
+        notifications.notifyRequestStatusChanged(
+                request,
+                oldStatus,
+                "CANCELLED"
+        );
     }
 
     private Page<RescueRequest> findPage(UUID userId, int page) {

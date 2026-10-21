@@ -51,6 +51,8 @@ class CitizenRequestServiceTest {
     private MediaAssetRepository media;
     @Mock
     private UserRepository users;
+    @Mock
+    private BusinessNotificationService notifications;
 
     private CitizenRequestService service;
     private UUID ownerId;
@@ -60,7 +62,7 @@ class CitizenRequestServiceTest {
     @BeforeEach
     void setUp() {
         service = new CitizenRequestService(
-                requests, disasterTypes, histories, media, users
+                requests, disasterTypes, histories, media, users, notifications
         );
         ownerId = UUID.randomUUID();
         owner = new User();
@@ -231,6 +233,11 @@ class CitizenRequestServiceTest {
                         && "Situation resolved".equals(event.getNotes())
         ));
         verify(requests).flush();
+        verify(notifications).notifyRequestStatusChanged(
+                request,
+                status,
+                "CANCELLED"
+        );
     }
 
     @ParameterizedTest

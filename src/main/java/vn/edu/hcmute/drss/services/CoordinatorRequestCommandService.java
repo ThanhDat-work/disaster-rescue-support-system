@@ -27,15 +27,18 @@ public class CoordinatorRequestCommandService {
     private final RescueRequestRepository requests;
     private final StatusHistoryRepository histories;
     private final UserRepository users;
+    private final BusinessNotificationService notifications;
 
     public CoordinatorRequestCommandService(
             RescueRequestRepository requests,
             StatusHistoryRepository histories,
-            UserRepository users
+            UserRepository users,
+            BusinessNotificationService notifications
     ) {
         this.requests = requests;
         this.histories = histories;
         this.users = users;
+        this.notifications = notifications;
     }
 
     @Transactional
@@ -82,6 +85,12 @@ public class CoordinatorRequestCommandService {
         // trước khi controller trả response. Nếu flush thất bại, history
         // và status cùng rollback.
         requests.flush();
+
+        notifications.notifyRequestStatusChanged(
+                request,
+                PENDING,
+                newStatus
+        );
 
         return newStatus;
     }

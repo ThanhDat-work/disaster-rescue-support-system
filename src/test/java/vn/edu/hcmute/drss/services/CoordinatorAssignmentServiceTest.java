@@ -48,6 +48,8 @@ class CoordinatorAssignmentServiceTest {
     private StatusHistoryRepository histories;
     @Mock
     private UserRepository users;
+    @Mock
+    private BusinessNotificationService notifications;
 
     private CoordinatorAssignmentService service;
     private UUID requestId;
@@ -65,7 +67,8 @@ class CoordinatorAssignmentServiceTest {
                 teamMembers,
                 assignments,
                 histories,
-                users
+                users,
+                notifications
         );
 
         requestId = UUID.randomUUID();
@@ -107,6 +110,7 @@ class CoordinatorAssignmentServiceTest {
 
         assertThat(request.getStatus()).isEqualTo("ASSIGNED");
         assertThat(team.getStatus()).isEqualTo("AVAILABLE");
+        assertThat(result.getId()).isNotNull();
         assertThat(result.getDisplayCode())
                 .matches("ASN-[0-9A-F]{16}");
         assertThat(result.getRequest()).isSameAs(request);
@@ -123,6 +127,12 @@ class CoordinatorAssignmentServiceTest {
                 ArgumentCaptor.forClass(StatusHistory.class);
         verify(histories).save(history.capture());
         verify(requests).flush();
+        verify(notifications).notifyAssignmentCreated(result);
+        verify(notifications).notifyRequestStatusChanged(
+                request,
+                "VERIFIED",
+                "ASSIGNED"
+        );
 
         assertThat(history.getValue().getRequest()).isSameAs(request);
         assertThat(history.getValue().getOldStatus()).isEqualTo("VERIFIED");
@@ -325,7 +335,13 @@ class CoordinatorAssignmentServiceTest {
                 .thenReturn(Optional.of(team));
         when(teamMembers.existsByTeam_IdAndLeftAtIsNull(teamId))
                 .thenReturn(true);
-    }
+        when(assignments.save(any(RescueAssignment.class)))
+                .thenAnswer(invocation -> {
+                        RescueAssignment saved = invocation.getArgument(0);
+                        saved.setId(UUID.randomUUID());
+                        return saved;
+                });
+        }
 
     private CoordinatorAssignmentRequest command(
             UUID selectedTeamId,
