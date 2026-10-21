@@ -7,6 +7,7 @@ import vn.edu.hcmute.drss.entities.User;
 import vn.edu.hcmute.drss.entities.UserRole;
 import vn.edu.hcmute.drss.entities.UserRoleId;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -15,4 +16,15 @@ public interface UserRoleRepository
 
     @EntityGraph(attributePaths = "role")
     List<UserRole> findAllByUserAndRevokedAtIsNull(User user);
+
+    @EntityGraph(attributePaths = "role")
+    List<UserRole> findAllByUser(User user);
+
+    @EntityGraph(attributePaths = { "user", "role" })
+    List<UserRole> findAllByUserInAndRevokedAtIsNull(
+            Collection<User> users);
+
+    long countByRole_RoleNameAndRevokedAtIsNullAndUser_Status(
+            String roleName,
+            String status);
 }
