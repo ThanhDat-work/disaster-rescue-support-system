@@ -16,3 +16,11 @@ app:
     base-url: http://localhost:8080
     mail-from: test-only@example.invalid
     rate-limit-hmac-secret: test-only-rate-limit-secret-at-least-32-cccc
+  media:
+    cloud-name: test-cloud
+    api-key: test-api-key
+    api-secret: test-api-secret
+    folder: drss/test
+    max-file-size: 10MB
+    max-files-per-request: 5
+    max-video-files-per-request: 1

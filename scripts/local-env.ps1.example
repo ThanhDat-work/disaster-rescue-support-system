@@ -16,6 +16,11 @@ $env:JWT_SECRET = 'gia_tri_jwt_vua_tao'
 $env:OTP_HMAC_SECRET = 'gia_tri_otp_vua_tao'
 $env:RATE_LIMIT_HMAC_SECRET = 'gia_tri_rate_limit_vua_tao'
 
+$env:CLOUDINARY_CLOUD_NAME = 'ten_cloud_cloudinary'
+$env:CLOUDINARY_API_KEY = 'cloudinary_api_key'
+$env:CLOUDINARY_API_SECRET = 'cloudinary_api_secret'
+$env:CLOUDINARY_FOLDER = 'drss/local/dat'
+
 $env:APP_BASE_URL = 'http://localhost:8080'
 $env:AUTH_COOKIE_SECURE = 'false'
 
