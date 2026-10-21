@@ -49,10 +49,14 @@
         <ul class="navbar-nav me-auto">
           <!-- Menu cho Người dân -->
           <li class="nav-item" sec:authorize="hasRole('CITIZEN')">
-            <a class="nav-link" href="/requests/new">Gửi yêu cầu khẩn cấp</a>
+            <a class="nav-link" th:href="@{/requests/new}">
+              Gửi yêu cầu khẩn cấp
+            </a>
           </li>
           <li class="nav-item" sec:authorize="hasRole('CITIZEN')">
-            <a class="nav-link" href="/requests/my-requests">Yêu cầu của tôi</a>
+            <a class="nav-link" th:href="@{/requests}">
+              Yêu cầu của tôi
+            </a>
           </li>
 
           <!-- Menu cho Điều phối viên -->

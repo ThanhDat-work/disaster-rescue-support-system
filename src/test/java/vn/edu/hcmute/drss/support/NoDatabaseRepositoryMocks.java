@@ -11,6 +11,7 @@ import vn.edu.hcmute.drss.repositories.UserRepository;
 import vn.edu.hcmute.drss.repositories.UserRoleRepository;
 import vn.edu.hcmute.drss.repositories.VerificationTokenRepository;
 import vn.edu.hcmute.drss.repositories.DisasterTypeRepository;
+import vn.edu.hcmute.drss.repositories.MediaAssetRepository;
 import vn.edu.hcmute.drss.repositories.RescueTeamRepository;
 
 import java.lang.annotation.Documented;
@@ -35,6 +36,7 @@ import java.lang.annotation.Target;
         RescueTeamMemberRepository.class,
         StatusHistoryRepository.class,
         DisasterTypeRepository.class,
+        MediaAssetRepository.class,
         RescueTeamRepository.class,
 })
 public @interface NoDatabaseRepositoryMocks {

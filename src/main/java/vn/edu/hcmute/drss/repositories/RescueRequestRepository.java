@@ -1,5 +1,8 @@
 package vn.edu.hcmute.drss.repositories;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -8,11 +11,23 @@ import vn.edu.hcmute.drss.entities.RescueRequest;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface RescueRequestRepository
         extends JpaRepository<RescueRequest, UUID> {
+
+    @EntityGraph(attributePaths = "disasterType")
+    Page<RescueRequest> findByUser_IdOrderByCreatedAtDescIdDesc(
+            UUID userId,
+            Pageable pageable
+    );
+
+    boolean existsByDisplayCode(String displayCode);
+
+    @EntityGraph(attributePaths = "disasterType")
+    Optional<RescueRequest> findWithDisasterTypeById(UUID id);
 
     @Query("""
             SELECT request.status AS category,

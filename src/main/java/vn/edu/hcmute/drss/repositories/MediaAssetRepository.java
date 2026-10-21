@@ -7,4 +7,5 @@ import java.util.UUID;
 
 @Repository
 public interface MediaAssetRepository extends JpaRepository<MediaAsset, UUID> {
+    java.util.List<MediaAsset> findByRequest_IdAndDeletedAtIsNullOrderByCreatedAtAsc(UUID requestId);
 }
