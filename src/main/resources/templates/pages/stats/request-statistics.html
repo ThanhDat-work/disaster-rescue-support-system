@@ -1,0 +1,204 @@
+<!doctype html>
+<html
+  lang="vi"
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layouts/main-layout :: layout(~{::title}, ~{::section})}"
+>
+  <head>
+    <title>Thống kê yêu cầu cứu hộ</title>
+  </head>
+  <body>
+    <section class="py-4">
+      <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+        <div>
+          <p class="text-uppercase text-primary fw-semibold mb-1">
+            Điều hành
+          </p>
+          <h1 class="h3 mb-1">Thống kê yêu cầu cứu hộ</h1>
+          <p class="text-secondary mb-0">
+            Tổng hợp theo trạng thái và mức độ khẩn cấp trong khoảng ngày đã chọn.
+          </p>
+        </div>
+        <a class="btn btn-outline-secondary align-self-start" th:href="@{/}">
+          Về trang chủ
+        </a>
+      </div>
+
+      <form
+        class="card card-body mb-4"
+        method="get"
+        th:action="@{/stats/requests}"
+      >
+        <div class="row g-3 align-items-end">
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="fromDate">Từ ngày</label>
+            <input
+              class="form-control"
+              id="fromDate"
+              name="fromDate"
+              type="date"
+              th:max="${maxDate}"
+              th:value="${fromDate}"
+            />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="toDate">Đến ngày</label>
+            <input
+              class="form-control"
+              id="toDate"
+              name="toDate"
+              type="date"
+              th:max="${maxDate}"
+              th:value="${toDate}"
+            />
+          </div>
+          <div class="col-12 col-md-4 d-flex flex-wrap gap-2">
+            <button class="btn btn-primary flex-grow-1" type="submit">
+              Xem thống kê
+            </button>
+            <a class="btn btn-outline-secondary" th:href="@{/stats/requests}">
+              30 ngày gần nhất
+            </a>
+          </div>
+        </div>
+        <p class="form-text mb-0 mt-3">
+          Khoảng tối đa 366 ngày và không được chọn ngày trong tương lai.
+        </p>
+      </form>
+
+      <div
+        class="alert alert-danger"
+        role="alert"
+        th:if="${errorMessage}"
+      >
+        <h2 class="h6 alert-heading">Không thể tải thống kê</h2>
+        <p class="mb-0" th:text="${errorMessage}"></p>
+      </div>
+
+      <div th:if="${dashboard}">
+        <div class="row g-3 mb-4">
+          <div class="col-12 col-lg-4">
+            <div class="card card-body h-100 border-primary">
+              <p class="text-secondary mb-1">Tổng yêu cầu</p>
+              <p
+                class="display-5 fw-bold text-primary mb-0"
+                th:text="${dashboard.totalRequests}"
+              ></p>
+            </div>
+          </div>
+          <div class="col-12 col-lg-8">
+            <div class="card card-body h-100">
+              <p class="text-secondary mb-1">Khoảng thống kê</p>
+              <p class="h4 mb-2">
+                <time
+                  th:datetime="${dashboard.fromDate}"
+                  th:text="${#temporals.format(dashboard.fromDate, 'dd/MM/yyyy')}"
+                ></time>
+                <span aria-hidden="true">–</span>
+                <time
+                  th:datetime="${dashboard.toDate}"
+                  th:text="${#temporals.format(dashboard.toDate, 'dd/MM/yyyy')}"
+                ></time>
+              </p>
+              <p class="text-secondary mb-0">
+                Số liệu được tổng hợp trực tiếp từ dữ liệu yêu cầu cứu hộ.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="card card-body text-center py-5 mb-4"
+          th:if="${dashboard.empty}"
+        >
+          <h2 class="h5">Chưa có yêu cầu trong khoảng này</h2>
+          <p class="text-secondary mb-0">
+            Hãy chọn khoảng ngày khác để xem dữ liệu thống kê.
+          </p>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-12 col-xl-7">
+            <div class="card card-body h-100">
+              <div class="mb-3">
+                <p class="text-uppercase text-primary fw-semibold mb-1">
+                  Trạng thái
+                </p>
+                <h2 class="h5 mb-0">Phân bố tiến độ xử lý</h2>
+              </div>
+
+              <div class="vstack gap-3">
+                <div th:each="item : ${dashboard.statusItems}">
+                  <div class="d-flex justify-content-between gap-3 mb-1">
+                    <div class="text-truncate">
+                      <span class="fw-semibold" th:text="${item.label}"></span>
+                      <small
+                        class="text-secondary ms-1"
+                        th:text="|(${item.code})|"
+                      ></small>
+                    </div>
+                    <strong th:text="${item.count}"></strong>
+                  </div>
+                  <div
+                    class="progress"
+                    role="progressbar"
+                    th:attr="aria-label=${item.label},aria-valuenow=${item.percentage}"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                    <div
+                      class="progress-bar"
+                      th:classappend="${item.tone}"
+                      th:style="|width: ${item.percentage}%|"
+                      th:text="|${item.percentage}%|"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-5">
+            <div class="card card-body h-100">
+              <div class="mb-3">
+                <p class="text-uppercase text-danger fw-semibold mb-1">
+                  Mức độ khẩn cấp
+                </p>
+                <h2 class="h5 mb-0">Phân bố ưu tiên cứu hộ</h2>
+              </div>
+
+              <div class="vstack gap-3">
+                <div th:each="item : ${dashboard.urgencyItems}">
+                  <div class="d-flex justify-content-between gap-3 mb-1">
+                    <div class="text-truncate">
+                      <span class="fw-semibold" th:text="${item.label}"></span>
+                      <small
+                        class="text-secondary ms-1"
+                        th:text="|(${item.code})|"
+                      ></small>
+                    </div>
+                    <strong th:text="${item.count}"></strong>
+                  </div>
+                  <div
+                    class="progress"
+                    role="progressbar"
+                    th:attr="aria-label=${item.label},aria-valuenow=${item.percentage}"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                    <div
+                      class="progress-bar"
+                      th:classappend="${item.tone}"
+                      th:style="|width: ${item.percentage}%|"
+                      th:text="|${item.percentage}%|"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>
