@@ -6,6 +6,7 @@ import vn.edu.hcmute.drss.entities.Notification;
 import vn.edu.hcmute.drss.entities.NotificationEventType;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -16,6 +17,15 @@ public interface NotificationRepository
             findTop50ByRecipientUser_IdOrderByCreatedAtDescIdDesc(
                     UUID recipientUserId
             );
+
+    Optional<Notification> findByIdAndRecipientUser_Id(
+            UUID notificationId,
+            UUID recipientUserId
+    );
+
+    long countByRecipientUser_IdAndIsReadFalse(
+            UUID recipientUserId
+    );
 
     long countByReferenceIdAndEventType(
             UUID referenceId,

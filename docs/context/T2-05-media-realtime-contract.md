@@ -158,6 +158,17 @@ Mỗi `media_assets` lưu tối thiểu:
 - Subscription coordinator kiểm tra role hiện tại; subscription team kiểm tra `user.status = ACTIVE` và `left_at IS NULL`.
 - Payload không chứa địa chỉ, tọa độ, số điện thoại, URL media, JWT hoặc secret.
 
+### 11.2 Notification access và reload
+
+- `GET /api/notifications` chỉ trả tối đa 50 notification mới nhất của user đang xác thực, sắp xếp theo `created_at DESC, id DESC`.
+- Response gồm danh sách an toàn và tổng số notification chưa đọc của chính user.
+- `POST /api/notifications/{notificationId}/read` đánh dấu một notification thuộc chính user là đã đọc.
+- Mark-read là idempotent: notification đã đọc không bị đổi lại `read_at`.
+- Notification không tồn tại và notification thuộc user khác cùng trả `404` để không làm lộ ID hợp lệ.
+- Endpoint thay đổi trạng thái bắt buộc CSRF và không nhận `recipientUserId` từ client.
+- Database là nguồn tải lại sau reconnect; WebSocket chỉ là kênh báo có thay đổi.
+- Checkpoint này chưa cài bell/dropdown, STOMP client, reconnect hoặc error UX; các phần đó vẫn deferred sang T3-02.
+
 ## 12. Cấu hình và secret
 
 Các biến bắt buộc:
@@ -183,6 +194,10 @@ Secret thật chỉ nằm trong local ignored file, GitHub Actions secret hoặc
 - Role revoked, inactive user và left membership không nhận event.
 - Forged subscription bị từ chối.
 - Không lộ dữ liệu riêng trong payload.
+- Reload chỉ trả notification của user đang đăng nhập và giới hạn tối đa 50 dòng.
+- Unread count không tính notification của user khác.
+- Mark-read đúng ownership, idempotent và bắt buộc CSRF.
+- Forged notification ID của user khác bị che bằng phản hồi `404` chung.
 
 ## 14. Quyết định trình tự UI
 
