@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
@@ -127,6 +128,39 @@ class CitizenRequestMediaIntegrationIT {
         assertThat(count).isZero();
     }
 
+        @Test
+    void oversizedMediaCreatesNoRequestAndNeverUploads()
+            throws Exception {
+        String address = "T2-05 oversized upload rejected";
+
+        mockMvc.perform(multipart("/requests")
+                        .file(oversizedPng("too-large.png"))
+                        .cookie(cookie())
+                        .with(csrf())
+                        .param(
+                                "disasterTypeId",
+                                activeDisasterTypeId().toString()
+                        )
+                        .param("urgency", "HIGH")
+                        .param("address", address))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/requests/new"))
+                .andExpect(flash().attribute(
+                        "errorMsg",
+                        org.hamcrest.Matchers.containsString("10 MiB")
+                ));
+
+        verify(storage, never()).upload(any());
+
+        Long requestCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM rescue_requests WHERE address = ?",
+                Long.class,
+                address
+        );
+
+        assertThat(requestCount).isZero();
+    }
+
     private Cookie cookie() {
         User user = users.findById(CITIZEN_ID).orElseThrow();
         IssuedAccessToken token = jwtTokenService.issue(
@@ -156,6 +190,31 @@ class CitizenRequestMediaIntegrationIT {
                 "image/png",
                 new byte[] {(byte) 0x89, 0x50, 0x4E, 0x47,
                         0x0D, 0x0A, 0x1A, 0x0A}
+        );
+    }
+
+        private MockMultipartFile oversizedPng(String name) {
+        byte[] content = new byte[
+                Math.toIntExact(
+                        org.springframework.util.unit.DataSize
+                                .ofMegabytes(10)
+                                .toBytes()
+                ) + 1
+        ];
+        content[0] = (byte) 0x89;
+        content[1] = 0x50;
+        content[2] = 0x4E;
+        content[3] = 0x47;
+        content[4] = 0x0D;
+        content[5] = 0x0A;
+        content[6] = 0x1A;
+        content[7] = 0x0A;
+
+        return new MockMultipartFile(
+                "mediaFiles",
+                name,
+                "image/png",
+                content
         );
     }
 

@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,6 +43,7 @@ import vn.edu.hcmute.drss.entities.User;
 import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
 import vn.edu.hcmute.drss.services.CitizenRequestService;
 import vn.edu.hcmute.drss.support.NoDatabaseRepositoryMocks;
+import vn.edu.hcmute.drss.exceptions.InvalidMediaUploadException;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -91,7 +93,23 @@ class CitizenRequestControllerMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("pages/citizen/request-form"))
                 .andExpect(model().attribute("disasterTypes", List.of(type)))
-                .andExpect(model().attributeExists("createCitizenRequest"));
+                .andExpect(model().attributeExists("createCitizenRequest"))
+                .andExpect(model().attribute(
+                        "mediaMaxFileSizeBytes",
+                        10L * 1024L * 1024L
+                ))
+                .andExpect(model().attribute("mediaMaxFiles", 5))
+                .andExpect(model().attribute("mediaMaxVideos", 1))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString(
+                                "data-max-file-size-bytes=\"10485760\""
+                        )
+                ))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString(
+                                "/js/request-media-validation.js"
+                        )
+                ));
     }
 
     @Test
@@ -266,6 +284,27 @@ class CitizenRequestControllerMvcTest {
                                 + "Vui l\u00f2ng th\u1eed l\u1ea1i."
                 ));
         }
+
+            @Test
+    void oversizedMediaValidationUsesSafeFlashAndNoSuccess()
+            throws Exception {
+        String message =
+                "M\u1ed7i t\u1ec7p media kh\u00f4ng \u0111\u01b0\u1ee3c "
+                        + "v\u01b0\u1ee3t qu\u00e1 10 MiB.";
+
+        when(mediaService.create(eq(USER_ID), any(), any()))
+                .thenThrow(new InvalidMediaUploadException(message));
+
+        mockMvc.perform(post("/requests")
+                        .with(authenticatedAs("ROLE_CITIZEN"))
+                        .with(csrf())
+                        .param("disasterTypeId", "7")
+                        .param("urgency", "HIGH"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/requests/new"))
+                .andExpect(flash().attribute("errorMsg", message))
+                .andExpect(flash().attributeCount(1));
+    }
 
     private RequestPostProcessor authenticatedAs(String role) {
         AuthenticatedUserPrincipal principal = new AuthenticatedUserPrincipal(

@@ -1,10 +1,9 @@
 package vn.edu.hcmute.drss.controllers;
 
 import jakarta.validation.Valid;
-import java.util.UUID;
 import java.util.List;
 import java.util.Objects;
-import org.springframework.web.multipart.MultipartFile;
+import java.util.UUID;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,33 +16,45 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import vn.edu.hcmute.drss.configs.MediaStorageProperties;
 import vn.edu.hcmute.drss.dtos.CancelCitizenRequest;
 import vn.edu.hcmute.drss.dtos.CreateCitizenRequest;
 import vn.edu.hcmute.drss.entities.RescueRequest;
-import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
-import vn.edu.hcmute.drss.services.CitizenRequestService;
 import vn.edu.hcmute.drss.exceptions.MediaStorageException;
+import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
 import vn.edu.hcmute.drss.services.CitizenRequestMediaService;
+import vn.edu.hcmute.drss.services.CitizenRequestService;
 
 @Controller
 @RequestMapping("/requests")
 public class CitizenRequestController {
+
     private final CitizenRequestService service;
     private final CitizenRequestMediaService mediaService;
+    private final MediaStorageProperties mediaProperties;
 
     public CitizenRequestController(
             CitizenRequestService service,
-            CitizenRequestMediaService mediaService
+            CitizenRequestMediaService mediaService,
+            MediaStorageProperties mediaProperties
     ) {
         this.service = service;
         this.mediaService = mediaService;
+        this.mediaProperties = mediaProperties;
     }
 
     @GetMapping
-    public String list(@AuthenticationPrincipal AuthenticatedUserPrincipal principal,
-            @RequestParam(defaultValue = "0") int page, Model model) {
-        Page<RescueRequest> pageData = service.list(principal.userId(), page);
+    public String list(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @RequestParam(defaultValue = "0") int page,
+            Model model
+    ) {
+        Page<RescueRequest> pageData = service.list(
+                principal.userId(),
+                page
+        );
         model.addAttribute("pageData", pageData);
         model.addAttribute("pageUrl", "/requests?");
         model.addAttribute("pageQuery", "");
@@ -52,9 +63,11 @@ public class CitizenRequestController {
 
     @GetMapping("/new")
     public String createForm(Model model) {
-        model.addAttribute("createCitizenRequest", new CreateCitizenRequest());
-        model.addAttribute("disasterTypes", service.getActiveDisasterTypes());
-        return "pages/citizen/request-form";
+        model.addAttribute(
+                "createCitizenRequest",
+                new CreateCitizenRequest()
+        );
+        return showCreateForm(model);
     }
 
     @PostMapping
@@ -86,7 +99,10 @@ public class CitizenRequestController {
             );
             return "redirect:/requests/" + created.getId();
         } catch (IllegalArgumentException exception) {
-            flash.addFlashAttribute("errorMsg", exception.getMessage());
+            flash.addFlashAttribute(
+                    "errorMsg",
+                    exception.getMessage()
+            );
             return "redirect:/requests/new";
         } catch (MediaStorageException exception) {
             flash.addFlashAttribute(
@@ -99,37 +115,77 @@ public class CitizenRequestController {
     }
 
     @GetMapping("/{requestId}")
-    public String detail(@PathVariable UUID requestId,
+    public String detail(
+            @PathVariable UUID requestId,
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
-            Model model, RedirectAttributes flash) {
+            Model model,
+            RedirectAttributes flash
+    ) {
         try {
-            model.addAttribute("request", service.detail(requestId, principal.userId()));
-            model.addAttribute("history", service.history(requestId, principal.userId()));
-            model.addAttribute("media", service.media(requestId, principal.userId()));
-            model.addAttribute("cancelCitizenRequest", new CancelCitizenRequest());
+            model.addAttribute(
+                    "request",
+                    service.detail(requestId, principal.userId())
+            );
+            model.addAttribute(
+                    "history",
+                    service.history(requestId, principal.userId())
+            );
+            model.addAttribute(
+                    "media",
+                    service.media(requestId, principal.userId())
+            );
+            model.addAttribute(
+                    "cancelCitizenRequest",
+                    new CancelCitizenRequest()
+            );
             return "pages/citizen/request-detail";
         } catch (IllegalArgumentException exception) {
-            flash.addFlashAttribute("errorMsg", exception.getMessage());
+            flash.addFlashAttribute(
+                    "errorMsg",
+                    exception.getMessage()
+            );
             return "redirect:/requests";
         }
     }
 
     @PostMapping("/{requestId}/cancel")
-    public String cancel(@PathVariable UUID requestId,
-            @Valid @ModelAttribute("cancelCitizenRequest") CancelCitizenRequest form,
-            BindingResult binding, @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
-            RedirectAttributes flash) {
+    public String cancel(
+            @PathVariable UUID requestId,
+            @Valid @ModelAttribute("cancelCitizenRequest")
+            CancelCitizenRequest form,
+            BindingResult binding,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            RedirectAttributes flash
+    ) {
         if (binding.hasErrors()) {
-            flash.addFlashAttribute("errorMsg", binding.getAllErrors().get(0).getDefaultMessage());
+            flash.addFlashAttribute(
+                    "errorMsg",
+                    binding.getAllErrors().get(0).getDefaultMessage()
+            );
             return "redirect:/requests/" + requestId;
         }
+
         try {
-            service.cancel(requestId, principal.userId(), form.getReason());
-            flash.addFlashAttribute("successMsg", "Đã hủy yêu cầu.");
+            service.cancel(
+                    requestId,
+                    principal.userId(),
+                    form.getReason()
+            );
+            flash.addFlashAttribute(
+                    "successMsg",
+                    "\u0110\u00e3 h\u1ee7y y\u00eau c\u1ea7u."
+            );
         } catch (OptimisticLockingFailureException exception) {
-            flash.addFlashAttribute("errorMsg", "Yêu cầu vừa được cập nhật. Tải lại trang để xem trạng thái mới.");
+            flash.addFlashAttribute(
+                    "errorMsg",
+                    "Y\u00eau c\u1ea7u v\u1eeba \u0111\u01b0\u1ee3c c\u1eadp nh\u1eadt. "
+                            + "T\u1ea3i l\u1ea1i trang \u0111\u1ec3 xem tr\u1ea1ng th\u00e1i m\u1edbi."
+            );
         } catch (IllegalArgumentException | IllegalStateException exception) {
-            flash.addFlashAttribute("errorMsg", exception.getMessage());
+            flash.addFlashAttribute(
+                    "errorMsg",
+                    exception.getMessage()
+            );
         }
         return "redirect:/requests/" + requestId;
     }
@@ -152,7 +208,22 @@ public class CitizenRequestController {
     }
 
     private String showCreateForm(Model model) {
-        model.addAttribute("disasterTypes", service.getActiveDisasterTypes());
+        model.addAttribute(
+                "disasterTypes",
+                service.getActiveDisasterTypes()
+        );
+        model.addAttribute(
+                "mediaMaxFileSizeBytes",
+                mediaProperties.maxFileSize().toBytes()
+        );
+        model.addAttribute(
+                "mediaMaxFiles",
+                mediaProperties.maxFilesPerRequest()
+        );
+        model.addAttribute(
+                "mediaMaxVideos",
+                mediaProperties.maxVideoFilesPerRequest()
+        );
         return "pages/citizen/request-form";
     }
 }

@@ -44,7 +44,18 @@ T2-05 không bao gồm:
 - File rỗng bị từ chối.
 - MIME khai báo phải phù hợp với chữ ký byte thực tế.
 - Không chỉ tin phần mở rộng tên file hoặc `Content-Type` do client gửi.
-- Transport multipart sử dụng `max-file-size=10MB`, `max-request-size=52MB` và `server.tomcat.max-swallow-size=52MB` để đồng bộ giới hạn HTTP với validator ứng dụng.
+- Giới hạn nghiệp vụ do `app.media.max-file-size=10MB` và `MediaUploadValidator` thực thi.
+- Transport multipart sử dụng `max-file-size=64MB`, `max-request-size=64MB`, `resolve-lazily=true` và `server.tomcat.max-swallow-size=64MB`.
+- Transport lớn hơn giới hạn nghiệp vụ có chủ đích: request hợp lệ tối đa 5 × 10 MiB còn đủ multipart overhead; đồng thời request đơn khoảng 50 MiB vẫn đi tới validator server để bị từ chối an toàn thay vì bị container reset kết nối trước controller.
+
+### 3.1 As-built xử lý upload vượt giới hạn
+
+- Browser kiểm tra số file, dung lượng từng file và số video trước khi submit để phản hồi ngay tại form.
+- Browser validation chỉ là UX; forged request hoặc client tắt JavaScript vẫn phải qua validator server.
+- Tệp lớn hơn 10 MiB nhưng tổng request chưa vượt 64 MiB bị `MediaUploadValidator` từ chối trước Cloudinary và trước transaction database.
+- Tổng multipart vượt giới hạn transport được xử lý bằng `@ControllerAdvice`, dùng thông báo an toàn và redirect về form tạo yêu cầu.
+- Validation thất bại không tạo `rescue_requests`, `media_assets`, notification hoặc Cloudinary resource.
+- Không hiển thị stack trace, giới hạn hạ tầng hoặc chi tiết Cloudinary cho người dùng.
 
 ## 4. Quyền media
 
@@ -198,6 +209,9 @@ Secret thật chỉ nằm trong local ignored file, GitHub Actions secret hoặc
 - Unread count không tính notification của user khác.
 - Mark-read đúng ownership, idempotent và bắt buộc CSRF.
 - Forged notification ID của user khác bị che bằng phản hồi `404` chung.
+- Browser chặn tệp lớn hơn 10 MiB trước submit và hiển thị lỗi ngay tại input media.
+- Forged/no-JavaScript request có tệp lớn hơn 10 MiB vẫn bị server từ chối, không gọi Cloudinary và không tạo request/media.
+- Multipart vượt giới hạn transport nhận phản hồi redirect an toàn thay vì trang lỗi kỹ thuật trong tầng MVC.
 
 ## 14. Quyết định trình tự UI
 
