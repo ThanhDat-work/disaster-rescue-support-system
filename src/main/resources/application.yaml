@@ -67,6 +67,9 @@ app:
     max-file-size: 10MB
     max-files-per-request: 5
     max-video-files-per-request: 1
+    cleanup-enabled: ${MEDIA_CLEANUP_ENABLED:true}
+    cleanup-fixed-delay: ${MEDIA_CLEANUP_FIXED_DELAY:PT5M}
+    cleanup-batch-size: ${MEDIA_CLEANUP_BATCH_SIZE:25}
 
 server:
   port: ${SERVER_PORT:8080}

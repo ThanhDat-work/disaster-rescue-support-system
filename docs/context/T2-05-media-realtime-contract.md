@@ -21,8 +21,8 @@ T2-05 bao gồm:
 - Upload ảnh và video lên Cloudinary bằng server-side SDK.
 - Lưu metadata media trong MySQL.
 - Cleanup Cloudinary khi upload nhiều file hoặc transaction database thất bại.
-- Soft-delete metadata và xóa Cloudinary sau commit.
-- Retry cleanup idempotent cho media chưa xóa được trên Cloudinary.
+- Cloudinary adapter hỗ trợ xóa idempotent đúng resource type và cache invalidation.
+- Compensation cleanup khi upload hoặc transaction tạo request thất bại; cleanup lỗi được lưu bền và scheduled retry.
 - Notification record nằm trong transaction nghiệp vụ.
 - Domain event chỉ phát tới WebSocket sau khi transaction commit.
 - Authorization WebSocket theo user, role và active team membership.
@@ -33,6 +33,7 @@ T2-05 không bao gồm:
 - Theo dõi/đóng yêu cầu; nội dung này thuộc T3-03.
 - UI STOMP hoàn chỉnh, reconnect/error UX và evidence responsive; nội dung này được deferred sang T3-02 sau khi T2-05 và T3-03 đã review/merge.
 - Client-side direct upload bằng Cloudinary API secret.
+- UI/API thay hoặc xóa media của request đã tạo và rescuer upload completion evidence. Hai flow này chưa có implementation trong branch, nên không được mô tả là đã hoàn thành.
 
 ## 3. Loại media và giới hạn
 
@@ -57,15 +58,13 @@ T2-05 không bao gồm:
 - Validation thất bại không tạo `rescue_requests`, `media_assets`, notification hoặc Cloudinary resource.
 - Không hiển thị stack trace, giới hạn hạ tầng hoặc chi tiết Cloudinary cho người dùng.
 
-## 4. Quyền media
+## 4. Quyền media as-built
 
-- Citizen được đính kèm media khi tạo yêu cầu.
-- Citizen chỉ được thay/xóa media của chính yêu cầu khi yêu cầu còn `PENDING`.
-- Citizen không được thao tác media của user khác.
-- Rescuer chỉ được tải evidence khi hoàn thành assignment mà mình còn active membership.
-- Evidence hoàn thành không được sửa/xóa sau khi transaction hoàn tất.
+- Citizen được đính kèm media khi tạo yêu cầu của chính mình.
+- Citizen chỉ xem media qua detail query đã kiểm tra ownership.
 - Coordinator được xem media của request trong luồng điều phối nhưng không thay đổi media.
 - URL media không được đưa vào notification payload.
+- Citizen thay/xóa media sau khi tạo và rescuer upload completion evidence chưa được cài trong branch này; không được tuyên bố hoàn thành trong handoff hoặc báo cáo.
 
 ## 5. Cloudinary folders
 
@@ -105,14 +104,13 @@ Luồng upload chuẩn:
 - Trong phạm vi hiện tại, trang chi tiết của người dân và điều phối viên đều phải hiển thị đúng ảnh/video.
 - Trang nhiệm vụ của cứu hộ chưa đọc `MediaAsset`; việc bổ sung media vào màn hình đó không được tuyên bố hoàn thành trong T2-05 nếu chưa có query, authorization và test tương ứng.
 
-## 7. Xóa media
+## 7. Xóa và retry cleanup as-built
 
-1. Transaction database đặt `deleted_at`.
-2. Sau commit mới gọi Cloudinary destroy với đúng resource type.
-3. Khi Cloudinary trả `ok` hoặc `not found`, đặt `cloud_deleted_at`.
-4. Nếu Cloudinary lỗi, giữ `cloud_deleted_at = NULL` để retry.
-5. Video luôn xóa với `resource_type=video`; ảnh dùng `resource_type=image`.
-6. Xóa dùng cache invalidation.
+- `MediaStorage.delete(publicId, resourceType)` gọi Cloudinary destroy với đúng `image`/`video` và `invalidate=true`.
+- Cloudinary `ok` và `not found` đều được xem là thành công để bảo đảm idempotency.
+- Khi compensation delete thất bại, `media_cleanup_tasks` lưu `public_id`, `resource_type`, failure code và retry metadata; không lưu API secret hoặc secure URL.
+- Scheduled worker chỉ lấy task chưa hoàn thành đã đến hạn, retry theo batch và backoff; thành công đặt `completed_at`, thất bại được dời `next_attempt_at`.
+- Flow end-user soft-delete/replace `media_assets` chưa được cài; các cột `deleted_at` và `cloud_deleted_at` mới là nền tảng schema, không phải bằng chứng rằng UI/API delete đã hoàn thành.
 
 ## 8. Metadata database
 
@@ -198,7 +196,9 @@ Secret thật chỉ nằm trong local ignored file, GitHub Actions secret hoặc
 - Quá 5 file hoặc quá 1 video bị chặn.
 - Upload nhiều file thất bại giữa chừng cleanup file trước đó.
 - Database rollback cleanup toàn bộ Cloudinary upload.
-- Delete sau commit và retry idempotent.
+- Adapter delete dùng đúng resource type, cache invalidation và coi `not found` là thành công idempotent.
+- Compensation cleanup lỗi được enqueue; scheduled retry đánh dấu hoàn thành hoặc reschedule với backoff.
+- MySQL query recipient loại role revoked, user inactive và membership đã rời đội.
 - Notification row rollback cùng business transaction.
 - Không phát WebSocket trước commit hoặc khi rollback.
 - Recipient user/team chính xác.

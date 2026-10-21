@@ -18,3 +18,4 @@ app:
     max-file-size: 10MB
     max-files-per-request: 5
     max-video-files-per-request: 1
+    cleanup-enabled: false
