@@ -83,16 +83,22 @@ class AuthenticationPersistenceIntegrationIT {
 
         assertThat(versionColumnCount).isEqualTo(2);
 
-        Integer seededUsersWithoutInitialAuthVersion = jdbcTemplate.queryForObject(
-                """
-                SELECT COUNT(*)
-                FROM users
-                WHERE auth_version <> 0
-                """,
-                Integer.class
-        );
+        Integer authVersionDefaultColumnCount =
+                jdbcTemplate.queryForObject(
+                        """
+                        SELECT COUNT(*)
+                        FROM information_schema.columns
+                        WHERE table_schema = ?
+                          AND table_name = 'users'
+                          AND column_name = 'auth_version'
+                          AND is_nullable = 'NO'
+                          AND column_default = '0'
+                        """,
+                        Integer.class,
+                        currentSchema
+                );
 
-        assertThat(seededUsersWithoutInitialAuthVersion).isZero();
+        assertThat(authVersionDefaultColumnCount).isEqualTo(1);
 
         List<String> verificationTokenIndexes = jdbcTemplate.queryForList(
                 """
