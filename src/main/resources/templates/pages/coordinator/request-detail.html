@@ -130,14 +130,87 @@
 
         <article
           class="card shadow-sm mb-4"
-          th:if="${request.status != 'PENDING'}"
+          th:if="${request.status == 'VERIFIED'}"
+        >
+          <div class="card-body p-4">
+            <h2 class="h5 mb-2">Phân công đội cứu hộ</h2>
+            <p class="text-secondary">
+              Chỉ đội đang AVAILABLE và có thành viên hoạt động mới xuất hiện
+              trong danh sách.
+            </p>
+
+            <div
+              class="alert alert-warning"
+              role="alert"
+              th:if="${availableTeams.empty}"
+            >
+              Hiện chưa có đội cứu hộ phù hợp để phân công.
+            </div>
+
+            <form
+              method="post"
+              th:action="@{/coordinator/requests/{id}/assign(id=${request.id})}"
+              th:object="${assignmentRequest}"
+            >
+              <input type="hidden" th:field="*{version}" />
+
+              <div class="mb-3">
+                <label class="form-label" for="teamId">Đội cứu hộ</label>
+                <select
+                  id="teamId"
+                  class="form-select"
+                  th:field="*{teamId}"
+                  th:disabled="${availableTeams.empty}"
+                  required
+                >
+                  <option value="">Chọn đội cứu hộ</option>
+                  <option
+                    th:each="team : ${availableTeams}"
+                    th:value="${team.id}"
+                    th:text="${team.displayCode + ' · ' + team.teamName + ' · ' + team.leaderName}"
+                  ></option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" for="coordinatorNote">
+                  Ghi chú điều phối
+                </label>
+                <textarea
+                  id="coordinatorNote"
+                  class="form-control"
+                  rows="3"
+                  maxlength="2000"
+                  th:field="*{coordinatorNote}"
+                  placeholder="Ví dụ: ưu tiên tiếp cận từ hướng đường chính"
+                ></textarea>
+                <div class="form-text">
+                  Ghi chú được lưu vào lịch sử trạng thái, không ghi đè báo cáo
+                  hoàn thành của đội cứu hộ.
+                </div>
+              </div>
+
+              <button
+                class="btn btn-primary"
+                type="submit"
+                th:disabled="${availableTeams.empty}"
+              >
+                Xác nhận phân công
+              </button>
+            </form>
+          </div>
+        </article>
+
+        <article
+          class="card shadow-sm mb-4"
+          th:if="${request.status != 'PENDING' and request.status != 'VERIFIED'}"
         >
           <div class="card-body p-4">
             <h2 class="h5 mb-2">Yêu cầu đã được xử lý</h2>
             <p class="text-secondary mb-0">
               Trạng thái hiện tại:
               <strong th:text="${request.status}"></strong>. Không thể thực hiện
-              lại quyết định xác minh hoặc từ chối.
+              lại thao tác không phù hợp với trạng thái này.
             </p>
           </div>
         </article>

@@ -2,6 +2,7 @@ package vn.edu.hcmute.drss.controllers;
 
 import jakarta.validation.Valid;
 import java.util.UUID;
+import java.util.List;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,6 +25,9 @@ import vn.edu.hcmute.drss.exceptions.CoordinatorRequestNotFoundException;
 import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
 import vn.edu.hcmute.drss.services.CoordinatorRequestCommandService;
 import vn.edu.hcmute.drss.services.CoordinatorRequestQueryService;
+import vn.edu.hcmute.drss.dtos.CoordinatorAssignmentRequest;
+import vn.edu.hcmute.drss.entities.RescueAssignment;
+import vn.edu.hcmute.drss.services.CoordinatorAssignmentService;
 
 @Controller
 @RequestMapping("/coordinator")
@@ -31,13 +35,16 @@ public class CoordinatorRequestController {
 
     private final CoordinatorRequestQueryService queryService;
     private final CoordinatorRequestCommandService commandService;
+    private final CoordinatorAssignmentService assignmentService;
 
     public CoordinatorRequestController(
             CoordinatorRequestQueryService queryService,
-            CoordinatorRequestCommandService commandService
+            CoordinatorRequestCommandService commandService,
+            CoordinatorAssignmentService assignmentService
     ) {
         this.queryService = queryService;
         this.commandService = commandService;
+        this.assignmentService = assignmentService;
     }
 
     @GetMapping("/pending")
@@ -68,7 +75,7 @@ public class CoordinatorRequestController {
         }
     }
 
-    @GetMapping("/requests/{requestId}")
+        @GetMapping("/requests/{requestId}")
     public String detail(
             @PathVariable UUID requestId,
             Model model
@@ -79,8 +86,19 @@ public class CoordinatorRequestController {
                 new CoordinatorDecisionRequest();
         decisionRequest.setVersion(detail.request().getVersion());
 
+        CoordinatorAssignmentRequest assignmentRequest =
+                new CoordinatorAssignmentRequest();
+        assignmentRequest.setVersion(detail.request().getVersion());
+
         model.addAttribute("detail", detail);
         model.addAttribute("decisionRequest", decisionRequest);
+        model.addAttribute("assignmentRequest", assignmentRequest);
+        model.addAttribute(
+                "availableTeams",
+                "VERIFIED".equals(detail.request().getStatus())
+                        ? assignmentService.findAvailableTeams()
+                        : List.of()
+        );
         return "pages/coordinator/request-detail";
     }
 
@@ -116,6 +134,63 @@ public class CoordinatorRequestController {
             redirectAttributes.addFlashAttribute(
                     "successMsg",
                     successMessage
+            );
+            return redirectToDetail(requestId);
+        } catch (CoordinatorRequestNotFoundException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "errorMsg",
+                    exception.getMessage()
+            );
+            return "redirect:/coordinator/pending";
+        } catch (OptimisticLockingFailureException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "errorMsg",
+                    "Yêu cầu vừa được cập nhật. Vui lòng tải lại trang."
+            );
+            return redirectToDetail(requestId);
+        } catch (
+                CoordinatorRequestConflictException
+                | IllegalArgumentException
+                | IllegalStateException exception
+        ) {
+            redirectAttributes.addFlashAttribute(
+                    "errorMsg",
+                    exception.getMessage()
+            );
+            return redirectToDetail(requestId);
+        }
+    }
+
+        @PostMapping("/requests/{requestId}/assign")
+    public String assign(
+            @PathVariable UUID requestId,
+            @Valid @ModelAttribute("assignmentRequest")
+            CoordinatorAssignmentRequest assignmentRequest,
+            BindingResult bindingResult,
+            @AuthenticationPrincipal
+            AuthenticatedUserPrincipal principal,
+            RedirectAttributes redirectAttributes
+    ) {
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute(
+                    "errorMsg",
+                    firstValidationMessage(bindingResult)
+            );
+            return redirectToDetail(requestId);
+        }
+
+        try {
+            RescueAssignment assignment = assignmentService.assign(
+                    requestId,
+                    requireCoordinatorId(principal),
+                    assignmentRequest
+            );
+
+            redirectAttributes.addFlashAttribute(
+                    "successMsg",
+                    "Đã phân công nhiệm vụ "
+                            + assignment.getDisplayCode()
+                            + " cho đội cứu hộ."
             );
             return redirectToDetail(requestId);
         } catch (CoordinatorRequestNotFoundException exception) {

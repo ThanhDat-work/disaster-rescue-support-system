@@ -46,6 +46,10 @@ import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
 import vn.edu.hcmute.drss.services.CoordinatorRequestCommandService;
 import vn.edu.hcmute.drss.services.CoordinatorRequestQueryService;
 import vn.edu.hcmute.drss.support.NoDatabaseRepositoryMocks;
+import vn.edu.hcmute.drss.dtos.CoordinatorAssignmentRequest;
+import vn.edu.hcmute.drss.entities.RescueAssignment;
+import vn.edu.hcmute.drss.entities.RescueTeam;
+import vn.edu.hcmute.drss.services.CoordinatorAssignmentService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -63,6 +67,9 @@ class CoordinatorRequestControllerMvcTest {
 
     @MockitoBean
     private CoordinatorRequestCommandService commandService;
+
+    @MockitoBean
+    private CoordinatorAssignmentService assignmentService;
 
     @Test
     void coordinatorRoutesRequireAuthenticationAndCoordinatorRole()
@@ -163,8 +170,18 @@ class CoordinatorRequestControllerMvcTest {
                         "decisionRequest",
                         org.hamcrest.Matchers.hasProperty(
                                 "version",
+                                org.hamcrest.Matchers.equalTo(4L))))
+                .andExpect(model().attributeExists("assignmentRequest"))
+                .andExpect(model().attribute(
+                        "assignmentRequest",
+                        org.hamcrest.Matchers.hasProperty(
+                                "version",
                                 org.hamcrest.Matchers.equalTo(4L)
                         )
+                ))
+                .andExpect(model().attribute(
+                        "availableTeams",
+                        List.of()
                 ));
     }
 
@@ -403,6 +420,201 @@ class CoordinatorRequestControllerMvcTest {
                 .andExpect(flash().attributeExists("errorMsg"));
     }
 
+        @Test
+    void verifiedDetailProvidesOnlyAvailableAssignmentTeams()
+            throws Exception {
+        RescueRequest request = request();
+        request.setStatus("VERIFIED");
+        RescueTeam team = team();
+        CoordinatorRequestDetail detail = new CoordinatorRequestDetail(
+                request,
+                List.of(),
+                List.of()
+        );
+
+        when(queryService.getDetail(request.getId())).thenReturn(detail);
+        when(assignmentService.findAvailableTeams())
+                .thenReturn(List.of(team));
+
+        mockMvc.perform(get(
+                        "/coordinator/requests/{requestId}",
+                        request.getId()
+                ).with(authenticatedAs("ROLE_COORDINATOR")))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute(
+                        "availableTeams",
+                        List.of(team)
+                ))
+                .andExpect(model().attribute(
+                        "assignmentRequest",
+                        org.hamcrest.Matchers.hasProperty(
+                                "version",
+                                org.hamcrest.Matchers.equalTo(4L)
+                        )
+                ));
+
+        verify(assignmentService).findAvailableTeams();
+    }
+
+    @Test
+    void assignmentPostRequiresCoordinatorRoleAndCsrf()
+            throws Exception {
+        UUID requestId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+
+        mockMvc.perform(post(
+                        "/coordinator/requests/{requestId}/assign",
+                        requestId
+                ).with(authenticatedAs("ROLE_COORDINATOR"))
+                        .param("teamId", teamId.toString())
+                        .param("version", "4"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post(
+                        "/coordinator/requests/{requestId}/assign",
+                        requestId
+                ).with(authenticatedAs("ROLE_CITIZEN"))
+                        .with(csrf())
+                        .param("teamId", teamId.toString())
+                        .param("version", "4"))
+                .andExpect(status().isForbidden());
+
+        verify(assignmentService, never()).assign(any(), any(), any());
+    }
+
+    @Test
+    void validAssignmentUsesPrincipalTeamVersionAndNote()
+            throws Exception {
+        UUID requestId = UUID.randomUUID();
+        RescueTeam team = team();
+        RescueAssignment assignment = new RescueAssignment();
+        assignment.setDisplayCode("ASN-0123456789ABCDEF");
+
+        when(assignmentService.assign(
+                eq(requestId),
+                eq(USER_ID),
+                any(CoordinatorAssignmentRequest.class)
+        )).thenReturn(assignment);
+
+        mockMvc.perform(post(
+                        "/coordinator/requests/{requestId}/assign",
+                        requestId
+                ).with(authenticatedAs("ROLE_COORDINATOR"))
+                        .with(csrf())
+                        .param("teamId", team.getId().toString())
+                        .param("version", "4")
+                        .param("coordinatorNote", "Ưu tiên đường chính"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl(
+                        "/coordinator/requests/" + requestId
+                ))
+                .andExpect(flash().attribute(
+                        "successMsg",
+                        "Đã phân công nhiệm vụ ASN-0123456789ABCDEF cho đội cứu hộ."
+                ));
+
+        ArgumentCaptor<CoordinatorAssignmentRequest> command =
+                ArgumentCaptor.forClass(
+                        CoordinatorAssignmentRequest.class
+                );
+        verify(assignmentService).assign(
+                eq(requestId),
+                eq(USER_ID),
+                command.capture()
+        );
+        assertThat(command.getValue().getTeamId())
+                .isEqualTo(team.getId());
+        assertThat(command.getValue().getVersion()).isEqualTo(4L);
+        assertThat(command.getValue().getCoordinatorNote())
+                .isEqualTo("Ưu tiên đường chính");
+    }
+
+    @Test
+    void malformedAssignmentIsRejectedBeforeService()
+            throws Exception {
+        UUID requestId = UUID.randomUUID();
+
+        mockMvc.perform(post(
+                        "/coordinator/requests/{requestId}/assign",
+                        requestId
+                ).with(authenticatedAs("ROLE_COORDINATOR"))
+                        .with(csrf())
+                        .param("version", "4"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl(
+                        "/coordinator/requests/" + requestId
+                ))
+                .andExpect(flash().attribute(
+                        "errorMsg",
+                        "Vui lòng chọn đội cứu hộ."
+                ));
+
+        mockMvc.perform(post(
+                        "/coordinator/requests/{requestId}/assign",
+                        requestId
+                ).with(authenticatedAs("ROLE_COORDINATOR"))
+                        .with(csrf())
+                        .param("teamId", UUID.randomUUID().toString())
+                        .param("version", "4")
+                        .param("coordinatorNote", "x".repeat(2001)))
+                .andExpect(status().isFound())
+                .andExpect(flash().attribute(
+                        "errorMsg",
+                        "Ghi chú phân công tối đa 2.000 ký tự."
+                ));
+
+        verify(assignmentService, never()).assign(any(), any(), any());
+    }
+
+    @Test
+    void assignmentConflictAndMissingRequestUseSafeRedirects()
+            throws Exception {
+        UUID conflictId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
+
+        when(assignmentService.assign(
+                eq(conflictId),
+                eq(USER_ID),
+                any(CoordinatorAssignmentRequest.class)
+        )).thenThrow(new CoordinatorRequestConflictException(
+                "Yêu cầu đã có phân công đang hoạt động."
+        ));
+
+        mockMvc.perform(post(
+                        "/coordinator/requests/{requestId}/assign",
+                        conflictId
+                ).with(authenticatedAs("ROLE_COORDINATOR"))
+                        .with(csrf())
+                        .param("teamId", teamId.toString())
+                        .param("version", "4"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl(
+                        "/coordinator/requests/" + conflictId
+                ))
+                .andExpect(flash().attribute(
+                        "errorMsg",
+                        "Yêu cầu đã có phân công đang hoạt động."
+                ));
+
+        UUID missingId = UUID.randomUUID();
+        when(assignmentService.assign(
+                eq(missingId),
+                eq(USER_ID),
+                any(CoordinatorAssignmentRequest.class)
+        )).thenThrow(new CoordinatorRequestNotFoundException());
+
+        mockMvc.perform(post(
+                        "/coordinator/requests/{requestId}/assign",
+                        missingId
+                ).with(authenticatedAs("ROLE_COORDINATOR"))
+                        .with(csrf())
+                        .param("teamId", teamId.toString())
+                        .param("version", "4"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/coordinator/pending"))
+                .andExpect(flash().attributeExists("errorMsg"));
+    }
+
     private RequestPostProcessor authenticatedAs(String role) {
         AuthenticatedUserPrincipal principal = new AuthenticatedUserPrincipal(
                 USER_ID,
@@ -436,6 +648,16 @@ class CoordinatorRequestControllerMvcTest {
         request.setCreatedAt(LocalDateTime.now());
         request.setVersion(4L);
         return request;
+    }
+
+    private RescueTeam team() {
+        RescueTeam team = new RescueTeam();
+        team.setId(UUID.randomUUID());
+        team.setDisplayCode("TEAM-001");
+        team.setTeamName("Đội Phản Ứng Nhanh");
+        team.setLeaderName("Tran Cuu Ho");
+        team.setStatus("AVAILABLE");
+        return team;
     }
 
     private DisasterType disasterType() {

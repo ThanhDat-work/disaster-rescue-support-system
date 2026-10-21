@@ -4,8 +4,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import jakarta.persistence.LockModeType;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -102,6 +105,12 @@ public interface RescueRequestRepository
     @EntityGraph(attributePaths = {"user", "disasterType"})
     @Query("SELECT request FROM RescueRequest request WHERE request.id = :id")
     Optional<RescueRequest> findCoordinatorDetailById(
+            @Param("id") UUID id
+    );
+
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT request FROM RescueRequest request WHERE request.id = :id")
+    Optional<RescueRequest> findByIdForCoordinatorAssignment(
             @Param("id") UUID id
     );
 
