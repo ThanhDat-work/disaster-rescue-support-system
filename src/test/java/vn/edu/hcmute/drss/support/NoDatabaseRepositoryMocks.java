@@ -3,18 +3,23 @@ package vn.edu.hcmute.drss.support;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import vn.edu.hcmute.drss.repositories.AuthRateLimitRepository;
 import vn.edu.hcmute.drss.repositories.RescueAssignmentRepository;
+import vn.edu.hcmute.drss.repositories.RescueRequestRepository;
 import vn.edu.hcmute.drss.repositories.RescueTeamMemberRepository;
 import vn.edu.hcmute.drss.repositories.RoleRepository;
 import vn.edu.hcmute.drss.repositories.StatusHistoryRepository;
 import vn.edu.hcmute.drss.repositories.UserRepository;
 import vn.edu.hcmute.drss.repositories.UserRoleRepository;
 import vn.edu.hcmute.drss.repositories.VerificationTokenRepository;
+import vn.edu.hcmute.drss.repositories.DisasterTypeRepository;
+import vn.edu.hcmute.drss.repositories.RescueTeamRepository;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+
+
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -26,8 +31,11 @@ import java.lang.annotation.Target;
         RoleRepository.class,
         UserRoleRepository.class,
         RescueAssignmentRepository.class,
+        RescueRequestRepository.class,
         RescueTeamMemberRepository.class,
-        StatusHistoryRepository.class
+        StatusHistoryRepository.class,
+        DisasterTypeRepository.class,
+        RescueTeamRepository.class,
 })
 public @interface NoDatabaseRepositoryMocks {
 }

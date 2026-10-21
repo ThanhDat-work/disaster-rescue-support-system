@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main-layout :: layout(~{::title}, ~{::section})}">
+  <head><title>Quản lý đội cứu hộ | DRSS</title></head>
+  <body>
+    <section class="py-4">
+      <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+        <div><p class="text-uppercase text-primary fw-semibold mb-1">Quản trị</p><h1 class="h3 mb-1">Đội cứu hộ</h1><p class="text-secondary mb-0">Quản lý thông tin và trạng thái vận hành của đội.</p></div>
+        <a class="btn btn-primary align-self-start" th:href="@{/admin/teams/new}">Thêm đội cứu hộ</a>
+      </div>
+      <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+      <form class="card card-body mb-4" method="get" th:action="@{/admin/teams}">
+        <div class="row g-3 align-items-end">
+          <div class="col-12 col-lg-5"><label class="form-label" for="keyword">Mã, tên đội hoặc đội trưởng</label><input class="form-control" id="keyword" name="keyword" maxlength="100" th:value="${keyword}" /></div>
+          <div class="col-12 col-sm-6 col-lg-3"><label class="form-label" for="status">Trạng thái</label><select class="form-select" id="status" name="status"><option value="">Tất cả</option><option th:each="option : ${teamStatuses}" th:value="${option}" th:text="${option}" th:selected="${status == option}"></option></select></div>
+          <div class="col-12 col-sm-6 col-lg-2 d-flex gap-2"><input type="hidden" name="size" th:value="${size}" /><button class="btn btn-primary flex-grow-1" type="submit">Lọc</button><a class="btn btn-outline-secondary" th:href="@{/admin/teams}">Xóa lọc</a></div>
+          <div class="col-12 col-sm-6 col-lg-2">
+  <label class="form-label" for="size">Số dòng</label>
+  <select class="form-select" id="size" name="size">
+    <option
+      th:each="option : ${pageSizes}"
+      th:value="${option}"
+      th:text="${option}"
+      th:selected="${size == option}"
+    ></option>
+  </select>
+</div>
+        </div>
+
+      </form>
+      <div class="card" th:if="${!result.empty}"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Mã</th><th>Tên đội</th><th>Đội trưởng</th><th>Liên hệ</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead><tbody><tr th:each="item : ${result.content}"><td class="fw-semibold" th:text="${item.displayCode}"></td><td th:text="${item.teamName}"></td><td th:text="${item.leaderName}"></td><td th:text="${item.contactNumber}"></td><td><span class="badge text-bg-light border" th:text="${item.status}"></span></td><td class="text-end"><a class="btn btn-sm btn-outline-primary" th:href="@{/admin/teams/{id}/edit(id=${item.id})}">Sửa</a></td></tr></tbody></table></div></div>
+      <div class="card card-body text-center py-5" th:if="${result.empty}"><h2 class="h5">Không có đội cứu hộ phù hợp</h2><p class="text-secondary mb-0">Hãy đổi bộ lọc hoặc tạo đội mới.</p></div>
+<nav class="mt-4" aria-label="Phân trang" th:if="${result.totalPages > 1}"><ul class="pagination flex-wrap"><li class="page-item" th:classappend="${result.first} ? 'disabled'"><a class="page-link" th:href="@{/admin/teams(keyword=${keyword},status=${status},page=${result.number - 1},size=${size})}">Trước</a></li><li class="page-item disabled"><span class="page-link" th:text="|Trang ${result.number + 1}/${result.totalPages}|"></span></li><li class="page-item" th:classappend="${result.last} ? 'disabled'"><a class="page-link" th:href="@{/admin/teams(keyword=${keyword},status=${status},page=${result.number + 1},size=${size})}">Sau</a></li></ul></nav>
+    </section>
+  </body>
+</html>
