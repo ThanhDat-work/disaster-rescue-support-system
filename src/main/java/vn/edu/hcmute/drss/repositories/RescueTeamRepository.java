@@ -4,11 +4,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import vn.edu.hcmute.drss.entities.RescueTeam;
+import jakarta.persistence.LockModeType;
 
 import java.util.UUID;
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RescueTeamRepository
@@ -49,5 +53,25 @@ public interface RescueTeamRepository
     boolean existsByTeamNameIgnoreCaseAndIdNot(
             String teamName,
             UUID id
+    );
+
+        @Query("""
+            SELECT team
+            FROM RescueTeam team
+            WHERE team.status = 'AVAILABLE'
+              AND EXISTS (
+                  SELECT member.id
+                  FROM RescueTeamMember member
+                  WHERE member.team = team
+                    AND member.leftAt IS NULL
+              )
+            ORDER BY team.teamName ASC, team.displayCode ASC
+            """)
+    List<RescueTeam> findAvailableWithActiveMembersForAssignment();
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT team FROM RescueTeam team WHERE team.id = :id")
+    Optional<RescueTeam> findByIdForCoordinatorAssignment(
+            @Param("id") UUID id
     );
 }

@@ -26,4 +26,6 @@ public interface RescueTeamMemberRepository
             @Param("userId") UUID userId,
             @Param("teamId") UUID teamId
     );
+
+        boolean existsByTeam_IdAndLeftAtIsNull(UUID teamId);
 }

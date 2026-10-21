@@ -9,6 +9,7 @@ import vn.edu.hcmute.drss.entities.RescueAssignment;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Collection;
 
 @Repository
 public interface RescueAssignmentRepository
@@ -49,5 +50,10 @@ public interface RescueAssignmentRepository
     Optional<RescueAssignment> findByIdAndUserId(
             @Param("assignmentId") UUID assignmentId,
             @Param("userId") UUID userId
+    );
+
+        boolean existsByRequest_IdAndStatusIn(
+            UUID requestId,
+            Collection<String> statuses
     );
 }
