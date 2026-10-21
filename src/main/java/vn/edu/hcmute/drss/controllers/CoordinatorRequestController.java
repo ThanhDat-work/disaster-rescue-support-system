@@ -1,17 +1,28 @@
 package vn.edu.hcmute.drss.controllers;
 
+import jakarta.validation.Valid;
 import java.util.UUID;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import vn.edu.hcmute.drss.dtos.CoordinatorDecisionRequest;
+import vn.edu.hcmute.drss.dtos.CoordinatorRequestDetail;
 import vn.edu.hcmute.drss.dtos.CoordinatorRequestFilter;
 import vn.edu.hcmute.drss.entities.RescueRequest;
+import vn.edu.hcmute.drss.exceptions.CoordinatorRequestConflictException;
+import vn.edu.hcmute.drss.exceptions.CoordinatorRequestNotFoundException;
+import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
+import vn.edu.hcmute.drss.services.CoordinatorRequestCommandService;
 import vn.edu.hcmute.drss.services.CoordinatorRequestQueryService;
 
 @Controller
@@ -19,11 +30,14 @@ import vn.edu.hcmute.drss.services.CoordinatorRequestQueryService;
 public class CoordinatorRequestController {
 
     private final CoordinatorRequestQueryService queryService;
+    private final CoordinatorRequestCommandService commandService;
 
     public CoordinatorRequestController(
-            CoordinatorRequestQueryService queryService
+            CoordinatorRequestQueryService queryService,
+            CoordinatorRequestCommandService commandService
     ) {
         this.queryService = queryService;
+        this.commandService = commandService;
     }
 
     @GetMapping("/pending")
@@ -59,7 +73,99 @@ public class CoordinatorRequestController {
             @PathVariable UUID requestId,
             Model model
     ) {
-        model.addAttribute("detail", queryService.getDetail(requestId));
+        CoordinatorRequestDetail detail = queryService.getDetail(requestId);
+
+        CoordinatorDecisionRequest decisionRequest =
+                new CoordinatorDecisionRequest();
+        decisionRequest.setVersion(detail.request().getVersion());
+
+        model.addAttribute("detail", detail);
+        model.addAttribute("decisionRequest", decisionRequest);
         return "pages/coordinator/request-detail";
+    }
+
+    @PostMapping("/requests/{requestId}/decision")
+    public String decide(
+            @PathVariable UUID requestId,
+            @Valid @ModelAttribute("decisionRequest")
+            CoordinatorDecisionRequest decisionRequest,
+            BindingResult bindingResult,
+            @AuthenticationPrincipal
+            AuthenticatedUserPrincipal principal,
+            RedirectAttributes redirectAttributes
+    ) {
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute(
+                    "errorMsg",
+                    firstValidationMessage(bindingResult)
+            );
+            return redirectToDetail(requestId);
+        }
+
+        try {
+            String newStatus = commandService.decide(
+                    requestId,
+                    requireCoordinatorId(principal),
+                    decisionRequest
+            );
+
+            String successMessage = "VERIFIED".equals(newStatus)
+                    ? "Đã xác minh yêu cầu cứu nạn."
+                    : "Đã từ chối yêu cầu cứu nạn.";
+
+            redirectAttributes.addFlashAttribute(
+                    "successMsg",
+                    successMessage
+            );
+            return redirectToDetail(requestId);
+        } catch (CoordinatorRequestNotFoundException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "errorMsg",
+                    exception.getMessage()
+            );
+            return "redirect:/coordinator/pending";
+        } catch (OptimisticLockingFailureException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "errorMsg",
+                    "Yêu cầu vừa được cập nhật. Vui lòng tải lại trang."
+            );
+            return redirectToDetail(requestId);
+        } catch (
+                CoordinatorRequestConflictException
+                | IllegalArgumentException
+                | IllegalStateException exception
+        ) {
+            redirectAttributes.addFlashAttribute(
+                    "errorMsg",
+                    exception.getMessage()
+            );
+            return redirectToDetail(requestId);
+        }
+    }
+
+    private UUID requireCoordinatorId(
+            AuthenticatedUserPrincipal principal
+    ) {
+        if (principal == null || principal.userId() == null) {
+            throw new IllegalStateException(
+                    "Không xác định được điều phối viên đang đăng nhập."
+            );
+        }
+
+        return principal.userId();
+    }
+
+    private String firstValidationMessage(BindingResult bindingResult) {
+        String message = bindingResult.getAllErrors()
+                .get(0)
+                .getDefaultMessage();
+
+        return message == null || message.isBlank()
+                ? "Dữ liệu xử lý không hợp lệ."
+                : message;
+    }
+
+    private String redirectToDetail(UUID requestId) {
+        return "redirect:/coordinator/requests/" + requestId;
     }
 }
