@@ -6,6 +6,7 @@
 - **Base commit:** `65b8bd3`
 - **Dependencies:** T2-02, T2-03, T2-04
 - **Artifact/Trace IDs:** `MEDIA-01`, `WS-01`, `SD-10`
+- **Last clarified:** 2026-10-21 — Citizen create upload uses non-transactional orchestration, transactional DB persistence and durable compensating cleanup tasks.
 
 ## 1. Nguồn quyết định
 
@@ -43,6 +44,7 @@ T2-05 không bao gồm:
 - File rỗng bị từ chối.
 - MIME khai báo phải phù hợp với chữ ký byte thực tế.
 - Không chỉ tin phần mở rộng tên file hoặc `Content-Type` do client gửi.
+- Transport multipart sử dụng `max-file-size=10MB`, `max-request-size=52MB` và `server.tomcat.max-swallow-size=52MB` để đồng bộ giới hạn HTTP với validator ứng dụng.
 
 ## 4. Quyền media
 
@@ -77,6 +79,16 @@ Luồng upload chuẩn:
 5. Nếu transaction database rollback, xóa bù media Cloudinary đã upload.
 6. Cleanup là idempotent; kết quả `not found` được xem là thành công.
 7. Nếu cleanup tức thời thất bại, metadata hoặc cleanup record phải còn đủ dữ liệu để retry; không ghi API secret hoặc secure URL vào log lỗi.
+
+### 6.1 As-built của luồng citizen create
+
+- Controller không trực tiếp gọi Cloudinary hoặc repository.
+- Orchestration ngoài transaction xác thực toàn bộ file rồi upload tuần tự.
+- Một service transaction riêng lưu request và toàn bộ `media_assets`.
+- Upload lỗi giữa chừng hoặc transaction database lỗi đều xóa bù theo thứ tự ngược.
+- Xóa bù lỗi tạo một `media_cleanup_tasks` bằng transaction `REQUIRES_NEW`.
+- Cleanup task chỉ giữ `public_id`, `resource_type`, failure code và retry metadata; không giữ API secret hoặc `secure_url`.
+- Notification chưa được tạo trong checkpoint này; nội dung đó thuộc checkpoint domain-event/after-commit tiếp theo.
 
 ## 7. Xóa media
 

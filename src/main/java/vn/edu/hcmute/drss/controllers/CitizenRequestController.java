@@ -2,6 +2,9 @@ package vn.edu.hcmute.drss.controllers;
 
 import jakarta.validation.Valid;
 import java.util.UUID;
+import java.util.List;
+import java.util.Objects;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,12 +23,22 @@ import vn.edu.hcmute.drss.dtos.CreateCitizenRequest;
 import vn.edu.hcmute.drss.entities.RescueRequest;
 import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
 import vn.edu.hcmute.drss.services.CitizenRequestService;
+import vn.edu.hcmute.drss.exceptions.MediaStorageException;
+import vn.edu.hcmute.drss.services.CitizenRequestMediaService;
 
 @Controller
 @RequestMapping("/requests")
 public class CitizenRequestController {
     private final CitizenRequestService service;
-    public CitizenRequestController(CitizenRequestService service) { this.service = service; }
+    private final CitizenRequestMediaService mediaService;
+
+    public CitizenRequestController(
+            CitizenRequestService service,
+            CitizenRequestMediaService mediaService
+    ) {
+        this.service = service;
+        this.mediaService = mediaService;
+    }
 
     @GetMapping
     public String list(@AuthenticationPrincipal AuthenticatedUserPrincipal principal,
@@ -45,16 +58,42 @@ public class CitizenRequestController {
     }
 
     @PostMapping
-    public String create(@Valid @ModelAttribute("createCitizenRequest") CreateCitizenRequest form,
-            BindingResult binding, @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
-            Model model, RedirectAttributes flash) {
-        if (binding.hasErrors()) return showCreateForm(model);
+    public String create(
+            @Valid @ModelAttribute("createCitizenRequest")
+            CreateCitizenRequest form,
+            BindingResult binding,
+            @RequestParam(name = "mediaFiles", required = false)
+            List<MultipartFile> mediaFiles,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            Model model,
+            RedirectAttributes flash
+    ) {
+        if (binding.hasErrors()) {
+            return showCreateForm(model);
+        }
+
         try {
-            RescueRequest created = service.create(principal.userId(), form);
-            flash.addFlashAttribute("successMsg", "Đã gửi yêu cầu " + created.getDisplayCode() + ".");
+            RescueRequest created = mediaService.create(
+                    principal.userId(),
+                    form,
+                    normalizeMediaFiles(mediaFiles)
+            );
+            flash.addFlashAttribute(
+                    "successMsg",
+                    "\u0110\u00e3 g\u1eedi y\u00eau c\u1ea7u "
+                            + created.getDisplayCode()
+                            + "."
+            );
             return "redirect:/requests/" + created.getId();
         } catch (IllegalArgumentException exception) {
             flash.addFlashAttribute("errorMsg", exception.getMessage());
+            return "redirect:/requests/new";
+        } catch (MediaStorageException exception) {
+            flash.addFlashAttribute(
+                    "errorMsg",
+                    "Kh\u00f4ng th\u1ec3 l\u01b0u media l\u00fac n\u00e0y. "
+                            + "Vui l\u00f2ng th\u1eed l\u1ea1i."
+            );
             return "redirect:/requests/new";
         }
     }
@@ -93,6 +132,23 @@ public class CitizenRequestController {
             flash.addFlashAttribute("errorMsg", exception.getMessage());
         }
         return "redirect:/requests/" + requestId;
+    }
+
+    private List<MultipartFile> normalizeMediaFiles(
+            List<MultipartFile> files
+    ) {
+        if (files == null || files.isEmpty()) {
+            return List.of();
+        }
+
+        return files.stream()
+                .filter(Objects::nonNull)
+                .filter(file -> !(
+                        file.isEmpty()
+                                && (file.getOriginalFilename() == null
+                                || file.getOriginalFilename().isBlank())
+                ))
+                .toList();
     }
 
     private String showCreateForm(Model model) {
