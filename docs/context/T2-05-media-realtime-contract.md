@@ -89,6 +89,10 @@ Luồng upload chuẩn:
 - Xóa bù lỗi tạo một `media_cleanup_tasks` bằng transaction `REQUIRES_NEW`.
 - Cleanup task chỉ giữ `public_id`, `resource_type`, failure code và retry metadata; không giữ API secret hoặc `secure_url`.
 - Notification chưa được tạo trong checkpoint này; nội dung đó thuộc checkpoint domain-event/after-commit tiếp theo.
+- Mọi màn hình đọc `MediaAsset` phải phân nhánh theo `resource_type`; không được đưa URL video vào thẻ `<img>`.
+- Ảnh dùng `<img>` và liên kết mở tài nguyên gốc; video dùng `<video controls>` với MIME type đã lưu.
+- Trong phạm vi hiện tại, trang chi tiết của người dân và điều phối viên đều phải hiển thị đúng ảnh/video.
+- Trang nhiệm vụ của cứu hộ chưa đọc `MediaAsset`; việc bổ sung media vào màn hình đó không được tuyên bố hoàn thành trong T2-05 nếu chưa có query, authorization và test tương ứng.
 
 ## 7. Xóa media
 

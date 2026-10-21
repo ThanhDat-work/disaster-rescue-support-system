@@ -221,6 +221,7 @@
             <div class="row g-3" th:if="${!detail.media.empty}">
               <div class="col-sm-6" th:each="asset : ${detail.media}">
                 <a
+                  th:if="${asset.resourceType.name() == 'IMAGE'}"
                   th:href="${asset.secureUrl}"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -230,9 +231,24 @@
                     class="img-fluid rounded border w-100"
                     style="height: 220px; object-fit: cover"
                     th:src="${asset.secureUrl}"
-                    th:alt="${'Media yêu cầu ' + request.displayCode}"
+                    th:alt="${'Ảnh yêu cầu ' + request.displayCode}"
+                    loading="lazy"
                   />
                 </a>
+
+                <video
+                  th:if="${asset.resourceType.name() == 'VIDEO'}"
+                  class="w-100 rounded border"
+                  style="height: 220px; object-fit: cover"
+                  controls
+                  preload="metadata"
+                >
+                  <source
+                    th:src="${asset.secureUrl}"
+                    th:type="${asset.mimeType}"
+                  />
+                  Trình duyệt không hỗ trợ phát video.
+                </video>
               </div>
             </div>
             <p class="text-secondary mb-0" th:if="${detail.media.empty}">
