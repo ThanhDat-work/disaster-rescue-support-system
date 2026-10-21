@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main-layout :: layout('Hàng đợi xác minh', ~{::section})}">
+<section>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <p class="text-uppercase small fw-bold text-danger mb-1">Điều phối viên</p>
+            <h1 class="h2 mb-1">Hàng đợi xác minh</h1>
+            <p class="text-secondary mb-0">
+                Ưu tiên xử lý các yêu cầu cũ trước; chỉ hiển thị trạng thái PENDING.
+            </p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/coordinator/pending}">
+            Làm mới
+        </a>
+    </div>
+
+    <form class="card shadow-sm mb-4" method="get"
+          th:action="@{/coordinator/pending}" th:object="${filter}">
+        <div class="card-body p-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-4 col-md-6">
+                    <label class="form-label" for="keyword">Từ khóa</label>
+                    <input id="keyword" class="form-control" th:field="*{keyword}"
+                           maxlength="150"
+                           placeholder="Mã, họ tên, số điện thoại, địa chỉ">
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label" for="urgency">Mức khẩn cấp</label>
+                    <select id="urgency" class="form-select" th:field="*{urgency}">
+                        <option value="">Tất cả</option>
+                        <option value="LOW">Thấp</option>
+                        <option value="MEDIUM">Trung bình</option>
+                        <option value="HIGH">Cao</option>
+                        <option value="CRITICAL">Nguy cấp</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label" for="disasterTypeId">Loại thiên tai</label>
+                    <select id="disasterTypeId" class="form-select"
+                            th:field="*{disasterTypeId}">
+                        <option value="">Tất cả</option>
+                        <option th:each="type : ${disasterTypes}"
+                                th:value="${type.id}"
+                                th:text="${type.disasterName}"></option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label" for="from">Từ ngày</label>
+                    <input id="from" class="form-control" type="date" th:field="*{from}">
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label" for="to">Đến ngày</label>
+                    <input id="to" class="form-control" type="date" th:field="*{to}">
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button class="btn btn-primary" type="submit">Áp dụng bộ lọc</button>
+                <a class="btn btn-outline-secondary" th:href="@{/coordinator/pending}">
+                    Xóa bộ lọc
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0">Yêu cầu đang chờ</h2>
+        <span class="text-secondary small"
+              th:text="${pageData.totalElements + ' yêu cầu'}">0 yêu cầu</span>
+    </div>
+
+    <div class="row g-3" th:if="${!pageData.empty}">
+        <div class="col-xl-6" th:each="request : ${pageData.content}">
+            <article class="card shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                        <div>
+                            <p class="small text-secondary mb-1"
+                               th:text="${#temporals.format(request.createdAt, 'dd/MM/yyyy HH:mm')}">
+                                21/10/2026 08:00
+                            </p>
+                            <h3 class="h5 mb-0" th:text="${request.displayCode}">
+                                REQ-DEMO
+                            </h3>
+                        </div>
+                        <span th:replace="~{fragments/components :: status-badge(${request.status})}"></span>
+                    </div>
+                    <dl class="row mb-3">
+                        <dt class="col-sm-4">Người gửi</dt>
+                        <dd class="col-sm-8" th:text="${request.user.fullName}"></dd>
+                        <dt class="col-sm-4">Liên hệ</dt>
+                        <dd class="col-sm-8" th:text="${request.user.phoneNumber}"></dd>
+                        <dt class="col-sm-4">Loại thiên tai</dt>
+                        <dd class="col-sm-8" th:text="${request.disasterType.disasterName}"></dd>
+                        <dt class="col-sm-4">Khẩn cấp</dt>
+                        <dd class="col-sm-8 fw-semibold" th:text="${request.urgency}"></dd>
+                        <dt class="col-sm-4">Địa chỉ</dt>
+                        <dd class="col-sm-8 mb-0" th:text="${request.address}"></dd>
+                    </dl>
+                    <a class="btn btn-outline-primary"
+                       th:href="@{/coordinator/requests/{id}(id=${request.id})}">
+                        Xem và xác minh
+                    </a>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <div class="card text-center py-5" th:if="${pageData.empty}">
+        <div class="card-body">
+            <h2 class="h5">Không có yêu cầu phù hợp</h2>
+            <p class="text-secondary mb-3">
+                Hàng đợi hiện trống hoặc không có yêu cầu khớp bộ lọc.
+            </p>
+            <a class="btn btn-outline-primary" th:href="@{/coordinator/pending}">
+                Xem toàn bộ hàng đợi
+            </a>
+        </div>
+    </div>
+
+    <nav class="mt-4" aria-label="Phân trang" th:if="${pageData.totalPages > 1}">
+        <ul class="pagination justify-content-center">
+            <li class="page-item" th:classappend="${pageData.first} ? 'disabled'">
+                <a class="page-link" th:if="${!pageData.first}"
+                   th:href="@{/coordinator/pending(page=${pageData.number - 1},keyword=${filter.keyword},urgency=${filter.urgency},disasterTypeId=${filter.disasterTypeId},from=${filter.from},to=${filter.to})}">
+                    Trang trước
+                </a>
+                <span class="page-link" th:if="${pageData.first}">Trang trước</span>
+            </li>
+            <li class="page-item"
+                th:each="index : ${#numbers.sequence(0, pageData.totalPages - 1)}"
+                th:classappend="${pageData.number == index} ? 'active'">
+                <a class="page-link"
+                   th:href="@{/coordinator/pending(page=${index},keyword=${filter.keyword},urgency=${filter.urgency},disasterTypeId=${filter.disasterTypeId},from=${filter.from},to=${filter.to})}"
+                   th:text="${index + 1}"
+                   th:attr="aria-current=${pageData.number == index ? 'page' : null}">1</a>
+            </li>
+            <li class="page-item" th:classappend="${pageData.last} ? 'disabled'">
+                <a class="page-link" th:if="${!pageData.last}"
+                   th:href="@{/coordinator/pending(page=${pageData.number + 1},keyword=${filter.keyword},urgency=${filter.urgency},disasterTypeId=${filter.disasterTypeId},from=${filter.from},to=${filter.to})}">
+                    Trang sau
+                </a>
+                <span class="page-link" th:if="${pageData.last}">Trang sau</span>
+            </li>
+        </ul>
+    </nav>
+</section>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main-layout :: layout('Chi tiết yêu cầu điều phối', ~{::section})}">
+<section th:with="request=${detail.request}">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <p class="text-uppercase small fw-bold text-danger mb-1">Điều phối viên</p>
+            <h1 class="h2 mb-1" th:text="${request.displayCode}">REQ-DEMO</h1>
+            <p class="text-secondary mb-0"
+               th:text="${request.disasterType.disasterName + ' · ' + request.urgency}"></p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/coordinator/pending}">
+            Quay lại hàng đợi
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <article class="card shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                        <h2 class="h5 mb-0">Thông tin yêu cầu</h2>
+                        <span th:replace="~{fragments/components :: status-badge(${request.status})}"></span>
+                    </div>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Thời gian gửi</dt>
+                        <dd class="col-sm-8"
+                            th:text="${#temporals.format(request.createdAt, 'dd/MM/yyyy HH:mm')}"></dd>
+                        <dt class="col-sm-4">Loại thiên tai</dt>
+                        <dd class="col-sm-8" th:text="${request.disasterType.disasterName}"></dd>
+                        <dt class="col-sm-4">Mức khẩn cấp</dt>
+                        <dd class="col-sm-8 fw-semibold" th:text="${request.urgency}"></dd>
+                        <dt class="col-sm-4">Địa chỉ</dt>
+                        <dd class="col-sm-8" th:text="${request.address}"></dd>
+                        <dt class="col-sm-4">Tọa độ</dt>
+                        <dd class="col-sm-8"
+                            th:if="${request.latitude != null and request.longitude != null}"
+                            th:text="${request.latitude + ', ' + request.longitude}"></dd>
+                        <dd class="col-sm-8 text-secondary"
+                            th:unless="${request.latitude != null and request.longitude != null}">
+                            Chưa cung cấp
+                        </dd>
+                        <dt class="col-sm-4">Mô tả</dt>
+                        <dd class="col-sm-8 mb-0"
+                            th:text="${request.description != null and !request.description.isBlank() ? request.description : 'Chưa có mô tả'}"></dd>
+                    </dl>
+                </div>
+            </article>
+
+            <article class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h2 class="h5 mb-3">Media hiện có</h2>
+                    <div class="row g-3" th:if="${!detail.media.empty}">
+                        <div class="col-sm-6" th:each="asset : ${detail.media}">
+                            <a th:href="${asset.secureUrl}" target="_blank"
+                               rel="noopener noreferrer" class="d-block">
+                                <img class="img-fluid rounded border w-100"
+                                     style="height: 220px; object-fit: cover"
+                                     th:src="${asset.secureUrl}"
+                                     th:alt="${'Media yêu cầu ' + request.displayCode}">
+                            </a>
+                        </div>
+                    </div>
+                    <p class="text-secondary mb-0" th:if="${detail.media.empty}">
+                        Yêu cầu chưa có media đính kèm.
+                    </p>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-lg-5">
+            <article class="card shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h2 class="h5 mb-3">Thông tin người dân</h2>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Họ tên</dt>
+                        <dd class="col-sm-8" th:text="${request.user.fullName}"></dd>
+                        <dt class="col-sm-4">Điện thoại</dt>
+                        <dd class="col-sm-8">
+                            <a th:href="${'tel:' + request.user.phoneNumber}"
+                               th:text="${request.user.phoneNumber}"></a>
+                        </dd>
+                        <dt class="col-sm-4">Email</dt>
+                        <dd class="col-sm-8 mb-0">
+                            <a th:href="${'mailto:' + request.user.email}"
+                               th:text="${request.user.email}"></a>
+                        </dd>
+                    </dl>
+                </div>
+            </article>
+
+            <article class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h2 class="h5 mb-3">Lịch sử trạng thái</h2>
+                    <p class="text-secondary" th:if="${detail.history.empty}">
+                        Yêu cầu mới được ghi nhận ở trạng thái PENDING.
+                    </p>
+                    <ol class="list-group list-group-flush">
+                        <li class="list-group-item px-0" th:each="event : ${detail.history}">
+                            <div class="d-flex justify-content-between gap-2">
+                                <span>
+                                    <span th:text="${event.oldStatus}"></span>
+                                    →
+                                    <strong th:text="${event.newStatus}"></strong>
+                                </span>
+                                <time class="small text-secondary"
+                                      th:text="${#temporals.format(event.createdAt, 'dd/MM/yyyy HH:mm')}"></time>
+                            </div>
+                            <p class="small mb-0 mt-1"
+                               th:text="${'Bởi ' + event.changedByUser.fullName}"></p>
+                            <p class="small text-secondary mb-0 mt-1"
+                               th:if="${event.notes != null and !event.notes.isBlank()}"
+                               th:text="${event.notes}"></p>
+                        </li>
+                    </ol>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+</html>
