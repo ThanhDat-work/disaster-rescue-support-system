@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main-layout :: layout(~{::title}, ~{::section})}">
+  <head><title th:text="${editing ? 'Sửa đội cứu hộ | DRSS' : 'Thêm đội cứu hộ | DRSS'}"></title></head>
+  <body>
+    <section class="py-4"><div class="row justify-content-center"><div class="col-12 col-lg-8"><a class="text-decoration-none" th:href="@{/admin/teams}">← Quay lại danh sách</a><div class="card card-body mt-3"><h1 class="h3" th:text="${editing ? 'Sửa đội cứu hộ' : 'Thêm đội cứu hộ'}"></h1>
+      <form method="post" th:object="${form}" th:action="${editing ? '/admin/teams/' + teamId : '/admin/teams'}" novalidate>
+        <div class="alert alert-danger" th:if="${#fields.hasGlobalErrors()}"><div th:each="error : ${#fields.globalErrors()}" th:text="${error}"></div></div>
+        <div class="row g-3">
+          <div class="col-12 col-md-6"><label class="form-label" for="code">Mã đội</label><input class="form-control" th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'" id="code" th:field="*{code}" maxlength="20" required /><div class="invalid-feedback" th:errors="*{code}"></div></div>
+          <div class="col-12 col-md-6"><label class="form-label" for="name">Tên đội</label><input class="form-control" th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'" id="name" th:field="*{name}" maxlength="100" required /><div class="invalid-feedback" th:errors="*{name}"></div></div>
+          <div class="col-12 col-md-6"><label class="form-label" for="leaderName">Tên đội trưởng</label><input class="form-control" th:classappend="${#fields.hasErrors('leaderName')} ? 'is-invalid'" id="leaderName" th:field="*{leaderName}" maxlength="100" required /><div class="invalid-feedback" th:errors="*{leaderName}"></div></div>
+          <div class="col-12 col-md-6"><label class="form-label" for="contactNumber">Số điện thoại</label><input class="form-control" th:classappend="${#fields.hasErrors('contactNumber')} ? 'is-invalid'" id="contactNumber" th:field="*{contactNumber}" inputmode="numeric" maxlength="15" required /><div class="invalid-feedback" th:errors="*{contactNumber}"></div></div>
+          <div class="col-12"><label class="form-label" for="status">Trạng thái</label><select class="form-select" th:classappend="${#fields.hasErrors('status')} ? 'is-invalid'" id="status" th:field="*{status}" required><option th:each="option : ${teamStatuses}" th:value="${option}" th:text="${option}"></option></select><div class="invalid-feedback" th:errors="*{status}"></div></div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-4"><button class="btn btn-primary" type="submit" th:text="${editing ? 'Lưu thay đổi' : 'Tạo đội cứu hộ'}"></button><a class="btn btn-outline-secondary" th:href="@{/admin/teams}">Hủy</a></div>
+      </form>
+    </div></div></div></section>
+  </body>
+</html>
