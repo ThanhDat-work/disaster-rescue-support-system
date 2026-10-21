@@ -3,6 +3,7 @@
 - **Status:** Approved
 - **Approved date:** 2026-10-20
 - **Task:** T3-01
+- **GitHub issue:** #10
 - **Implementation branch:** `feat/t3-01-admin-stats`
 - **Baseline commit:** `f65e400`
 - **Artifact/Trace ID:** `ADMIN-01`, `STATS-01`
