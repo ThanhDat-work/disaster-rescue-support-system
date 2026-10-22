@@ -68,9 +68,11 @@ public class CoordinatorTrackingService {
 
     @Transactional(readOnly = true)
     public Page<CoordinatorTrackingItem> findTracking(
+            UUID coordinatorId,
             CoordinatorTrackingFilter filter,
             int requestedPage
     ) {
+        UUID excludedOwnerId = requireCoordinatorId(coordinatorId);
         CoordinatorTrackingFilter safeFilter = filter == null
                 ? new CoordinatorTrackingFilter()
                 : filter;
@@ -103,6 +105,7 @@ public class CoordinatorTrackingService {
                 urgency,
                 fromInclusive,
                 toExclusive,
+                excludedOwnerId,
                 PageRequest.of(pageNumber, PAGE_SIZE)
         );
 
@@ -115,6 +118,7 @@ public class CoordinatorTrackingService {
                     urgency,
                     fromInclusive,
                     toExclusive,
+                    excludedOwnerId,
                     PageRequest.of(
                             requestPage.getTotalPages() - 1,
                             PAGE_SIZE
@@ -169,6 +173,7 @@ public class CoordinatorTrackingService {
             String urgency,
             LocalDateTime fromInclusive,
             LocalDateTime toExclusive,
+            UUID excludedOwnerId,
             Pageable pageable
     ) {
         return requests.searchForCoordinatorTracking(
@@ -179,6 +184,7 @@ public class CoordinatorTrackingService {
                 filter.getTeamId(),
                 fromInclusive,
                 toExclusive,
+                excludedOwnerId,
                 pageable
         );
     }
@@ -247,5 +253,14 @@ public class CoordinatorTrackingService {
             return null;
         }
         return value.trim();
+    }
+
+    private UUID requireCoordinatorId(UUID coordinatorId) {
+        if (coordinatorId == null) {
+            throw new IllegalArgumentException(
+                    "Điều phối viên xác thực không hợp lệ."
+            );
+        }
+        return coordinatorId;
     }
 }

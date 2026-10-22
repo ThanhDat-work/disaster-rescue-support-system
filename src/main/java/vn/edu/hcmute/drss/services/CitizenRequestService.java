@@ -147,6 +147,7 @@ public class CitizenRequestService {
         history.setOldStatus(oldStatus);
         history.setNewStatus("CANCELLED");
         history.setChangedByUser(request.getUser());
+        history.setActorRole("ROLE_CITIZEN");
         history.setNotes(normalizedReason);
         histories.save(history);
         requests.flush();

@@ -31,6 +31,11 @@ public interface RescueTeamMemberRepository
 
         boolean existsByTeam_IdAndLeftAtIsNull(UUID teamId);
 
+        boolean existsByTeam_IdAndUser_IdAndLeftAtIsNull(
+            UUID teamId,
+            UUID userId
+        );
+
         @Query("""
                 SELECT DISTINCT member.user
                 FROM RescueTeamMember member

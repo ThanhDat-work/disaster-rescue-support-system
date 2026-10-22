@@ -118,6 +118,13 @@ public class AdminUserService {
         String newStatus = normalizeMutableStatus(requestedStatus);
         User user = findUserForUpdate(targetUserId);
 
+        if (user.getId().equals(actorId)) {
+            throw new AdminDomainException(
+                    "status",
+                    "Bạn không thể thay đổi trạng thái tài khoản của chính mình"
+            );
+        }
+
         if (INACTIVE.equals(user.getStatus())) {
             throw new AdminDomainException(
                     "status",
@@ -133,12 +140,6 @@ public class AdminUserService {
 
         if (user.getStatus().equals(newStatus)) {
             return;
-        }
-
-        if (user.getId().equals(actorId) && BANNED.equals(newStatus)) {
-            throw new AdminDomainException(
-                    "status",
-                    "Bạn không thể tự vô hiệu hóa tài khoản của mình");
         }
 
         Set<String> currentRoles = activeRoleNames(user);
@@ -164,6 +165,14 @@ public class AdminUserService {
                 requestedRoles);
 
         User user = findUserForUpdate(targetUserId);
+
+        if (user.getId().equals(actorId)) {
+            throw new AdminDomainException(
+                    "roles",
+                    "Bạn không thể thay đổi vai trò của chính mình"
+            );
+        }
+
         List<UserRole> assignments = userRoleRepository.findAllByUser(user);
 
         TreeSet<String> currentRoles = assignments.stream()
@@ -304,15 +313,17 @@ public class AdminUserService {
     }
 
     private void requireAnotherActiveAdmin() {
-        long activeAdminCount = userRoleRepository
-                .countByRole_RoleNameAndRevokedAtIsNullAndUser_Status(
+        List<UserRole> activeAdmins = userRoleRepository
+                .findActiveAssignmentsByRoleNameAndUserStatusForUpdate(
                         ADMIN_ROLE,
-                        ACTIVE);
+                        ACTIVE
+                );
 
-        if (activeAdminCount <= 1) {
+        if (activeAdmins.size() <= 1) {
             throw new AdminDomainException(
                     null,
-                    "Không thể vô hiệu hóa hoặc thu hồi quyền của quản trị viên hoạt động cuối cùng");
+                    "Không thể vô hiệu hóa hoặc thu hồi quyền của quản trị viên hoạt động cuối cùng"
+            );
         }
     }
 

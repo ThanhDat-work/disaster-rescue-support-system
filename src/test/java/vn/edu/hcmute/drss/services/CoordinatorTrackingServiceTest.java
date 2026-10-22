@@ -37,6 +37,8 @@ import vn.edu.hcmute.drss.repositories.RescueTeamRepository;
 @ExtendWith(MockitoExtension.class)
 class CoordinatorTrackingServiceTest {
 
+    private static final UUID COORDINATOR_ID = UUID.randomUUID();
+
     @Mock
     private RescueRequestRepository requests;
     @Mock
@@ -91,6 +93,7 @@ class CoordinatorTrackingServiceTest {
                 eq(teamId),
                 eq(LocalDateTime.of(2026, 10, 1, 0, 0)),
                 eq(LocalDateTime.of(2026, 10, 22, 0, 0)),
+                eq(COORDINATOR_ID),
                 any(Pageable.class)
         )).thenReturn(page);
         when(assignments
@@ -99,7 +102,7 @@ class CoordinatorTrackingServiceTest {
                 )).thenReturn(List.of(assignment));
 
         Page<CoordinatorTrackingItem> result =
-                service.findTracking(filter, -1);
+                service.findTracking(COORDINATOR_ID, filter, -1);
 
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent()).singleElement().satisfies(item -> {
@@ -122,10 +125,11 @@ class CoordinatorTrackingServiceTest {
                 isNull(),
                 isNull(),
                 isNull(),
+                eq(COORDINATOR_ID),
                 any(Pageable.class)
         )).thenReturn(Page.empty());
 
-        Page<CoordinatorTrackingItem> result = service.findTracking(
+        Page<CoordinatorTrackingItem> result = service.findTracking(COORDINATOR_ID, 
                 new CoordinatorTrackingFilter(),
                 0
         );
@@ -138,14 +142,14 @@ class CoordinatorTrackingServiceTest {
         CoordinatorTrackingFilter invalidStatus =
                 new CoordinatorTrackingFilter();
         invalidStatus.setStatus("FORGED");
-        assertThatThrownBy(() -> service.findTracking(invalidStatus, 0))
+        assertThatThrownBy(() -> service.findTracking(COORDINATOR_ID, invalidStatus, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Trạng thái");
 
         CoordinatorTrackingFilter invalidUrgency =
                 new CoordinatorTrackingFilter();
         invalidUrgency.setUrgency("FORGED");
-        assertThatThrownBy(() -> service.findTracking(invalidUrgency, 0))
+        assertThatThrownBy(() -> service.findTracking(COORDINATOR_ID, invalidUrgency, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("khẩn cấp");
 
@@ -153,14 +157,14 @@ class CoordinatorTrackingServiceTest {
                 new CoordinatorTrackingFilter();
         invalidDates.setFrom(LocalDate.of(2026, 10, 22));
         invalidDates.setTo(LocalDate.of(2026, 10, 21));
-        assertThatThrownBy(() -> service.findTracking(invalidDates, 0))
+        assertThatThrownBy(() -> service.findTracking(COORDINATOR_ID, invalidDates, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Ngày bắt đầu");
 
         CoordinatorTrackingFilter longKeyword =
                 new CoordinatorTrackingFilter();
         longKeyword.setKeyword("x".repeat(151));
-        assertThatThrownBy(() -> service.findTracking(longKeyword, 0))
+        assertThatThrownBy(() -> service.findTracking(COORDINATOR_ID, longKeyword, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("150");
     }

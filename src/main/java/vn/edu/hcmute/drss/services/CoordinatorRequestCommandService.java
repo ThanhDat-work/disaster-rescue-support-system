@@ -54,7 +54,7 @@ public class CoordinatorRequestCommandService {
         }
 
         User coordinator = findCoordinator(coordinatorId);
-        RescueRequest request = findRequest(requestId);
+        RescueRequest request = findRequest(requestId, coordinatorId);
 
         verifyExpectedVersion(request, command.getVersion());
         verifyPendingState(request);
@@ -77,6 +77,7 @@ public class CoordinatorRequestCommandService {
         history.setOldStatus(PENDING);
         history.setNewStatus(newStatus);
         history.setChangedByUser(coordinator);
+        history.setActorRole("ROLE_COORDINATOR");
         history.setNotes(historyNotes);
 
         histories.save(history);
@@ -108,12 +109,18 @@ public class CoordinatorRequestCommandService {
                 ));
     }
 
-    private RescueRequest findRequest(UUID requestId) {
-        if (requestId == null) {
+    private RescueRequest findRequest(
+            UUID requestId,
+            UUID coordinatorId
+    ) {
+        if (requestId == null || coordinatorId == null) {
             throw new CoordinatorRequestNotFoundException();
         }
 
-        return requests.findByIdForCoordinatorAssignment(requestId)
+        return requests.findByIdForCoordinatorAction(
+                        requestId,
+                        coordinatorId
+                )
                 .orElseThrow(CoordinatorRequestNotFoundException::new);
     }
 

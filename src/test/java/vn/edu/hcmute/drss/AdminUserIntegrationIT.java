@@ -8,6 +8,7 @@ import vn.edu.hcmute.drss.entities.Role;
 import vn.edu.hcmute.drss.entities.User;
 import vn.edu.hcmute.drss.entities.UserRole;
 import vn.edu.hcmute.drss.entities.UserRoleId;
+import vn.edu.hcmute.drss.exceptions.AdminDomainException;
 import vn.edu.hcmute.drss.repositories.RoleRepository;
 import vn.edu.hcmute.drss.repositories.UserRepository;
 import vn.edu.hcmute.drss.repositories.UserRoleRepository;
@@ -22,6 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @Transactional
@@ -159,4 +161,28 @@ class AdminUserIntegrationIT {
         assertThat(page.getSize()).isEqualTo(10);
         assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(4);
     }
+
+
+    @Test
+    void selfMutationAndLastActiveAdminAreRejected() {
+        User admin = userRepository.findByEmailIgnoreCase("admin@demo.com")
+                .orElseThrow();
+        User otherActor = userRepository
+                .findByEmailIgnoreCase("dieuphoi@demo.com").orElseThrow();
+
+        assertThatThrownBy(() -> adminUserService.changeStatus(
+                admin.getId(), "BANNED", admin.getId()
+        )).isInstanceOf(AdminDomainException.class)
+                .hasMessageContaining("chính mình");
+        assertThatThrownBy(() -> adminUserService.updateRoles(
+                admin.getId(), Set.of("ROLE_ADMIN", "ROLE_CITIZEN"),
+                admin.getId()
+        )).isInstanceOf(AdminDomainException.class)
+                .hasMessageContaining("chính mình");
+        assertThatThrownBy(() -> adminUserService.changeStatus(
+                admin.getId(), "BANNED", otherActor.getId()
+        )).isInstanceOf(AdminDomainException.class)
+                .hasMessageContaining("cuối cùng");
+    }
+
 }

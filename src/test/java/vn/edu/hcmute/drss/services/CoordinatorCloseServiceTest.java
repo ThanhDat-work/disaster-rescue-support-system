@@ -104,6 +104,8 @@ class CoordinatorCloseServiceTest {
                 .isSameAs(coordinator);
         assertThat(history.getValue().getOldStatus()).isEqualTo("RESCUED");
         assertThat(history.getValue().getNewStatus()).isEqualTo("CLOSED");
+        assertThat(history.getValue().getActorRole())
+                .isEqualTo("ROLE_COORDINATOR");
         assertThat(history.getValue().getNotes())
                 .isEqualTo("Hoàn tất cứu nạn an toàn.");
     }
@@ -112,7 +114,7 @@ class CoordinatorCloseServiceTest {
     void staleVersionAndEveryNonRescuedStateAreRejected() {
         when(users.findById(coordinatorId))
                 .thenReturn(Optional.of(coordinator));
-        when(requests.findByIdForCoordinatorAssignment(requestId))
+        when(requests.findByIdForCoordinatorAction(requestId, coordinatorId))
                 .thenReturn(Optional.of(request));
         assertThatThrownBy(() -> service.close(
                 requestId,
@@ -211,7 +213,7 @@ class CoordinatorCloseServiceTest {
     private void allowClose() {
         when(users.findById(coordinatorId))
                 .thenReturn(Optional.of(coordinator));
-        when(requests.findByIdForCoordinatorAssignment(requestId))
+        when(requests.findByIdForCoordinatorAction(requestId, coordinatorId))
                 .thenReturn(Optional.of(request));
         when(assignments
                 .findFirstByRequest_IdOrderByAssignedAtDescIdDesc(requestId))

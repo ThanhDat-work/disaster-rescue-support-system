@@ -201,6 +201,7 @@ RescueTeamMember membership,
         history.setOldStatus(oldStatus);
         history.setNewStatus(newStatus);
         history.setChangedByUser(membership.getUser());
+        history.setActorRole("ROLE_RESCUER");
         history.setNotes(notes);
         return history;
     }

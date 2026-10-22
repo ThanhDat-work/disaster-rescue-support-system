@@ -1,5 +1,7 @@
 package vn.edu.hcmute.drss.repositories;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -63,5 +65,21 @@ public interface UserRoleRepository
             boolean existsByUserAndRole_RoleNameAndRevokedAtIsNull(
             User user,
             String roleName
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT userRole
+            FROM UserRole userRole
+            JOIN FETCH userRole.user user
+            JOIN FETCH userRole.role role
+            WHERE role.roleName = :roleName
+              AND userRole.revokedAt IS NULL
+              AND user.status = :status
+            ORDER BY user.id
+            """)
+    List<UserRole> findActiveAssignmentsByRoleNameAndUserStatusForUpdate(
+            @Param("roleName") String roleName,
+            @Param("status") String status
     );
 }

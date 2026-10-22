@@ -1,13 +1,13 @@
 package vn.edu.hcmute.drss.repositories;
 
+import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import jakarta.persistence.LockModeType;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -22,13 +22,14 @@ public interface RescueAssignmentRepository
             FROM RescueAssignment assignment
             JOIN FETCH assignment.request request
             JOIN FETCH assignment.team team
-            WHERE EXISTS (
-                SELECT member.id
-                FROM RescueTeamMember member
-                WHERE member.team = team
-                  AND member.user.id = :userId
-                  AND member.leftAt IS NULL
-            )
+            WHERE request.user.id <> :userId
+              AND EXISTS (
+                  SELECT member.id
+                  FROM RescueTeamMember member
+                  WHERE member.team = team
+                    AND member.user.id = :userId
+                    AND member.leftAt IS NULL
+              )
             ORDER BY assignment.assignedAt DESC
             """)
     List<RescueAssignment> findAssignmentsByUserId(
@@ -41,6 +42,7 @@ public interface RescueAssignmentRepository
             JOIN FETCH assignment.request request
             JOIN FETCH assignment.team team
             WHERE assignment.id = :assignmentId
+              AND request.user.id <> :userId
               AND EXISTS (
                   SELECT member.id
                   FROM RescueTeamMember member
@@ -54,13 +56,14 @@ public interface RescueAssignmentRepository
             @Param("userId") UUID userId
     );
 
-        @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             SELECT assignment
             FROM RescueAssignment assignment
             JOIN FETCH assignment.request request
             JOIN FETCH assignment.team team
             WHERE assignment.id = :assignmentId
+              AND request.user.id <> :userId
               AND EXISTS (
                   SELECT member.id
                   FROM RescueTeamMember member
@@ -81,7 +84,9 @@ public interface RescueAssignmentRepository
 
     @EntityGraph(attributePaths = {"request", "team"})
     Optional<RescueAssignment>
-            findFirstByRequest_IdOrderByAssignedAtDescIdDesc(UUID requestId);
+            findFirstByRequest_IdOrderByAssignedAtDescIdDesc(
+                    UUID requestId
+            );
 
     @EntityGraph(attributePaths = {"request", "team"})
     List<RescueAssignment>

@@ -427,3 +427,14 @@ Chỉ hiển thị dữ liệu có thể truy vết đúng tới user hoặc ph�
 - Statistics đúng user/đội, đúng nhãn và có biểu đồ phù hợp.
 - Audit lưu được actor role và role switch.
 - Full regression, MySQL integration, manual flow và CI đều PASS.
+
+## 19. Checkpoint 09.2 as-built
+
+- Coordinator queue, tracking, detail và command đều loại request có owner trùng current user ngay tại repository query.
+- Rescuer list, detail, start và complete đều loại assignment có request owner trùng current user.
+- Team chứa request owner với membership còn hiệu lực không xuất hiện trong danh sách chọn và bị service từ chối nếu forge team ID.
+- Request owner bị loại khỏi coordinator/team notification recipients của chính request đó.
+- Admin không thể cập nhật role hoặc status của chính mình; active admin cuối cùng được bảo vệ bằng pessimistic lock.
+- `status_histories.actor_role` là bắt buộc cho dữ liệu mới; dữ liệu trước V9 được backfill `SYSTEM`.
+- Các actor role được ghi theo transition: `ROLE_CITIZEN`, `ROLE_COORDINATOR`, `ROLE_RESCUER`.
+- Checkpoint 09.2 không triển khai profile/avatar/statistics; các phần đó thuộc checkpoint 09.3.

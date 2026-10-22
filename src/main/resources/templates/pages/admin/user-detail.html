@@ -9,16 +9,23 @@
   </head>
   <body>
     <section class="py-4">
-      <a class="text-decoration-none" th:href="@{/admin/users}">← Quay lại danh sách</a>
+      <a class="text-decoration-none" th:href="@{/admin/users}"
+        >← Quay lại danh sách</a
+      >
 
       <div class="row g-4 mt-1">
         <div class="col-12 col-xl-7">
           <div class="card card-body h-100">
             <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
               <div>
-                <p class="text-uppercase text-primary fw-semibold mb-1">Người dùng</p>
+                <p class="text-uppercase text-primary fw-semibold mb-1">
+                  Người dùng
+                </p>
                 <h1 class="h3 mb-1" th:text="${user.fullName}"></h1>
-                <p class="text-secondary mb-0" th:text="${user.displayCode}"></p>
+                <p
+                  class="text-secondary mb-0"
+                  th:text="${user.displayCode}"
+                ></p>
               </div>
               <span
                 class="badge align-self-start"
@@ -37,11 +44,14 @@
             <div>
               <h2 class="h5">Trạng thái tài khoản</h2>
               <p class="text-secondary">
-                Tài khoản INACTIVE chỉ được kích hoạt bằng OTP. Thay đổi trạng thái
-                sẽ thu hồi hiệu lực của JWT cũ.
+                Tài khoản INACTIVE chỉ được kích hoạt bằng OTP. Thay đổi trạng
+                thái sẽ thu hồi hiệu lực của JWT cũ.
               </p>
 
-              <div class="d-flex flex-wrap gap-2" th:if="${user.status != 'INACTIVE'}">
+              <div
+                class="d-flex flex-wrap gap-2"
+                th:if="${user.status != 'INACTIVE' and #authentication.principal.userId != user.id}"
+              >
                 <form
                   method="post"
                   th:if="${user.status == 'ACTIVE'}"
@@ -65,8 +75,20 @@
                 </form>
               </div>
 
-              <div class="alert alert-warning mb-0" th:if="${user.status == 'INACTIVE'}">
-                Tài khoản đang chờ kích hoạt OTP; Admin không được kích hoạt thủ công.
+              <div
+                class="alert alert-info mb-0"
+                th:if="${#authentication.principal.userId == user.id}"
+              >
+                Bạn đang xem tài khoản của chính mình. Thay đổi trạng thái và
+                vai trò phải do quản trị viên khác thực hiện.
+              </div>
+
+              <div
+                class="alert alert-warning mb-0"
+                th:if="${user.status == 'INACTIVE'}"
+              >
+                Tài khoản đang chờ kích hoạt OTP; Admin không được kích hoạt thủ
+                công.
               </div>
             </div>
           </div>
@@ -76,16 +98,28 @@
           <div class="card card-body h-100">
             <h2 class="h5">Vai trò hiện tại</h2>
             <p class="text-secondary">
-              Người dùng phải còn ít nhất một vai trò. Cập nhật vai trò sẽ làm JWT cũ mất hiệu lực.
+              Người dùng phải còn ít nhất một vai trò. Cập nhật vai trò sẽ làm
+              JWT cũ mất hiệu lực.
             </p>
 
             <form
               method="post"
               th:object="${rolesForm}"
               th:action="@{/admin/users/{id}/roles(id=${user.id})}"
+              th:if="${#authentication.principal.userId != user.id}"
               novalidate
             >
-              <div class="alert alert-danger" th:if="${#fields.hasGlobalErrors()}">
+              <div
+                class="alert alert-info mb-0"
+                th:if="${#authentication.principal.userId == user.id}"
+              >
+                Vai trò của tài khoản này chỉ có thể được thay đổi bởi quản trị
+                viên khác.
+              </div>
+              <div
+                class="alert alert-danger"
+                th:if="${#fields.hasGlobalErrors()}"
+              >
                 <div
                   th:each="error : ${#fields.globalErrors()}"
                   th:text="${error}"
@@ -111,9 +145,7 @@
 
               <div class="text-danger small mb-3" th:errors="*{roles}"></div>
 
-              <button class="btn btn-primary" type="submit">
-                Lưu vai trò
-              </button>
+              <button class="btn btn-primary" type="submit">Lưu vai trò</button>
             </form>
           </div>
         </div>

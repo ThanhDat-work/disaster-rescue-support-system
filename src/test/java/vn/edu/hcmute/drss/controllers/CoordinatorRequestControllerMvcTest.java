@@ -108,9 +108,10 @@ class CoordinatorRequestControllerMvcTest {
         DisasterType flood = disasterType();
         Page<RescueRequest> page = new PageImpl<>(List.of(request()));
         when(queryService.findPending(
+                eq(USER_ID),
                 any(CoordinatorRequestFilter.class),
                 eq(2)
-        )).thenReturn(page);
+        )).thenReturn(page);    
         when(queryService.getActiveDisasterTypes())
                 .thenReturn(List.of(flood));
 
@@ -129,6 +130,7 @@ class CoordinatorRequestControllerMvcTest {
                 .andExpect(model().attributeExists("filter"));
 
         verify(queryService).findPending(
+                eq(USER_ID),
                 any(CoordinatorRequestFilter.class),
                 eq(2)
         );
@@ -138,6 +140,7 @@ class CoordinatorRequestControllerMvcTest {
     void invalidFilterRedirectsWithSafeMessage() throws Exception {
         String message = "Bộ lọc không hợp lệ.";
         when(queryService.findPending(
+                eq(USER_ID),
                 any(CoordinatorRequestFilter.class),
                 eq(0)
         )).thenThrow(new IllegalArgumentException(message));
@@ -158,7 +161,7 @@ class CoordinatorRequestControllerMvcTest {
                 List.of(),
                 List.of()
         );
-        when(queryService.getDetail(request.getId())).thenReturn(detail);
+        when(queryService.getDetail(request.getId(), USER_ID)).thenReturn(detail);
 
         mockMvc.perform(get(
                         "/coordinator/requests/{requestId}",
@@ -208,7 +211,7 @@ void detailRendersImageAndVideoUsingTheirResourceTypes()
             List.of(),
             List.of(image, video)
     );
-    when(queryService.getDetail(request.getId())).thenReturn(detail);
+    when(queryService.getDetail(request.getId(), USER_ID)).thenReturn(detail);
 
     String html = mockMvc.perform(get(
                     "/coordinator/requests/{requestId}",
@@ -237,7 +240,7 @@ void detailRendersImageAndVideoUsingTheirResourceTypes()
     @Test
     void missingDetailReturns404() throws Exception {
         UUID requestId = UUID.randomUUID();
-        when(queryService.getDetail(requestId))
+        when(queryService.getDetail(requestId, USER_ID))
                 .thenThrow(new CoordinatorRequestNotFoundException());
 
         mockMvc.perform(get(
@@ -481,8 +484,8 @@ void detailRendersImageAndVideoUsingTheirResourceTypes()
                 List.of()
         );
 
-        when(queryService.getDetail(request.getId())).thenReturn(detail);
-        when(assignmentService.findAvailableTeams())
+        when(queryService.getDetail(request.getId(), USER_ID)).thenReturn(detail);
+        when(assignmentService.findAvailableTeams(request.getUser().getId()))
                 .thenReturn(List.of(team));
 
         mockMvc.perform(get(
@@ -502,7 +505,7 @@ void detailRendersImageAndVideoUsingTheirResourceTypes()
                         )
                 ));
 
-        verify(assignmentService).findAvailableTeams();
+        verify(assignmentService).findAvailableTeams(request.getUser().getId());
     }
 
     @Test

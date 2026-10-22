@@ -55,7 +55,7 @@ public interface RescueTeamRepository
             UUID id
     );
 
-        @Query("""
+    @Query("""
             SELECT team
             FROM RescueTeam team
             WHERE team.status = 'AVAILABLE'
@@ -65,9 +65,19 @@ public interface RescueTeamRepository
                   WHERE member.team = team
                     AND member.leftAt IS NULL
               )
+              AND NOT EXISTS (
+                  SELECT ownerMember.id
+                  FROM RescueTeamMember ownerMember
+                  WHERE ownerMember.team = team
+                    AND ownerMember.user.id = :requestOwnerId
+                    AND ownerMember.leftAt IS NULL
+              )
             ORDER BY team.teamName ASC, team.displayCode ASC
             """)
-    List<RescueTeam> findAvailableWithActiveMembersForAssignment();
+    List<RescueTeam>
+            findAvailableWithActiveMembersForAssignmentExcludingOwner(
+                    @Param("requestOwnerId") UUID requestOwnerId
+            );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT team FROM RescueTeam team WHERE team.id = :id")

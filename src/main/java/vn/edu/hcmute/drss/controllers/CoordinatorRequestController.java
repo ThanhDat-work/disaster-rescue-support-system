@@ -60,6 +60,8 @@ public class CoordinatorRequestController {
 
     @GetMapping("/pending")
     public String pending(
+                    @AuthenticationPrincipal
+            AuthenticatedUserPrincipal principal,
             @ModelAttribute("filter") CoordinatorRequestFilter filter,
             @RequestParam(defaultValue = "0") int page,
             Model model,
@@ -67,6 +69,7 @@ public class CoordinatorRequestController {
     ) {
         try {
             Page<RescueRequest> pageData = queryService.findPending(
+                    requireCoordinatorId(principal),
                     filter,
                     page
             );
@@ -87,6 +90,8 @@ public class CoordinatorRequestController {
 
     @GetMapping("/tracking")
     public String tracking(
+            @AuthenticationPrincipal
+            AuthenticatedUserPrincipal principal,
             @ModelAttribute("filter") CoordinatorTrackingFilter filter,
             @RequestParam(defaultValue = "0") int page,
             Model model,
@@ -94,7 +99,11 @@ public class CoordinatorRequestController {
     ) {
         try {
             Page<CoordinatorTrackingItem> pageData =
-                    trackingService.findTracking(filter, page);
+                    trackingService.findTracking(
+                            requireCoordinatorId(principal),
+                            filter,
+                            page
+                    );
             model.addAttribute("pageData", pageData);
             model.addAttribute(
                     "disasterTypes",
@@ -114,9 +123,15 @@ public class CoordinatorRequestController {
     @GetMapping("/requests/{requestId}")
     public String detail(
             @PathVariable UUID requestId,
+            @AuthenticationPrincipal
+            AuthenticatedUserPrincipal principal,
             Model model
     ) {
-        CoordinatorRequestDetail detail = queryService.getDetail(requestId);
+        UUID coordinatorId = requireCoordinatorId(principal);
+        CoordinatorRequestDetail detail = queryService.getDetail(
+                requestId,
+                coordinatorId
+        );
 
         CoordinatorDecisionRequest decisionRequest =
                 new CoordinatorDecisionRequest();
@@ -140,7 +155,9 @@ public class CoordinatorRequestController {
         model.addAttribute(
                 "availableTeams",
                 "VERIFIED".equals(detail.request().getStatus())
-                        ? assignmentService.findAvailableTeams()
+                        ? assignmentService.findAvailableTeams(
+                                detail.request().getUser().getId()
+                        )
                         : List.of()
         );
         return "pages/coordinator/request-detail";

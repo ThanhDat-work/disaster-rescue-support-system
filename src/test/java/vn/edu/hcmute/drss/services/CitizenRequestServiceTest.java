@@ -231,6 +231,7 @@ class CitizenRequestServiceTest {
                 status.equals(event.getOldStatus())
                         && "CANCELLED".equals(event.getNewStatus())
                         && event.getChangedByUser() == owner
+                        && "ROLE_CITIZEN".equals(event.getActorRole())
                         && "Situation resolved".equals(event.getNotes())
         ));
         verify(requests).flush();
