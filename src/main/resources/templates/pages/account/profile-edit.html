@@ -1,0 +1,81 @@
+<!doctype html>
+<html
+  lang="vi"
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layouts/main-layout :: layout('Chỉnh sửa hồ sơ', ~{::section})}"
+>
+  <section class="container py-4 py-lg-5">
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-7">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4 p-lg-5">
+            <h1 class="h3 mb-4">Chỉnh sửa hồ sơ</h1>
+            <p class="text-secondary">
+              Email, mã tài khoản, trạng thái và vai trò chỉ đọc.
+            </p>
+            <form
+              th:action="@{/account/profile}"
+              th:object="${profileEdit}"
+              method="post"
+              class="vstack gap-3"
+            >
+              <div>
+                <label for="fullName" class="form-label">Họ tên</label>
+                <input
+                  id="fullName"
+                  type="text"
+                  th:field="*{fullName}"
+                  maxlength="100"
+                  required
+                  class="form-control"
+                />
+                <div
+                  class="text-danger small"
+                  th:if="${#fields.hasErrors('fullName')}"
+                  th:errors="*{fullName}"
+                ></div>
+              </div>
+              <div>
+                <label for="phoneNumber" class="form-label"
+                  >Số điện thoại</label
+                >
+                <input
+                  id="phoneNumber"
+                  type="tel"
+                  th:field="*{phoneNumber}"
+                  maxlength="15"
+                  pattern="[0-9]{10,15}"
+                  required
+                  class="form-control"
+                />
+                <div
+                  class="text-danger small"
+                  th:if="${#fields.hasErrors('phoneNumber')}"
+                  th:errors="*{phoneNumber}"
+                ></div>
+              </div>
+              <div>
+                <label class="form-label">Email (không thể đổi tại đây)</label>
+                <input
+                  class="form-control"
+                  th:value="${profile.email}"
+                  readonly
+                />
+              </div>
+              <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-primary" type="submit">
+                  Lưu thay đổi
+                </button>
+                <a
+                  class="btn btn-outline-secondary"
+                  th:href="@{/account/profile}"
+                  >Hủy</a
+                >
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</html>

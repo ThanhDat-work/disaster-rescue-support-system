@@ -1,0 +1,245 @@
+<!doctype html>
+<html
+  lang="vi"
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layouts/main-layout :: layout('Hồ sơ cá nhân', ~{::section})}"
+>
+  <section class="container py-4 py-lg-5">
+    <div
+      class="alert alert-success"
+      role="status"
+      th:if="${success}"
+      th:text="${success}"
+    ></div>
+    <div
+      class="alert alert-danger"
+      role="alert"
+      th:if="${error}"
+      th:text="${error}"
+    ></div>
+    <div class="row g-4">
+      <div class="col-12 col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body p-4">
+            <h1 class="h3 mb-4">Hồ sơ cá nhân</h1>
+            <div class="text-center mb-4">
+              <img
+                th:if="${profile.avatarUrl != null}"
+                th:src="${profile.avatarUrl}"
+                alt="Ảnh đại diện của tôi"
+                class="rounded-circle object-fit-cover border"
+                width="144"
+                height="144"
+              />
+              <div
+                th:unless="${profile.avatarUrl != null}"
+                class="rounded-circle bg-secondary-subtle d-inline-flex align-items-center justify-content-center border"
+                style="width: 144px; height: 144px; font-size: 3rem"
+                aria-label="Ảnh đại diện mặc định"
+              >
+                👤
+              </div>
+              <h2 class="h4 mt-3 mb-1" th:text="${profile.fullName}">Họ tên</h2>
+              <p class="text-secondary" th:text="${profile.displayCode}">
+                USR-000
+              </p>
+              <span
+                class="badge rounded-pill text-bg-success"
+                th:if="${profile.status == 'ACTIVE'}"
+                >Đang hoạt động</span
+              >
+              <span
+                class="badge rounded-pill text-bg-secondary"
+                th:unless="${profile.status == 'ACTIVE'}"
+                th:text="${profile.status}"
+                >Trạng thái</span
+              >
+            </div>
+            <dl class="row mb-4">
+              <dt class="col-4">Email</dt>
+              <dd class="col-8 text-break" th:text="${profile.email}">email</dd>
+              <dt class="col-4">Điện thoại</dt>
+              <dd class="col-8" th:text="${profile.phoneNumber}">phone</dd>
+              <dt class="col-4">Ngày tạo</dt>
+              <dd
+                class="col-8"
+                th:text="${profile.createdAt == null ? '—' : #temporals.format(profile.createdAt, 'dd/MM/yyyy')}"
+              >
+                date
+              </dd>
+            </dl>
+            <h3 class="h6">Vai trò được cấp</h3>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+              <span
+                th:each="role : ${profile.grantedRoles}"
+                class="badge rounded-pill"
+                th:classappend="${role == profile.activeRole} ? ' text-bg-primary' : ' text-bg-secondary'"
+                th:text="${role == 'ROLE_CITIZEN' ? 'Người dân' :
+                  role == 'ROLE_COORDINATOR' ? 'Điều phối viên' :
+                  role == 'ROLE_RESCUER' ? 'Cứu hộ' : 'Quản trị viên'}"
+                >Vai trò</span
+              >
+            </div>
+            <p class="small text-secondary">
+              Vai trò đang hoạt động được tô nổi bật. Thao tác chuyển vai trò
+              cần xác nhận mật khẩu.
+            </p>
+            <div class="d-flex flex-wrap gap-2 mb-4">
+              <a class="btn btn-primary" th:href="@{/account/profile/edit}"
+                >Chỉnh sửa hồ sơ</a
+              >
+              <a
+                class="btn btn-outline-primary"
+                th:href="@{/account/role-switch}"
+                >Thay đổi vai trò</a
+              >
+            </div>
+            <form
+              th:action="@{/account/profile/avatar}"
+              method="post"
+              enctype="multipart/form-data"
+              class="mb-2"
+            >
+              <label for="avatar" class="form-label"
+                >Ảnh đại diện (JPEG/PNG/WebP, tối đa 2 MiB)</label
+              >
+              <input
+                id="avatar"
+                name="avatar"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                class="form-control mb-2"
+                required
+              />
+              <button type="submit" class="btn btn-outline-secondary btn-sm">
+                Tải lên/thay ảnh
+              </button>
+            </form>
+            <form
+              th:if="${profile.avatarUrl != null}"
+              th:action="@{/account/profile/avatar/delete}"
+              method="post"
+            >
+              <button type="submit" class="btn btn-outline-danger btn-sm">
+                Xóa ảnh đại diện
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-8">
+        <div class="card shadow-sm border-0 mb-4">
+          <div class="card-body p-4">
+            <h2 class="h4">Thống kê theo vai trò hiện tại</h2>
+            <p
+              class="text-secondary"
+              th:if="${profile.activeRole == 'ROLE_RESCUER'}"
+            >
+              Nhiệm vụ của đội mà bạn còn là thành viên; không quy cho cá nhân
+              trực tiếp thực hiện.
+            </p>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3">
+              <div class="col" th:each="card : ${statistics.cards.entrySet()}">
+                <div class="border rounded-3 p-3 h-100">
+                  <div class="text-secondary small" th:text="${card.key}">
+                    Chỉ số
+                  </div>
+                  <strong class="h4 d-block mb-0" th:text="${card.value}"
+                    >0</strong
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div th:if="${profile.activeRole != 'ROLE_ADMIN'}" class="row g-4">
+          <div
+            th:if="${!statistics.distribution.isEmpty()}"
+            class="col-12 col-xl-6"
+          >
+            <div class="card shadow-sm border-0 h-100">
+              <div class="card-body p-4">
+                <h3
+                  class="h5"
+                  th:text="${profile.activeRole == 'ROLE_RESCUER' ? 'Trạng thái nhiệm vụ của đội' : 'Trạng thái yêu cầu của tôi'}"
+                >
+                  Phân bố
+                </h3>
+                <canvas
+                  id="profileDistribution"
+                  height="240"
+                  role="img"
+                  aria-label="Biểu đồ tròn phân bố trạng thái"
+                ></canvas>
+                <ul class="small mt-2">
+                  <li
+                    th:each="entry : ${statistics.distribution.entrySet()}"
+                    th:text="${entry.key + ': ' + entry.value}"
+                  >
+                    Nhãn: 0
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div
+            class="col-12"
+            th:classappend="${statistics.distribution.isEmpty()} ? '' : ' col-xl-6'"
+          >
+            <div class="card shadow-sm border-0 h-100">
+              <div class="card-body p-4">
+                <h3
+                  class="h5"
+                  th:text="${profile.activeRole == 'ROLE_CITIZEN' ? 'Yêu cầu theo tháng' :
+               profile.activeRole == 'ROLE_COORDINATOR' ? 'Hành động điều phối theo tuần' :
+               'Đội hoàn thành nhiệm vụ theo tuần'}"
+                >
+                  Xu hướng
+                </h3>
+                <canvas
+                  id="profileTrend"
+                  height="240"
+                  role="img"
+                  aria-label="Biểu đồ xu hướng"
+                ></canvas>
+                <p class="small text-secondary mb-0">
+                  Dữ liệu từ lịch sử nghiệp vụ thực tế; 6 tháng hoặc 8 tuần gần
+                  nhất.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          th:if="${profile.activeRole == 'ROLE_ADMIN'}"
+          class="card shadow-sm border-0"
+        >
+          <div class="card-body p-4">
+            <h3 class="h5">Hoạt động chuyển vai trò của tôi</h3>
+            <p class="text-secondary" th:if="${statistics.activity.isEmpty()}">
+              Chưa có lịch sử chuyển vai trò.
+            </p>
+            <ol th:unless="${statistics.activity.isEmpty()}">
+              <li th:each="event : ${statistics.activity}" th:text="${event}">
+                Sự kiện
+              </li>
+            </ol>
+            <p class="small text-secondary mb-0">
+              Chưa có audit tác vụ quản trị theo actor; không hiển thị số liệu
+              quản trị cá nhân chưa được ghi nhận.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script th:inline="javascript">
+      window.drssProfileCharts = {
+        role: /*[[${profile.activeRole}]]*/ "ROLE_CITIZEN",
+        distribution: /*[[${statistics.distribution}]]*/ {},
+        labels: /*[[${statistics.labels}]]*/ [],
+        series: /*[[${statistics.series}]]*/ {},
+      };
+    </script>
+    <script th:src="@{/js/profile-charts.js}" defer></script>
+  </section>
+</html>

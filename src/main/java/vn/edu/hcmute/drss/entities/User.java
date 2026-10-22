@@ -32,8 +32,14 @@ public class User extends BaseEntity {
     private String passwordHash;
 
     @Column(nullable = false, length = 32)
-    private String status; // Sẽ dùng Validation kiểm tra: ACTIVE, INACTIVE, BANNED
+    private String status;
 
     @Column(name = "auth_version", nullable = false)
     private int authVersion;
+
+    @Column(name = "avatar_public_id", length = 255)
+    private String avatarPublicId;
+
+    @Column(name = "avatar_secure_url", length = 500)
+    private String avatarSecureUrl;
 }
