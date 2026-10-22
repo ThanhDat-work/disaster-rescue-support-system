@@ -239,7 +239,7 @@ class CoordinatorAssignmentServiceTest {
         allowCoordinatorRequestAndNoAssignment();
         when(teams.findByIdForCoordinatorAssignment(teamId))
                 .thenReturn(Optional.of(team));
-        when(teamMembers.existsByTeam_IdAndLeftAtIsNull(teamId))
+        when(teamMembers.existsEligibleRescuerByTeamId(teamId))
                 .thenReturn(false);
 
         assertThatThrownBy(() -> service.assign(
@@ -259,7 +259,7 @@ class CoordinatorAssignmentServiceTest {
         allowCoordinatorRequestAndNoAssignment();
         when(teams.findByIdForCoordinatorAssignment(teamId))
                 .thenReturn(Optional.of(team));
-        when(teamMembers.existsByTeam_IdAndLeftAtIsNull(teamId))
+        when(teamMembers.existsEligibleRescuerByTeamId(teamId))
                 .thenReturn(true);
         when(teamMembers.existsByTeam_IdAndUser_IdAndLeftAtIsNull(
                 teamId, owner.getId()
@@ -360,7 +360,7 @@ class CoordinatorAssignmentServiceTest {
         allowCoordinatorRequestAndNoAssignment();
         when(teams.findByIdForCoordinatorAssignment(teamId))
                 .thenReturn(Optional.of(team));
-        when(teamMembers.existsByTeam_IdAndLeftAtIsNull(teamId))
+        when(teamMembers.existsEligibleRescuerByTeamId(teamId))
                 .thenReturn(true);
         when(teamMembers.existsByTeam_IdAndUser_IdAndLeftAtIsNull(
                 teamId, owner.getId()

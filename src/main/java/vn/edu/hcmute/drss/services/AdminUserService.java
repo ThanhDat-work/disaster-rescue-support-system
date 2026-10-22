@@ -100,6 +100,7 @@ public class AdminUserService {
                 user.getEmail(),
                 user.getPhoneNumber(),
                 user.getStatus(),
+                user.getAvatarSecureUrl(),
                 rolesByUserId.getOrDefault(user.getId(), List.of())));
     }
 
@@ -150,6 +151,16 @@ public class AdminUserService {
             requireAnotherActiveAdmin();
         }
 
+        if (BANNED.equals(newStatus)
+                && userRoleRepository.countActiveTeamMemberships(
+                        user.getId().toString()
+                ) > 0) {
+            throw new AdminDomainException(
+                    "status",
+                    "Hãy đưa người cứu hộ ra khỏi mọi đội trước khi vô hiệu hóa tài khoản"
+            );
+        }
+
         user.setStatus(newStatus);
         incrementAuthVersion(user);
         saveUser(user);
@@ -197,6 +208,18 @@ public class AdminUserService {
 
         if (ACTIVE.equals(user.getStatus()) && removesAdmin) {
             requireAnotherActiveAdmin();
+        }
+
+        boolean removesRescuer = currentRoles.contains("ROLE_RESCUER")
+                && !normalizedRoles.contains("ROLE_RESCUER");
+        if (removesRescuer
+                && userRoleRepository.countActiveTeamMemberships(
+                        user.getId().toString()
+                ) > 0) {
+            throw new AdminDomainException(
+                    "roles",
+                    "Hãy đưa người cứu hộ ra khỏi mọi đội trước khi thu hồi ROLE_RESCUER"
+            );
         }
 
         Map<String, Role> requestedRoleEntities = roleRepository
@@ -299,6 +322,7 @@ public class AdminUserService {
                 user.getEmail(),
                 user.getPhoneNumber(),
                 user.getStatus(),
+                user.getAvatarSecureUrl(),
                 roles.stream().sorted().toList());
     }
 

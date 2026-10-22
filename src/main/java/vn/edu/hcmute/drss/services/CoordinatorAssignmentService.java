@@ -219,7 +219,7 @@ public class CoordinatorAssignmentService {
     }
 
     private void verifyActiveMember(UUID teamId) {
-        if (!teamMembers.existsByTeam_IdAndLeftAtIsNull(teamId)) {
+        if (!teamMembers.existsEligibleRescuerByTeamId(teamId)) {
             throw new CoordinatorRequestConflictException(
                     "Đội cứu hộ đã chọn không có thành viên hoạt động."
             );

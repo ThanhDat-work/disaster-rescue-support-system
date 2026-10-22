@@ -438,3 +438,25 @@ Chỉ hiển thị dữ liệu có thể truy vết đúng tới user hoặc ph�
 - `status_histories.actor_role` là bắt buộc cho dữ liệu mới; dữ liệu trước V9 được backfill `SYSTEM`.
 - Các actor role được ghi theo transition: `ROLE_CITIZEN`, `ROLE_COORDINATOR`, `ROLE_RESCUER`.
 - Checkpoint 09.2 không triển khai profile/avatar/statistics; các phần đó thuộc checkpoint 09.3.
+
+## 20. Checkpoint 09.3A as-built
+
+- Hồ sơ cá nhân chỉ cho sửa họ tên, số điện thoại và avatar; email, display code, status và role là read-only.
+- Avatar dùng Cloudinary riêng theo user, có validation, replace/delete và cleanup theo contract media hiện có.
+- Statistics lấy theo active role và chỉ dùng dữ liệu audit/request/assignment thật của user hiện tại.
+- Navbar hiển thị active role bằng badge trạng thái không click; đổi role chỉ đi qua nút **Thay đổi vai trò** trong hồ sơ.
+
+## 21. Checkpoint 09.3B — Rescue team membership as-built
+
+- Một người cứu hộ có thể tham gia nhiều đội; trong cùng một đội chỉ có một membership đang hoạt động cho mỗi user.
+- `ROLE_RESCUER` là quyền hệ thống; `LEADER` và `MEMBER` là chức vụ membership trong một đội cụ thể.
+- Form tạo/sửa đội chọn đúng một đội trưởng và nhiều thành viên từ các user `ACTIVE` có grant `ROLE_RESCUER` chưa revoke.
+- Đội trưởng không thể đồng thời nằm trong danh sách thành viên của cùng đội; backend kiểm tra lại toàn bộ ID, không tin dữ liệu client.
+- Nút xác nhận đội trưởng/thành viên chỉ cập nhật bản nháp trên trình duyệt; chỉ submit cuối mới lưu team và membership trong cùng transaction.
+- `rescue_teams.leader_user_id` là nguồn liên kết đội trưởng; `leader_name` được đồng bộ để giữ tương thích dữ liệu/report cũ.
+- Migration V11 backfill đội trưởng từ membership `LEADER` hiện có. Team legacy không có leader relation không được dùng để phân công cho đến khi admin sửa.
+- Assignment, rescuer task access, notification recipient và WebSocket team subscription chỉ chấp nhận membership còn hiệu lực của user `ACTIVE` có `ROLE_RESCUER` chưa revoke.
+- Admin không thể thu hồi `ROLE_RESCUER` hoặc vô hiệu hóa tài khoản khi user còn membership chưa rời đội.
+- Admin user detail chỉ hiển thị khu vực đội cứu hộ khi user có `ROLE_RESCUER`; có empty state nếu chưa tham gia đội.
+- Rescuer có `Đội của tôi`; trang chi tiết chỉ lộ avatar, display code, họ tên và chức vụ team của các thành viên, không lộ email/điện thoại và không link sang profile người khác.
+- Danh sách nhiệm vụ tiếp tục hiển thị team phụ trách để user đa đội biết nhiệm vụ thuộc đội nào.

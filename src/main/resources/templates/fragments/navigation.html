@@ -68,6 +68,9 @@
           <li class="nav-item" sec:authorize="hasRole('RESCUER')">
             <a class="nav-link" href="/team/tasks">Nhiệm vụ được giao</a>
           </li>
+          <li class="nav-item" sec:authorize="hasRole('RESCUER')">
+            <a class="nav-link" href="/team/my-teams">Đội của tôi</a>
+          </li>
           <li
             class="nav-item"
             sec:authorize="hasAnyRole('ADMIN', 'COORDINATOR')"

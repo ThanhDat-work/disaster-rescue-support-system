@@ -18,6 +18,7 @@ import vn.edu.hcmute.drss.exceptions.AdminDomainException;
 import vn.edu.hcmute.drss.services.AdminRescueTeamService;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Controller
@@ -25,11 +26,8 @@ import java.util.UUID;
 public class AdminRescueTeamController {
 
     private static final List<String> STATUSES = List.of(
-            "AVAILABLE",
-            "BUSY",
-            "OFFLINE"
+            "AVAILABLE", "BUSY", "OFFLINE"
     );
-
     private final AdminRescueTeamService service;
 
     public AdminRescueTeamController(AdminRescueTeamService service) {
@@ -37,14 +35,10 @@ public class AdminRescueTeamController {
     }
 
     @ModelAttribute("teamStatuses")
-    public List<String> teamStatuses() {
-        return STATUSES;
-    }
+    public List<String> teamStatuses() { return STATUSES; }
 
     @ModelAttribute("pageSizes")
-    public List<Integer> pageSizes() {
-        return List.of(10, 20, 50);
-    }
+    public List<Integer> pageSizes() { return List.of(10, 20, 50); }
 
     @GetMapping
     public String list(
@@ -55,23 +49,14 @@ public class AdminRescueTeamController {
             Model model
     ) {
         try {
-            Page<RescueTeam> result = service.search(
-                    keyword,
-                    status,
-                    page,
-                    size
-            );
+            Page<RescueTeam> result = service.search(keyword, status, page, size);
             model.addAttribute("result", result);
         } catch (AdminDomainException exception) {
             model.addAttribute("errorMessage", exception.getMessage());
-            model.addAttribute(
-                    "result",
-                    service.search(null, null, 0, 20)
-            );
+            model.addAttribute("result", service.search(null, null, 0, 20));
             page = 0;
             size = 20;
         }
-
         model.addAttribute("keyword", keyword == null ? "" : keyword.trim());
         model.addAttribute("status", status == null ? "" : status.trim());
         model.addAttribute("page", page);
@@ -81,18 +66,12 @@ public class AdminRescueTeamController {
 
     @GetMapping("/new")
     public String createForm(Model model) {
-        model.addAttribute(
-                "form",
-                new AdminRescueTeamRequest(
-                        "",
-                        "",
-                        "",
-                        "",
-                        "AVAILABLE"
-                )
-        );
+        model.addAttribute("form", new AdminRescueTeamRequest(
+                "", "", "", "", "AVAILABLE", null, Set.of()
+        ));
+        prepareCandidates(model);
         model.addAttribute("editing", false);
-return "pages/admin/team-form";
+        return "pages/admin/team-form";
     }
 
     @PostMapping
@@ -103,23 +82,35 @@ return "pages/admin/team-form";
             RedirectAttributes redirectAttributes
     ) {
         if (bindingResult.hasErrors()) {
+            prepareCandidates(model);
             model.addAttribute("editing", false);
             return "pages/admin/team-form";
         }
-
         try {
             service.create(form);
         } catch (AdminDomainException exception) {
             reject(bindingResult, exception);
+            prepareCandidates(model);
             model.addAttribute("editing", false);
             return "pages/admin/team-form";
         }
-
-        redirectAttributes.addFlashAttribute(
-                "successMsg",
-                "Đã tạo đội cứu hộ"
-        );
+        redirectAttributes.addFlashAttribute("successMsg", "Đã tạo đội cứu hộ");
         return "redirect:/admin/teams";
+    }
+
+    @GetMapping("/{id}")
+    public String detail(
+            @PathVariable UUID id,
+            Model model,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            model.addAttribute("team", service.getTeamView(id));
+            return "pages/admin/team-detail";
+        } catch (AdminDomainException exception) {
+            redirectAttributes.addFlashAttribute("errorMsg", exception.getMessage());
+            return "redirect:/admin/teams";
+        }
     }
 
     @GetMapping("/{id}/edit")
@@ -129,25 +120,27 @@ return "pages/admin/team-form";
             RedirectAttributes redirectAttributes
     ) {
         try {
-            RescueTeam team = service.get(id);
-            model.addAttribute(
-                    "form",
-                    new AdminRescueTeamRequest(
-                            team.getDisplayCode(),
-                            team.getTeamName(),
-                            team.getLeaderName(),
-                            team.getContactNumber(),
-                            team.getStatus()
-                    )
-            );
+            service.get(id);
+            var view = service.getTeamView(id);
+            Set<UUID> memberIds = view.members().stream()
+                    .filter(row -> !"LEADER".equals(row.teamRole()))
+                    .map(row -> row.userId())
+                    .collect(java.util.stream.Collectors.toSet());
+            model.addAttribute("form", new AdminRescueTeamRequest(
+                    view.displayCode(),
+                    view.teamName(),
+                    view.leader() == null ? "" : view.leader().fullName(),
+                    view.contactNumber(),
+                    view.status(),
+                    view.leader() == null ? null : view.leader().userId(),
+                    memberIds
+            ));
+            prepareCandidates(model);
             model.addAttribute("editing", true);
             model.addAttribute("teamId", id);
             return "pages/admin/team-form";
         } catch (AdminDomainException exception) {
-            redirectAttributes.addFlashAttribute(
-                    "errorMsg",
-                    exception.getMessage()
-            );
+            redirectAttributes.addFlashAttribute("errorMsg", exception.getMessage());
             return "redirect:/admin/teams";
         }
     }
@@ -164,7 +157,6 @@ return "pages/admin/team-form";
             prepareEditModel(model, id);
             return "pages/admin/team-form";
         }
-
         try {
             service.update(id, form);
         } catch (AdminDomainException exception) {
@@ -172,12 +164,8 @@ return "pages/admin/team-form";
             prepareEditModel(model, id);
             return "pages/admin/team-form";
         }
-
-        redirectAttributes.addFlashAttribute(
-                "successMsg",
-                "Đã cập nhật đội cứu hộ"
-        );
-        return "redirect:/admin/teams";
+        redirectAttributes.addFlashAttribute("successMsg", "Đã cập nhật đội cứu hộ");
+        return "redirect:/admin/teams/" + id;
     }
 
     @PostMapping("/{id}/status")
@@ -187,24 +175,25 @@ return "pages/admin/team-form";
             RedirectAttributes redirectAttributes
     ) {
         try {
-service.changeStatus(id, status);
+            service.changeStatus(id, status);
             redirectAttributes.addFlashAttribute(
-                    "successMsg",
-                    "Đã cập nhật trạng thái đội cứu hộ"
+                    "successMsg", "Đã cập nhật trạng thái đội cứu hộ"
             );
         } catch (AdminDomainException exception) {
-            redirectAttributes.addFlashAttribute(
-                    "errorMsg",
-                    exception.getMessage()
-            );
+            redirectAttributes.addFlashAttribute("errorMsg", exception.getMessage());
         }
-
         return "redirect:/admin/teams";
     }
 
     private void prepareEditModel(Model model, UUID id) {
+        prepareCandidates(model);
         model.addAttribute("editing", true);
         model.addAttribute("teamId", id);
+    }
+
+    private void prepareCandidates(Model model) {
+        List<?> candidates = service.eligibleCandidates();
+        model.addAttribute("rescuers", candidates == null ? List.of() : candidates);
     }
 
     private void reject(
@@ -220,10 +209,6 @@ service.changeStatus(id, status);
             );
             return;
         }
-
-        bindingResult.reject(
-                "admin.domain",
-                exception.getMessage()
-        );
+        bindingResult.reject("admin.domain", exception.getMessage());
     }
 }

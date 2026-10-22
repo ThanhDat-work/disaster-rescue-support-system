@@ -32,6 +32,40 @@ public class RescuerController {
         this.rescuerService = rescuerService;
     }
 
+    @GetMapping("/my-teams")
+    public String myTeams(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            Model model
+    ) {
+        model.addAttribute(
+                "teams",
+                rescuerService.getMyTeams(requirePrincipal(principal).userId())
+        );
+        return "pages/rescuer/my-team-list";
+    }
+
+    @GetMapping("/my-teams/{teamId}")
+    public String myTeamDetail(
+            @PathVariable UUID teamId,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            Model model,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            model.addAttribute(
+                    "team",
+                    rescuerService.getMyTeam(
+                            teamId,
+                            requirePrincipal(principal).userId()
+                    )
+            );
+            return "pages/rescuer/my-team-detail";
+        } catch (IllegalArgumentException | SecurityException exception) {
+            redirectAttributes.addFlashAttribute("errorMsg", exception.getMessage());
+            return "redirect:/team/my-teams";
+        }
+    }
+
     @GetMapping("/tasks")
     public String listTasks(
             @AuthenticationPrincipal
