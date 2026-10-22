@@ -1,21 +1,37 @@
 package vn.edu.hcmute.drss.services;
 
+import jakarta.mail.MessagingException;
 import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.mail.MailException;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.stereotype.Service;
 import vn.edu.hcmute.drss.configs.AuthSecurityProperties;
 import vn.edu.hcmute.drss.entities.VerificationTokenPurpose;
 import vn.edu.hcmute.drss.exceptions.OtpMailDeliveryException;
 
 import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 @Service
 public class GmailOtpEmailService {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(GmailOtpEmailService.class);
 
     private static final Pattern OTP_PATTERN =
             Pattern.compile("[0-9]{6}");
@@ -56,11 +72,84 @@ public class GmailOtpEmailService {
                 properties.otpTtl()
         ));
 
+        String attemptId = UUID.randomUUID().toString();
+        long startedAt = System.nanoTime();
+
+        if (mailSender instanceof JavaMailSenderImpl smtpSender) {
+            LOGGER.info(
+                    "OTP_SMTP_START attempt={} purpose={} host={} port={}",
+                    attemptId,
+                    purpose,
+                    smtpSender.getHost(),
+                    smtpSender.getPort()
+            );
+        } else {
+            LOGGER.info(
+                    "OTP_SMTP_START attempt={} purpose={} senderType={}",
+                    attemptId,
+                    purpose,
+                    mailSender.getClass().getSimpleName()
+            );
+        }
+
         try {
             mailSender.send(message);
+            LOGGER.info(
+                    "OTP_SMTP_ACCEPTED attempt={} purpose={} elapsedMs={}",
+                    attemptId,
+                    purpose,
+                    TimeUnit.NANOSECONDS.toMillis(
+                            System.nanoTime() - startedAt
+                    )
+            );
         } catch (MailException exception) {
+            // Log only exception types. Exception messages and failed
+            // mail objects can contain recipient addresses or OTPs.
+            LOGGER.warn(
+                    "OTP_SMTP_FAILED attempt={} purpose={} elapsedMs={} types={}",
+                    attemptId,
+                    purpose,
+                    TimeUnit.NANOSECONDS.toMillis(
+                            System.nanoTime() - startedAt
+                    ),
+                    failureTypes(exception)
+            );
             throw new OtpMailDeliveryException(exception);
         }
+    }
+
+    private String failureTypes(MailException exception) {
+        Set<Throwable> visited = Collections.newSetFromMap(
+                new IdentityHashMap<>()
+        );
+        ArrayDeque<Throwable> pending = new ArrayDeque<>();
+        List<String> types = new ArrayList<>();
+        pending.add(exception);
+
+        while (!pending.isEmpty() && visited.size() < 16) {
+            Throwable current = pending.removeFirst();
+            if (!visited.add(current)) {
+                continue;
+            }
+            types.add(current.getClass().getSimpleName());
+
+            if (current.getCause() != null) {
+                pending.addLast(current.getCause());
+            }
+            if (current instanceof MessagingException mailFailure
+                    && mailFailure.getNextException() != null) {
+                pending.addLast(mailFailure.getNextException());
+            }
+            if (current instanceof MailSendException sendFailure) {
+                for (Exception failure : sendFailure.getMessageExceptions()) {
+                    if (failure != null) {
+                        pending.addLast(failure);
+                    }
+                }
+            }
+        }
+
+        return String.join(" -> ", types);
     }
 
     private String subjectFor(
