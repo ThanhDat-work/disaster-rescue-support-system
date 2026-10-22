@@ -59,4 +59,9 @@ public interface UserRoleRepository
                 @Param("userId") UUID userId,
                 @Param("roleName") String roleName
         );
+
+            boolean existsByUserAndRole_RoleNameAndRevokedAtIsNull(
+            User user,
+            String roleName
+    );
 }

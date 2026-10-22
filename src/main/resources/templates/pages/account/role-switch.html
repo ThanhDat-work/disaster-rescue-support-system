@@ -1,0 +1,96 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layouts/main-layout :: layout('Thay đổi vai trò', ~{::section})}"
+>
+  <section class="container py-4 py-lg-5">
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-7">
+        <div class="card shadow-sm border-0">
+          <div class="card-body p-4 p-lg-5">
+            <p class="text-uppercase small fw-bold text-primary mb-2">
+              Bảo mật tài khoản
+            </p>
+            <h1 class="h3 mb-2">Thay đổi vai trò hoạt động</h1>
+            <p class="text-secondary">
+              Thay đổi này áp dụng cho mọi tab trong cùng trình duyệt. Các form
+              thuộc vai trò cũ sẽ bị từ chối khi gửi.
+            </p>
+
+            <p class="mb-4">
+              Vai trò hiện tại:
+              <span class="badge text-bg-primary" th:text="${activeRole}">
+                ROLE_CITIZEN
+              </span>
+            </p>
+
+            <form
+              th:action="@{/account/role-switch}"
+              th:object="${roleSwitchRequest}"
+              method="post"
+              class="vstack gap-3"
+            >
+              <div
+                class="alert alert-danger"
+                th:if="${#fields.hasGlobalErrors()}"
+                th:each="error : ${#fields.globalErrors()}"
+                th:text="${error}"
+              >
+                Không thể chuyển vai trò.
+              </div>
+
+              <div>
+                <label class="form-label" for="targetRole"> Vai trò mới </label>
+                <select
+                  class="form-select"
+                  id="targetRole"
+                  th:field="*{targetRole}"
+                  required
+                >
+                  <option value="">Chọn vai trò</option>
+                  <option
+                    th:each="role : ${availableRoles}"
+                    th:if="${role != activeRole}"
+                    th:value="${role}"
+                    th:text="${role == 'ROLE_CITIZEN' ? 'Người dân' :
+                        role == 'ROLE_COORDINATOR' ? 'Điều phối viên' :
+                        role == 'ROLE_RESCUER' ? 'Nhân viên cứu hộ' :
+                        'Quản trị viên'}"
+                  ></option>
+                </select>
+                <div class="invalid-feedback d-block" th:errors="*{targetRole}">
+                  Vai trò không hợp lệ.
+                </div>
+              </div>
+
+              <div>
+                <label class="form-label" for="password">
+                  Mật khẩu hiện tại
+                </label>
+                <input
+                  class="form-control"
+                  id="password"
+                  type="password"
+                  th:field="*{password}"
+                  maxlength="64"
+                  autocomplete="current-password"
+                  required
+                />
+                <div class="invalid-feedback d-block" th:errors="*{password}">
+                  Vui lòng nhập mật khẩu.
+                </div>
+              </div>
+
+              <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-primary" type="submit">
+                  Xác nhận chuyển vai trò
+                </button>
+                <a class="btn btn-outline-secondary" th:href="@{/}"> Hủy </a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</html>

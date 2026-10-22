@@ -9,21 +9,16 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import vn.edu.hcmute.drss.entities.Role;
 import vn.edu.hcmute.drss.entities.User;
-import vn.edu.hcmute.drss.entities.UserRole;
 import vn.edu.hcmute.drss.repositories.UserRepository;
 import vn.edu.hcmute.drss.repositories.UserRoleRepository;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -64,11 +59,11 @@ class JwtAuthenticationServiceTest {
     }
 
     @Test
-    void authenticatesActiveUserWithCurrentRoles() {
-        Jwt jwt = jwt(3, List.of(
-                "ROLE_CITIZEN",
-                "ROLE_COORDINATOR"
-        ));
+    void authenticatesActiveUserWithCurrentRole() {
+        Jwt jwt = jwt(
+                3,
+                List.of("ROLE_COORDINATOR")
+        );
 
         when(jwtDecoder.decode("valid-token"))
                 .thenReturn(jwt);
@@ -77,11 +72,11 @@ class JwtAuthenticationServiceTest {
                 .thenReturn(Optional.of(user));
 
         when(userRoleRepository
-                .findAllByUserAndRevokedAtIsNull(user))
-                .thenReturn(List.of(
-                        assignment("ROLE_COORDINATOR"),
-                        assignment("ROLE_CITIZEN")
-                ));
+                .existsByUserAndRole_RoleNameAndRevokedAtIsNull(
+                        user,
+                        "ROLE_COORDINATOR"
+                ))
+                .thenReturn(true);
 
         Optional<Authentication> result =
                 service.authenticate("valid-token");
@@ -101,21 +96,23 @@ class JwtAuthenticationServiceTest {
                 (AuthenticatedUserPrincipal)
                         authentication.getPrincipal();
 
-        assertThat(principal.userId()).isEqualTo(USER_ID);
-        assertThat(principal.authVersion()).isEqualTo(3);
-        assertThat(principal.roles()).containsExactly(
-                "ROLE_CITIZEN",
-                "ROLE_COORDINATOR"
-        );
+        assertThat(principal.userId())
+                .isEqualTo(USER_ID);
+
+        assertThat(principal.authVersion())
+                .isEqualTo(3);
+
+        assertThat(principal.activeRole())
+                .isEqualTo("ROLE_COORDINATOR");
+
+        assertThat(principal.roles())
+                .containsExactly("ROLE_COORDINATOR");
 
         assertThat(authentication.getAuthorities())
                 .extracting(authority ->
                         authority.getAuthority()
                 )
-                .containsExactly(
-                        "ROLE_CITIZEN",
-                        "ROLE_COORDINATOR"
-                );
+                .containsExactly("ROLE_COORDINATOR");
     }
 
     @Test
@@ -150,10 +147,7 @@ class JwtAuthenticationServiceTest {
         assertThat(service.authenticate("valid-token"))
                 .isEmpty();
 
-        verify(
-                userRoleRepository,
-                never()
-        ).findAllByUserAndRevokedAtIsNull(user);
+        verifyNoInteractions(userRoleRepository);
     }
 
     @Test
@@ -170,50 +164,11 @@ class JwtAuthenticationServiceTest {
         assertThat(service.authenticate("old-token"))
                 .isEmpty();
 
-        verify(
-                userRoleRepository,
-                never()
-        ).findAllByUserAndRevokedAtIsNull(user);
+        verifyNoInteractions(userRoleRepository);
     }
 
     @Test
-    void revokedRoleIsRemovedFromEffectiveAuthorities() {
-        when(jwtDecoder.decode("partially-stale-token"))
-                .thenReturn(jwt(
-                        3,
-                        List.of(
-                                "ROLE_CITIZEN",
-                                "ROLE_ADMIN"
-                        )
-                ));
-
-        when(userRepository.findById(USER_ID))
-                .thenReturn(Optional.of(user));
-
-        /*
-         * ROLE_ADMIN vẫn nằm trong JWT nhưng đã bị thu hồi
-         * trong database, nên chỉ ROLE_CITIZEN còn hiệu lực.
-         */
-        when(userRoleRepository
-                .findAllByUserAndRevokedAtIsNull(user))
-                .thenReturn(List.of(
-                        assignment("ROLE_CITIZEN")
-                ));
-
-        Authentication authentication =
-                service.authenticate(
-                        "partially-stale-token"
-                ).orElseThrow();
-
-        assertThat(authentication.getAuthorities())
-                .extracting(authority ->
-                        authority.getAuthority()
-                )
-                .containsExactly("ROLE_CITIZEN");
-    }
-
-    @Test
-    void userWithoutAnyEffectiveRoleIsRejected() {
+    void revokedActiveRoleRejectsWholeJwt() {
         when(jwtDecoder.decode("revoked-token"))
                 .thenReturn(jwt(
                         3,
@@ -224,10 +179,11 @@ class JwtAuthenticationServiceTest {
                 .thenReturn(Optional.of(user));
 
         when(userRoleRepository
-                .findAllByUserAndRevokedAtIsNull(user))
-                .thenReturn(List.of(
-                        assignment("ROLE_CITIZEN")
-                ));
+                .existsByUserAndRole_RoleNameAndRevokedAtIsNull(
+                        user,
+                        "ROLE_ADMIN"
+                ))
+                .thenReturn(false);
 
         assertThat(service.authenticate("revoked-token"))
                 .isEmpty();
@@ -235,7 +191,9 @@ class JwtAuthenticationServiceTest {
 
     @Test
     void malformedSubjectOrClaimsAreRejected() {
-        Jwt malformed = Jwt.withTokenValue("malformed-token")
+        Jwt malformed = Jwt.withTokenValue(
+                        "malformed-token"
+                )
                 .header("alg", "HS256")
                 .subject("not-a-uuid")
                 .issuedAt(Instant.parse(
@@ -245,7 +203,10 @@ class JwtAuthenticationServiceTest {
                         "2026-10-19T00:30:00Z"
                 ))
                 .claim("jti", "jwt-id")
-                .claim("roles", List.of("ROLE_CITIZEN"))
+                .claim(
+                        "roles",
+                        List.of("ROLE_CITIZEN")
+                )
                 .claim("ver", 3)
                 .build();
 
@@ -275,24 +236,15 @@ class JwtAuthenticationServiceTest {
                         "2026-10-19T00:30:00Z"
                 ))
                 .claim("jti", "jwt-id")
-                .claim("roles", roles)
+                .claim(
+                        "active_role",
+                        roles.get(0)
+                )
+                .claim(
+                        "roles",
+                        List.of(roles.get(0))
+                )
                 .claim("ver", authVersion)
                 .build();
-    }
-
-    private UserRole assignment(String roleName) {
-        Role role = new Role(
-                1L,
-                roleName,
-                "Test role",
-                LocalDateTime.now()
-        );
-
-        UserRole userRole = new UserRole();
-        userRole.setUser(user);
-        userRole.setRole(role);
-        userRole.setAssignedAt(LocalDateTime.now());
-
-        return userRole;
     }
 }

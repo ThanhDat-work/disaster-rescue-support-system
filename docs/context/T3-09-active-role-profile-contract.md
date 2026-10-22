@@ -41,6 +41,7 @@ T3-09 phải bảo đảm role switch là thay đổi security context, không c
 - JWT có claim `active_role` và authorities chỉ chứa role đó.
 - JWT tiếp tục chứa user ID, auth version và các claim tối thiểu hiện có.
 - Không đưa toàn bộ role vào authorities của JWT.
+- Migration V8 tăng `auth_version` của toàn bộ user hiện có để thu hồi các JWT cũ từng chứa nhiều authority trước khi cơ chế active role có hiệu lực.
 - Role switch thành công cấp JWT mới và ghi đè HttpOnly cookie cũ.
 - Cookie giữ `SameSite=Lax`, path `/`, và `Secure` theo environment.
 - Role switch không làm mất CSRF session hợp lệ.
@@ -135,12 +136,12 @@ Trang role switch hiển thị:
 
 ### 5.3 Redirect sau khi chuyển
 
-| Target role | Redirect |
-|---|---|
-| `CITIZEN` | `/requests` |
+| Target role   | Redirect               |
+| ------------- | ---------------------- |
+| `CITIZEN`     | `/requests`            |
 | `COORDINATOR` | `/coordinator/pending` |
-| `RESCUER` | `/rescuer/tasks` |
-| `ADMIN` | `/admin/users` |
+| `RESCUER`     | `/team/tasks`          |
+| `ADMIN`       | `/admin/users`         |
 
 ### 5.4 Multi-tab behavior
 
@@ -152,12 +153,12 @@ Trang role switch hiển thị:
 
 ## 6. Route isolation
 
-| Active role | Phạm vi chính |
-|---|---|
-| `CITIZEN` | `/requests/**` |
+| Active role   | Phạm vi chính     |
+| ------------- | ----------------- |
+| `CITIZEN`     | `/requests/**`    |
 | `COORDINATOR` | `/coordinator/**` |
-| `RESCUER` | `/rescuer/**` |
-| `ADMIN` | `/admin/**` |
+| `RESCUER`     | `/team/**`        |
+| `ADMIN`       | `/admin/**`       |
 
 - User được cấp nhiều role vẫn chỉ truy cập phạm vi của active role hiện tại.
 - `/account/**`, logout và static resources áp dụng rule dùng chung phù hợp.
@@ -239,6 +240,7 @@ Không lưu password, JWT, cookie hoặc raw secret.
 - `status_histories` phải lưu thêm `actor_role` tại thời điểm transition.
 - Không suy luận actor role từ grants hiện tại vì role có thể được thay đổi sau này.
 - Migration phải cập nhật dữ liệu cũ bằng giá trị phù hợp hoặc nullable/`SYSTEM` theo quyết định migration được kiểm thử.
+- Đây là phạm vi của checkpoint 09.2; checkpoint 09.1 chưa thay đổi `status_histories` và không được báo cáo yêu cầu này là đã hoàn thành.
 
 ### 9.3 Auth version
 
@@ -297,9 +299,10 @@ Chỉ hiển thị dữ liệu có thể truy vết đúng tới user hoặc ph�
 
 ## 12. Navbar
 
-- Navbar hiển thị badge role hiện tại ở vị trí gần user identity/avatar.
-- Badge không phải control cấp quyền.
-- Nhấn badge/dropdown có thể dẫn tới trang hồ sơ hoặc trang role switch.
+- Navbar hiển thị badge active role ở vị trí gần user identity/avatar.
+- Badge chỉ thể hiện trạng thái vai trò hiện tại; không phải link, button, dropdown hoặc control chuyển role.
+- Nhấn vào badge không điều hướng sang trang khác.
+- Việc chuyển role chỉ bắt đầu từ nút **Thay đổi vai trò** trên trang hồ sơ và dẫn tới `/account/role-switch`.
 - Màu gợi ý:
   - citizen: xanh dương;
   - coordinator: cam;

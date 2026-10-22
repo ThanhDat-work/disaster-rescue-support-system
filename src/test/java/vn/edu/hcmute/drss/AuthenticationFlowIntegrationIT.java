@@ -468,7 +468,7 @@ class AuthenticationFlowIntegrationIT {
                         .param("email", FLOW_EMAIL)
                         .param("password", password))
                 .andExpect(status().isFound())
-                .andExpect(redirectedUrl("/"))
+                .andExpect(redirectedUrl("/requests"))
                 .andExpect(header().string(
                         HttpHeaders.SET_COOKIE,
                         containsString("HttpOnly")

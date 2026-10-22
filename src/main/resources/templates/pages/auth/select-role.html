@@ -1,0 +1,57 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layouts/main-layout :: layout('Chọn vai trò', ~{::section})}"
+>
+  <section class="auth-page">
+    <div class="auth-card auth-card-compact">
+      <header class="auth-header">
+        <span class="auth-step">DRSS · Chọn vai trò đăng nhập</span>
+        <h1>Tiếp tục với một vai trò</h1>
+        <p>Tài khoản này có nhiều vai trò nghiệp vụ.</p>
+      </header>
+
+      <form
+        th:action="@{/auth/select-role}"
+        th:object="${roleForm}"
+        method="post"
+        class="auth-form"
+      >
+        <div
+          class="auth-form-error"
+          th:if="${#fields.hasGlobalErrors()}"
+          th:each="error : ${#fields.globalErrors()}"
+          th:text="${error}"
+        >
+          Không thể chọn vai trò.
+        </div>
+
+        <div>
+          <label class="form-label" for="targetRole">Vai trò</label>
+          <select
+            class="form-select"
+            id="targetRole"
+            th:field="*{targetRole}"
+            required
+          >
+            <option value="">Chọn vai trò</option>
+            <option
+              th:each="role : ${availableRoles}"
+              th:value="${role}"
+              th:text="${role == 'ROLE_COORDINATOR' ? 'Điều phối viên' :
+                  role == 'ROLE_RESCUER' ? 'Nhân viên cứu hộ' :
+                  role == 'ROLE_ADMIN' ? 'Quản trị viên' : 'Người dân'}"
+            ></option>
+          </select>
+          <div class="invalid-feedback d-block" th:errors="*{targetRole}">
+            Vui lòng chọn vai trò.
+          </div>
+        </div>
+
+        <button class="btn btn-primary auth-submit" type="submit">
+          Tiếp tục
+        </button>
+      </form>
+    </div>
+  </section>
+</html>

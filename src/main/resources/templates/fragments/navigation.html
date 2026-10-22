@@ -31,9 +31,11 @@
           ><strong>DRSS</strong><small>Hỗ trợ cứu nạn thiên tai</small></span
         >
       </a>
+
       <div class="system-status d-none d-lg-flex" role="status">
         <span class="status-pulse"></span> Hệ thống sẵn sàng
       </div>
+
       <button
         class="navbar-toggler"
         type="button"
@@ -45,6 +47,7 @@
       >
         <span class="navbar-toggler-icon"></span>
       </button>
+
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
           <!-- Menu cho Người dân -->
@@ -53,10 +56,9 @@
               Gửi yêu cầu khẩn cấp
             </a>
           </li>
+
           <li class="nav-item" sec:authorize="hasRole('CITIZEN')">
-            <a class="nav-link" th:href="@{/requests}">
-              Yêu cầu của tôi
-            </a>
+            <a class="nav-link" th:href="@{/requests}"> Yêu cầu của tôi </a>
           </li>
 
           <!-- Menu cho Điều phối viên -->
@@ -65,6 +67,7 @@
               >Danh sách chờ xác minh</a
             >
           </li>
+
           <li class="nav-item" sec:authorize="hasRole('COORDINATOR')">
             <a class="nav-link" href="/coordinator/tracking"
               >Theo dõi tiến độ</a
@@ -73,10 +76,10 @@
 
           <!-- Menu cho Đội cứu hộ -->
           <li class="nav-item" sec:authorize="hasRole('RESCUER')">
-            <a class="nav-link" href="/team/tasks">Nhiệm vụ được giao</a>
+            <a class="nav-link" href="/team/tasks"> Nhiệm vụ được giao </a>
           </li>
 
-                    <li
+          <li
             class="nav-item"
             sec:authorize="hasAnyRole('ADMIN', 'COORDINATOR')"
           >
@@ -93,17 +96,20 @@
               data-bs-toggle="dropdown"
               >Quản trị hệ thống</a
             >
+
             <ul class="dropdown-menu">
               <li>
                 <a class="dropdown-item" href="/admin/disasters"
                   >Quản lý loại thiên tai</a
                 >
               </li>
+
               <li>
                 <a class="dropdown-item" href="/admin/users"
                   >Quản lý người dùng</a
                 >
               </li>
+
               <li>
                 <a class="dropdown-item" href="/admin/teams"
                   >Quản lý đội cứu hộ</a
@@ -112,10 +118,12 @@
             </ul>
           </li>
         </ul>
+
         <ul class="navbar-nav">
           <li class="nav-item" sec:authorize="isAuthenticated()">
             <a class="nav-link" href="/profile">Hồ sơ cá nhân</a>
           </li>
+
           <li class="nav-item" sec:authorize="isAuthenticated()">
             <form th:action="@{/auth/logout}" method="post">
               <button
@@ -126,15 +134,33 @@
               </button>
             </form>
           </li>
+
           <li class="nav-item" sec:authorize="!isAuthenticated()">
-            <a class="nav-link" th:href="@{/auth/register}">Đăng ký</a>
+            <a class="nav-link" th:href="@{/auth/register}"> Đăng ký </a>
           </li>
+
           <li class="nav-item" sec:authorize="!isAuthenticated()">
             <a class="btn btn-primary btn-sm nav-login" th:href="@{/auth/login}"
               >Đăng nhập <span aria-hidden="true">→</span></a
             >
           </li>
         </ul>
+
+        <li
+          class="nav-item d-flex align-items-center"
+          sec:authorize="isAuthenticated()"
+        >
+          <span
+            class="badge rounded-pill text-bg-primary me-lg-2 my-2 my-lg-0"
+            aria-label="Vai trò đang hoạt động"
+            title="Vai trò đang hoạt động"
+            th:text="${#authentication.principal.activeRole == 'ROLE_CITIZEN' ? 'Người dân' :
+                  #authentication.principal.activeRole == 'ROLE_COORDINATOR' ? 'Điều phối viên' :
+                  #authentication.principal.activeRole == 'ROLE_RESCUER' ? 'Cứu hộ' :
+                  'Quản trị viên'}"
+            >Vai trò</span
+          >
+        </li>
       </div>
     </div>
   </nav>

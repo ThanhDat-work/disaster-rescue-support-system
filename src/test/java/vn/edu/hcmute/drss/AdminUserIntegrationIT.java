@@ -121,7 +121,7 @@ class AdminUserIntegrationIT {
 
         IssuedAccessToken tokenAfterRoleUpdate = jwtTokenService.issue(
                 afterRoleUpdate,
-                List.of("ROLE_CITIZEN", "ROLE_RESCUER"));
+                "ROLE_CITIZEN");
 
         assertThat(jwtAuthenticationService.authenticate(
                 tokenAfterRoleUpdate.tokenValue())).isPresent();

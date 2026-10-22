@@ -15,6 +15,7 @@ import vn.edu.hcmute.drss.repositories.MediaAssetRepository;
 import vn.edu.hcmute.drss.repositories.RescueTeamRepository;
 import vn.edu.hcmute.drss.repositories.MediaCleanupTaskRepository;
 import vn.edu.hcmute.drss.repositories.NotificationRepository;
+import vn.edu.hcmute.drss.repositories.RoleSwitchAuditRepository;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -41,7 +42,8 @@ import java.lang.annotation.Target;
         MediaAssetRepository.class,
         RescueTeamRepository.class,
         MediaCleanupTaskRepository.class,
-        NotificationRepository.class
+        NotificationRepository.class,
+        RoleSwitchAuditRepository.class
 })
 public @interface NoDatabaseRepositoryMocks {
 }

@@ -17,7 +17,10 @@ import vn.edu.hcmute.drss.dtos.LoginRequest;
 import vn.edu.hcmute.drss.security.ClientIpAddressResolver;
 import vn.edu.hcmute.drss.security.JwtCookieService;
 import vn.edu.hcmute.drss.services.AccountLoginService;
+import vn.edu.hcmute.drss.services.InitialRoleSelectionSessionService;
 import vn.edu.hcmute.drss.services.LoginResult;
+import vn.edu.hcmute.drss.services.ActiveRoleService;
+import vn.edu.hcmute.drss.services.InitialRoleSelectionSessionService;
 
 @Controller
 @RequestMapping("/auth")
@@ -26,15 +29,18 @@ public class AuthLoginController {
     private final AccountLoginService loginService;
     private final JwtCookieService jwtCookieService;
     private final ClientIpAddressResolver ipAddressResolver;
+    private final InitialRoleSelectionSessionService roleSelectionSessionService;
 
     public AuthLoginController(
             AccountLoginService loginService,
             JwtCookieService jwtCookieService,
-            ClientIpAddressResolver ipAddressResolver
+            ClientIpAddressResolver ipAddressResolver,
+            InitialRoleSelectionSessionService roleSelectionSessionService
     ) {
         this.loginService = loginService;
         this.jwtCookieService = jwtCookieService;
         this.ipAddressResolver = ipAddressResolver;
+        this.roleSelectionSessionService = roleSelectionSessionService;
     }
 
     @GetMapping("/login")
@@ -94,13 +100,21 @@ public class AuthLoginController {
                         jwtCookieService.createAccessTokenCookie(
                                 result.accessToken()
                         );
-
                 response.addHeader(
                         HttpHeaders.SET_COOKIE,
                         cookie.toString()
                 );
-
-                yield successfulLoginRedirect();
+                yield "redirect:"
+                        + ActiveRoleService.landingPath(
+                        result.activeRole()
+                );
+            }
+            case ROLE_SELECTION_REQUIRED -> {
+                roleSelectionSessionService.begin(
+                        request,
+                        result.pendingUserId()
+                );
+                yield "redirect:/auth/select-role";
             }
             case INVALID_CREDENTIALS -> {
                 bindingResult.reject(
@@ -131,14 +145,5 @@ public class AuthLoginController {
                 yield "pages/auth/login";
             }
         };
-    }
-
-    private String successfulLoginRedirect() {
-        /*
-         * T2-01 redirect về trang chủ công khai.
-         * Task sau có thể thay method này bằng saved-request hoặc
-         * role landing mà không sửa AccountLoginService.
-         */
-        return "redirect:/";
     }
 }
