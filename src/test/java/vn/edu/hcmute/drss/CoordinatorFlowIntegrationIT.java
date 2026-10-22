@@ -111,8 +111,8 @@ class CoordinatorFlowIntegrationIT {
         filter.setKeyword("T203");
         filter.setUrgency("HIGH");
 
-        Page<RescueRequest> firstPage = queryService.findPending(filter, 0);
-        Page<RescueRequest> secondPage = queryService.findPending(filter, 1);
+        Page<RescueRequest> firstPage = queryService.findPending(COORDINATOR_ID, filter, 0);
+        Page<RescueRequest> secondPage = queryService.findPending(COORDINATOR_ID, filter, 1);
 
         assertThat(firstPage.getTotalElements()).isEqualTo(11);
         assertThat(firstPage.getSize())
@@ -147,9 +147,7 @@ class CoordinatorFlowIntegrationIT {
                 mediaUrl
         );
 
-        CoordinatorRequestDetail detail = queryService.getDetail(
-                SEEDED_VERIFIED_REQUEST_ID
-        );
+        CoordinatorRequestDetail detail = queryService.getDetail(SEEDED_VERIFIED_REQUEST_ID, COORDINATOR_ID);
 
         assertThat(detail.request().getUser().getEmail())
                 .isEqualTo("dan@demo.com");

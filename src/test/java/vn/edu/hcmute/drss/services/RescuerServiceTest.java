@@ -164,6 +164,8 @@ membership.setLeftAt(null);
         assertThat(history.getNewStatus())
                 .isEqualTo("IN_PROGRESS");
 
+        assertThat(history.getActorRole()).isEqualTo("ROLE_RESCUER");
+
         assertThat(history.getNotes())
                 .isEqualTo("Đã tiếp cận hiện trường.");
 
@@ -250,6 +252,8 @@ membership.setLeftAt(null);
 
         assertThat(history.getNewStatus())
                 .isEqualTo("RESCUED");
+
+        assertThat(history.getActorRole()).isEqualTo("ROLE_RESCUER");
 
         verify(assignmentRepository).save(assignment);
         verify(assignmentRepository).flush();

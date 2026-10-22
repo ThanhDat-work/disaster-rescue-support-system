@@ -49,9 +49,11 @@ public class CoordinatorRequestQueryService {
 
     @Transactional(readOnly = true)
     public Page<RescueRequest> findPending(
+        UUID coordinatorId,
             CoordinatorRequestFilter filter,
             int requestedPage
     ) {
+        UUID excludedOwnerId = requireCoordinatorId(coordinatorId);
         CoordinatorRequestFilter safeFilter = filter == null
                 ? new CoordinatorRequestFilter()
                 : filter;
@@ -74,6 +76,7 @@ public class CoordinatorRequestQueryService {
                 safeFilter.getDisasterTypeId(),
                 fromInclusive,
                 toExclusive,
+                excludedOwnerId,
                 PageRequest.of(pageNumber, PAGE_SIZE)
         );
 
@@ -85,6 +88,7 @@ public class CoordinatorRequestQueryService {
                     safeFilter.getDisasterTypeId(),
                     fromInclusive,
                     toExclusive,
+                    excludedOwnerId,
                     PageRequest.of(result.getTotalPages() - 1, PAGE_SIZE)
             );
         }
@@ -93,8 +97,20 @@ public class CoordinatorRequestQueryService {
     }
 
     @Transactional(readOnly = true)
-    public CoordinatorRequestDetail getDetail(UUID requestId) {
-        RescueRequest request = requests.findCoordinatorDetailById(requestId)
+    public CoordinatorRequestDetail getDetail(
+            UUID requestId,
+            UUID coordinatorId
+    ) {
+        UUID excludedOwnerId = requireCoordinatorId(coordinatorId);
+        if (requestId == null) {
+            throw new CoordinatorRequestNotFoundException();
+        }
+
+        RescueRequest request = requests
+                .findCoordinatorDetailByIdAndOwnerExcluded(
+                        requestId,
+                        excludedOwnerId
+                )
                 .orElseThrow(CoordinatorRequestNotFoundException::new);
 
         return new CoordinatorRequestDetail(
@@ -117,6 +133,7 @@ public class CoordinatorRequestQueryService {
             Long disasterTypeId,
             LocalDateTime fromInclusive,
             LocalDateTime toExclusive,
+            UUID excludedOwnerId,
             Pageable pageable
     ) {
         return requests.searchPendingForCoordinator(
@@ -125,6 +142,7 @@ public class CoordinatorRequestQueryService {
                 disasterTypeId,
                 fromInclusive,
                 toExclusive,
+                excludedOwnerId,
                 pageable
         );
     }
@@ -175,5 +193,14 @@ public class CoordinatorRequestQueryService {
         }
 
         return value.trim();
+    }
+
+    private UUID requireCoordinatorId(UUID coordinatorId) {
+        if (coordinatorId == null) {
+            throw new IllegalArgumentException(
+                    "Điều phối viên xác thực không hợp lệ."
+            );
+        }
+        return coordinatorId;
     }
 }

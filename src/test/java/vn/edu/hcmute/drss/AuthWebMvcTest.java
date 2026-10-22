@@ -212,7 +212,8 @@ class AuthWebMvcTest {
                 new IssuedAccessToken(
                         "signed-jwt",
                         Instant.now().plusSeconds(1800)
-                )
+                ),
+                "ROLE_CITIZEN"
         ));
 
         mockMvc.perform(post("/auth/login")
@@ -220,7 +221,7 @@ class AuthWebMvcTest {
                         .param("email", EMAIL)
                         .param("password", "secure password 123"))
                 .andExpect(status().isFound())
-                .andExpect(redirectedUrl("/"))
+                .andExpect(redirectedUrl("/requests"))
                 .andExpect(header().string(
                         HttpHeaders.SET_COOKIE,
                         containsString("DRSS_ACCESS_TOKEN=signed-jwt")

@@ -9,23 +9,19 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.hcmute.drss.entities.User;
-import vn.edu.hcmute.drss.entities.UserRole;
 import vn.edu.hcmute.drss.repositories.UserRepository;
 import vn.edu.hcmute.drss.repositories.UserRoleRepository;
 
 import java.time.Instant;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 
 @Service
 public class JwtAuthenticationService {
 
     private static final String ACTIVE_STATUS = "ACTIVE";
-    private static final String ROLES_CLAIM = "roles";
+    private static final String ACTIVE_ROLE_CLAIM = "active_role";
     private static final String AUTH_VERSION_CLAIM = "ver";
 
     private final JwtDecoder jwtDecoder;
@@ -43,15 +39,12 @@ public class JwtAuthenticationService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Authentication> authenticate(
-            String tokenValue
-    ) {
+    public Optional<Authentication> authenticate(String tokenValue) {
         if (tokenValue == null || tokenValue.isBlank()) {
             return Optional.empty();
         }
 
         Jwt jwt;
-
         try {
             jwt = jwtDecoder.decode(tokenValue);
         } catch (JwtException | IllegalArgumentException exception) {
@@ -59,52 +52,33 @@ public class JwtAuthenticationService {
         }
 
         Optional<JwtIdentity> identity = extractIdentity(jwt);
-
         if (identity.isEmpty()) {
             return Optional.empty();
         }
 
         JwtIdentity jwtIdentity = identity.get();
-
         Optional<User> userOptional = userRepository.findById(
                 jwtIdentity.userId()
         );
-
         if (userOptional.isEmpty()) {
             return Optional.empty();
         }
 
         User user = userOptional.get();
-
-        if (!ACTIVE_STATUS.equals(user.getStatus())) {
+        if (!ACTIVE_STATUS.equals(user.getStatus())
+                || user.getAuthVersion()
+                != jwtIdentity.authVersion()) {
             return Optional.empty();
         }
 
-        if (user.getAuthVersion() != jwtIdentity.authVersion()) {
+        boolean stillGranted = userRoleRepository
+                .existsByUserAndRole_RoleNameAndRevokedAtIsNull(
+                        user,
+                        jwtIdentity.activeRole()
+                );
+        if (!stillGranted) {
             return Optional.empty();
         }
-
-        Set<String> currentDatabaseRoles =
-                loadCurrentDatabaseRoles(user);
-
-        TreeSet<String> effectiveRoles =
-                new TreeSet<>(jwtIdentity.roles());
-
-        /*
-         * Chỉ giữ role đồng thời:
-         * - có trong JWT lúc đăng nhập;
-         * - vẫn còn hiệu lực trong database ở request hiện tại.
-         *
-         * Role mới được cấp sau khi JWT phát hành không tự động xuất hiện.
-         * Role đã bị thu hồi bị loại bỏ ngay.
-         */
-        effectiveRoles.retainAll(currentDatabaseRoles);
-
-        if (effectiveRoles.isEmpty()) {
-            return Optional.empty();
-        }
-
-        List<String> roleList = List.copyOf(effectiveRoles);
 
         AuthenticatedUserPrincipal principal =
                 new AuthenticatedUserPrincipal(
@@ -112,22 +86,18 @@ public class JwtAuthenticationService {
                         user.getEmail(),
                         user.getFullName(),
                         user.getAuthVersion(),
-                        roleList
+                        jwtIdentity.activeRole()
                 );
 
-        List<SimpleGrantedAuthority> authorities =
-                roleList.stream()
-                        .map(SimpleGrantedAuthority::new)
-                        .toList();
-
-        Authentication authentication =
+        return Optional.of(
                 new UsernamePasswordAuthenticationToken(
                         principal,
                         null,
-                        authorities
-                );
-
-        return Optional.of(authentication);
+                        List.of(new SimpleGrantedAuthority(
+                                jwtIdentity.activeRole()
+                        ))
+                )
+        );
     }
 
     private Optional<JwtIdentity> extractIdentity(Jwt jwt) {
@@ -143,13 +113,11 @@ public class JwtAuthenticationService {
 
         Instant issuedAt = jwt.getIssuedAt();
         Instant expiresAt = jwt.getExpiresAt();
-
         if (!expiresAt.isAfter(issuedAt)) {
             return Optional.empty();
         }
 
         UUID userId;
-
         try {
             userId = UUID.fromString(jwt.getSubject());
         } catch (IllegalArgumentException exception) {
@@ -159,92 +127,34 @@ public class JwtAuthenticationService {
         Object rawVersion = jwt.getClaims().get(
                 AUTH_VERSION_CLAIM
         );
-
         if (!(rawVersion instanceof Number versionNumber)) {
             return Optional.empty();
         }
-
         long versionAsLong = versionNumber.longValue();
-
         if (versionAsLong < 0
                 || versionAsLong > Integer.MAX_VALUE) {
             return Optional.empty();
         }
 
-        Optional<Set<String>> roles = extractRoles(jwt);
-
-        if (roles.isEmpty()) {
+        Object rawRole = jwt.getClaims().get(ACTIVE_ROLE_CLAIM);
+        if (!(rawRole instanceof String role)
+                || !role.matches(
+                "ROLE_(CITIZEN|COORDINATOR|RESCUER|ADMIN)"
+        )) {
             return Optional.empty();
         }
 
-        return Optional.of(
-                new JwtIdentity(
-                        userId,
-                        (int) versionAsLong,
-                        roles.get()
-                )
-        );
-    }
-
-    private Optional<Set<String>> extractRoles(Jwt jwt) {
-        Object rawRoles = jwt.getClaims().get(ROLES_CLAIM);
-
-        if (!(rawRoles instanceof Collection<?> collection)) {
-            return Optional.empty();
-        }
-
-        TreeSet<String> roles = new TreeSet<>();
-
-        for (Object value : collection) {
-            if (!(value instanceof String role)
-                    || role.isBlank()) {
-                return Optional.empty();
-            }
-
-            String normalizedRole = role.strip();
-
-            if (!normalizedRole.startsWith("ROLE_")) {
-                return Optional.empty();
-            }
-
-            roles.add(normalizedRole);
-        }
-
-        if (roles.isEmpty()) {
-            return Optional.empty();
-        }
-
-        return Optional.of(Set.copyOf(roles));
-    }
-
-    private Set<String> loadCurrentDatabaseRoles(User user) {
-        TreeSet<String> roles = new TreeSet<>();
-
-        for (UserRole userRole :
-                userRoleRepository
-                        .findAllByUserAndRevokedAtIsNull(user)) {
-
-            if (userRole.getRole() == null) {
-                continue;
-            }
-
-            String roleName =
-                    userRole.getRole().getRoleName();
-
-            if (roleName != null
-                    && !roleName.isBlank()
-                    && roleName.startsWith("ROLE_")) {
-                roles.add(roleName.strip());
-            }
-        }
-
-        return Set.copyOf(roles);
+        return Optional.of(new JwtIdentity(
+                userId,
+                (int) versionAsLong,
+                role
+        ));
     }
 
     private record JwtIdentity(
             UUID userId,
             int authVersion,
-            Set<String> roles
+            String activeRole
     ) {
     }
 }

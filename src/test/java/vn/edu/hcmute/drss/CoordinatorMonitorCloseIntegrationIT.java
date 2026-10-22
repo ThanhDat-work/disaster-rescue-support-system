@@ -139,7 +139,7 @@ class CoordinatorMonitorCloseIntegrationIT {
         filter.setTeamId(TEAM_ID);
 
         Page<CoordinatorTrackingItem> page =
-                trackingService.findTracking(filter, 0);
+                trackingService.findTracking(COORDINATOR_ID, filter, 0);
 
         assertThat(page.getContent())
                 .anySatisfy(item -> {

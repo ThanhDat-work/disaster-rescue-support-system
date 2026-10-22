@@ -80,8 +80,8 @@
           <table class="table table-hover align-middle mb-0">
             <thead>
               <tr>
+                <th>Người dùng</th>
                 <th>Mã</th>
-                <th>Họ tên</th>
                 <th>Liên hệ</th>
                 <th>Trạng thái</th>
                 <th>Vai trò</th>
@@ -90,8 +90,14 @@
             </thead>
             <tbody>
               <tr th:each="item : ${result.content}">
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <img th:if="${item.avatarSecureUrl != null}" th:src="${item.avatarSecureUrl}" alt="" class="rounded-circle object-fit-cover" width="36" height="36" />
+                    <span th:unless="${item.avatarSecureUrl != null}" class="rounded-circle bg-body-secondary d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px">👤</span>
+                    <span th:text="${item.fullName}"></span>
+                  </div>
+                </td>
                 <td class="fw-semibold" th:text="${item.displayCode}"></td>
-                <td th:text="${item.fullName}"></td>
                 <td>
                   <div th:text="${item.email}"></div>
                   <small class="text-secondary" th:text="${item.phoneNumber}"></small>

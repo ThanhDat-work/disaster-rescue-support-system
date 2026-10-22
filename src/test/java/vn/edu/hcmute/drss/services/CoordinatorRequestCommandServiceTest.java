@@ -100,6 +100,8 @@ class CoordinatorRequestCommandServiceTest {
                 .isSameAs(coordinator);
         assertThat(history.getValue().getNotes())
                 .isEqualTo("Điều phối viên đã xác minh yêu cầu.");
+        assertThat(history.getValue().getActorRole())
+                .isEqualTo("ROLE_COORDINATOR");
     }
 
     @Test
@@ -133,6 +135,8 @@ class CoordinatorRequestCommandServiceTest {
         assertThat(history.getValue().getNewStatus()).isEqualTo("REJECTED");
         assertThat(history.getValue().getNotes())
                 .isEqualTo("Thiếu thông tin vị trí");
+        assertThat(history.getValue().getActorRole())
+                .isEqualTo("ROLE_COORDINATOR");
     }
 
     @Test
@@ -204,7 +208,7 @@ class CoordinatorRequestCommandServiceTest {
     void missingRequestReturnsNotFoundWithoutHistory() {
         when(users.findById(coordinatorId))
                 .thenReturn(Optional.of(coordinator));
-        when(requests.findByIdForCoordinatorAssignment(requestId))
+        when(requests.findByIdForCoordinatorAction(requestId, coordinatorId))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.decide(
@@ -218,6 +222,22 @@ class CoordinatorRequestCommandServiceTest {
     }
 
     @Test
+    void ownerOrForgedRequestIsNotFoundWithoutHistory() {
+        when(users.findById(coordinatorId)).thenReturn(Optional.of(coordinator));
+        when(requests.findByIdForCoordinatorAction(requestId, coordinatorId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.decide(
+                requestId, coordinatorId,
+                command(CoordinatorDecisionAction.VERIFY, 3L, null)
+        )).isInstanceOf(CoordinatorRequestNotFoundException.class);
+
+        verify(histories, never()).save(any());
+        verify(notifications, never()).notifyRequestStatusChanged(
+                any(), any(), any());
+    }
+
+    @Test
     void missingCoordinatorIsRejectedBeforeRequestMutation() {
         when(users.findById(coordinatorId)).thenReturn(Optional.empty());
 
@@ -228,7 +248,7 @@ class CoordinatorRequestCommandServiceTest {
         )).isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("điều phối viên");
 
-        verify(requests, never()).findCoordinatorDetailById(any());
+        verify(requests, never()).findByIdForCoordinatorAction(any(), any());
         verify(histories, never()).save(any());
     }
 
@@ -272,7 +292,7 @@ class CoordinatorRequestCommandServiceTest {
     private void allowDecision() {
         when(users.findById(coordinatorId))
                 .thenReturn(Optional.of(coordinator));
-        when(requests.findByIdForCoordinatorAssignment(requestId))
+        when(requests.findByIdForCoordinatorAction(requestId, coordinatorId))
                 .thenReturn(Optional.of(request));
     }
 

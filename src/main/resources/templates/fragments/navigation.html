@@ -47,19 +47,14 @@
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
-          <!-- Menu cho Người dân -->
           <li class="nav-item" sec:authorize="hasRole('CITIZEN')">
-            <a class="nav-link" th:href="@{/requests/new}">
-              Gửi yêu cầu khẩn cấp
-            </a>
+            <a class="nav-link" th:href="@{/requests/new}"
+              >Gửi yêu cầu khẩn cấp</a
+            >
           </li>
           <li class="nav-item" sec:authorize="hasRole('CITIZEN')">
-            <a class="nav-link" th:href="@{/requests}">
-              Yêu cầu của tôi
-            </a>
+            <a class="nav-link" th:href="@{/requests}">Yêu cầu của tôi</a>
           </li>
-
-          <!-- Menu cho Điều phối viên -->
           <li class="nav-item" sec:authorize="hasRole('COORDINATOR')">
             <a class="nav-link" href="/coordinator/pending"
               >Danh sách chờ xác minh</a
@@ -70,22 +65,20 @@
               >Theo dõi tiến độ</a
             >
           </li>
-
-          <!-- Menu cho Đội cứu hộ -->
           <li class="nav-item" sec:authorize="hasRole('RESCUER')">
             <a class="nav-link" href="/team/tasks">Nhiệm vụ được giao</a>
           </li>
-
-                    <li
+          <li class="nav-item" sec:authorize="hasRole('RESCUER')">
+            <a class="nav-link" href="/team/my-teams">Đội của tôi</a>
+          </li>
+          <li
             class="nav-item"
             sec:authorize="hasAnyRole('ADMIN', 'COORDINATOR')"
           >
-            <a class="nav-link" th:href="@{/stats/requests}">
-              Thống kê yêu cầu
-            </a>
+            <a class="nav-link" th:href="@{/stats/requests}"
+              >Thống kê yêu cầu</a
+            >
           </li>
-
-          <!-- Menu cho Quản trị viên -->
           <li class="nav-item dropdown" sec:authorize="hasRole('ADMIN')">
             <a
               class="nav-link dropdown-toggle"
@@ -114,7 +107,7 @@
         </ul>
         <ul class="navbar-nav">
           <li class="nav-item" sec:authorize="isAuthenticated()">
-            <a class="nav-link" href="/profile">Hồ sơ cá nhân</a>
+            <a class="nav-link" th:href="@{/account/profile}">Hồ sơ cá nhân</a>
           </li>
           <li class="nav-item" sec:authorize="isAuthenticated()">
             <form th:action="@{/auth/logout}" method="post">
@@ -135,6 +128,20 @@
             >
           </li>
         </ul>
+        <div
+          class="d-flex align-items-center"
+          sec:authorize="isAuthenticated()"
+        >
+          <span
+            class="badge rounded-pill text-bg-primary me-lg-2 my-2 my-lg-0"
+            aria-label="Vai trò đang hoạt động"
+            title="Vai trò đang hoạt động"
+            th:text="${#authentication.principal.activeRole == 'ROLE_CITIZEN' ? 'Người dân' :
+                  #authentication.principal.activeRole == 'ROLE_COORDINATOR' ? 'Điều phối viên' :
+                  #authentication.principal.activeRole == 'ROLE_RESCUER' ? 'Cứu hộ' : 'Quản trị viên'}"
+            >Vai trò</span
+          >
+        </div>
       </div>
     </div>
   </nav>

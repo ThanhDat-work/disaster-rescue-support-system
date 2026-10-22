@@ -61,7 +61,7 @@ public class CoordinatorCloseService {
                 ));
 
         RescueRequest request = requests
-                .findByIdForCoordinatorAssignment(requestId)
+                .findByIdForCoordinatorAction(requestId, coordinatorId)
                 .orElseThrow(CoordinatorRequestNotFoundException::new);
 
         requireCurrentVersion(request, command.getVersion());
@@ -87,6 +87,7 @@ public class CoordinatorCloseService {
         history.setOldStatus(RESCUED);
         history.setNewStatus(CLOSED);
         history.setChangedByUser(coordinator);
+        history.setActorRole("ROLE_COORDINATOR");
         history.setNotes(closeNote);
         histories.save(history);
 

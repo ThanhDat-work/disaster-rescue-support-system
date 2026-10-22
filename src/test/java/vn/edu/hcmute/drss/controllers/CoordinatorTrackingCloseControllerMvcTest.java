@@ -116,6 +116,7 @@ class CoordinatorTrackingCloseControllerMvcTest {
         RescueTeam team = assignment.getTeam();
 
         when(trackingService.findTracking(
+                eq(COORDINATOR_ID),
                 any(CoordinatorTrackingFilter.class),
                 eq(2)
         )).thenReturn(page);
@@ -147,7 +148,7 @@ class CoordinatorTrackingCloseControllerMvcTest {
                 List.of()
         );
 
-        when(queryService.getDetail(request.getId())).thenReturn(detail);
+        when(queryService.getDetail(request.getId(), COORDINATOR_ID)).thenReturn(detail);
         when(trackingService.findLatestAssignment(request.getId()))
                 .thenReturn(Optional.of(assignment));
 

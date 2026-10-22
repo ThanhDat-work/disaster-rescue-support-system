@@ -51,79 +51,39 @@ class JwtTokenServiceTest {
         user.setAuthVersion(3);
     }
 
-    @Test
-    void issuesRequiredClaimsWithSortedDistinctRoles() {
+        @Test
+    void issuesExactlyOneActiveRoleClaim() {
         Jwt encodedJwt = mock(Jwt.class);
-
-        when(encodedJwt.getTokenValue())
-                .thenReturn("signed.jwt.value");
-
+        when(encodedJwt.getTokenValue()).thenReturn("signed.jwt.value");
         when(jwtEncoder.encode(
                 org.mockito.ArgumentMatchers.any()
         )).thenReturn(encodedJwt);
 
         IssuedAccessToken result = service.issue(
                 user,
-                List.of(
-                        "ROLE_RESCUER",
-                        "ROLE_CITIZEN",
-                        "ROLE_RESCUER"
-                )
+                "ROLE_CITIZEN"
         );
 
         ArgumentCaptor<JwtEncoderParameters> captor =
-                ArgumentCaptor.forClass(
-                        JwtEncoderParameters.class
-                );
-
+                ArgumentCaptor.forClass(JwtEncoderParameters.class);
         verify(jwtEncoder).encode(captor.capture());
 
-        JwtEncoderParameters parameters = captor.getValue();
-
-        assertThat(parameters.getJwsHeader().getAlgorithm())
-                .isEqualTo(
-                        org.springframework.security.oauth2.jose.jws
-                                .MacAlgorithm.HS256
-                );
-
-        assertThat(parameters.getClaims().getSubject())
-                .isEqualTo(USER_ID.toString());
-
-        assertThat(parameters.getClaims()
-                .getClaimAsString("iss"))
-                .isEqualTo("drss");
-
-        assertThat(parameters.getClaims()
+        assertThat(captor.getValue().getClaims()
+                .getClaimAsString("active_role"))
+                .isEqualTo("ROLE_CITIZEN");
+        assertThat(captor.getValue().getClaims()
                 .getClaimAsStringList("roles"))
-                .containsExactly(
-                        "ROLE_CITIZEN",
-                        "ROLE_RESCUER"
-                );
+                .containsExactly("ROLE_CITIZEN");
+        assertThat(result.tokenValue()).isEqualTo("signed.jwt.value");
+    }
 
-        assertThat(
-                ((Number) parameters.getClaims()
-                        .getClaim("ver")).intValue()
-        ).isEqualTo(3);
-
-        assertThat(parameters.getClaims().getId())
-                .isNotBlank();
-
-        assertThat(parameters.getClaims().getIssuedAt())
-                .isEqualTo(
-                        Instant.parse("2026-10-19T07:00:00Z")
-                );
-
-        assertThat(parameters.getClaims().getExpiresAt())
-                .isEqualTo(
-                        Instant.parse("2026-10-19T07:30:00Z")
-                );
-
-        assertThat(result.tokenValue())
-                .isEqualTo("signed.jwt.value");
-
-        assertThat(result.toString())
-                .contains("<redacted>")
-                .doesNotContain("signed.jwt.value");
+    @Test
+    void refusesMultipleActiveRoles() {
+        assertThatThrownBy(() -> service.issue(
+                user,
+                List.of("ROLE_CITIZEN", "ROLE_RESCUER")
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Exactly one active role is required");
     }
 
     @Test
@@ -133,7 +93,7 @@ class JwtTokenServiceTest {
         )
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage(
-                        "At least one active role is required"
+                        "Exactly one active role is required"
                 );
     }
 

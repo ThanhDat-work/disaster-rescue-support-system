@@ -58,6 +58,7 @@ class CoordinatorAssignmentServiceTest {
     private RescueRequest request;
     private RescueTeam team;
     private User coordinator;
+    private User owner;
 
     @BeforeEach
     void setUp() {
@@ -79,6 +80,9 @@ class CoordinatorAssignmentServiceTest {
         request.setId(requestId);
         request.setStatus("VERIFIED");
         request.setVersion(4L);
+        owner = new User();
+        owner.setId(UUID.randomUUID());
+        request.setUser(owner);
 
         team = new RescueTeam();
         team.setId(teamId);
@@ -92,10 +96,10 @@ class CoordinatorAssignmentServiceTest {
 
     @Test
     void availableTeamQueryUsesRepositoryOrder() {
-        when(teams.findAvailableWithActiveMembersForAssignment())
+        when(teams.findAvailableWithActiveMembersForAssignmentExcludingOwner(owner.getId()))
                 .thenReturn(List.of(team));
 
-        assertThat(service.findAvailableTeams()).containsExactly(team);
+        assertThat(service.findAvailableTeams(owner.getId())).containsExactly(team);
     }
 
     @Test
@@ -137,6 +141,8 @@ class CoordinatorAssignmentServiceTest {
         assertThat(history.getValue().getRequest()).isSameAs(request);
         assertThat(history.getValue().getOldStatus()).isEqualTo("VERIFIED");
         assertThat(history.getValue().getNewStatus()).isEqualTo("ASSIGNED");
+        assertThat(history.getValue().getActorRole())
+                .isEqualTo("ROLE_COORDINATOR");
         assertThat(history.getValue().getChangedByUser())
                 .isSameAs(coordinator);
         assertThat(history.getValue().getNotes())
@@ -233,7 +239,7 @@ class CoordinatorAssignmentServiceTest {
         allowCoordinatorRequestAndNoAssignment();
         when(teams.findByIdForCoordinatorAssignment(teamId))
                 .thenReturn(Optional.of(team));
-        when(teamMembers.existsByTeam_IdAndLeftAtIsNull(teamId))
+        when(teamMembers.existsEligibleRescuerByTeamId(teamId))
                 .thenReturn(false);
 
         assertThatThrownBy(() -> service.assign(
@@ -249,10 +255,31 @@ class CoordinatorAssignmentServiceTest {
     }
 
     @Test
+    void teamContainingRequestOwnerCannotBeAssigned() {
+        allowCoordinatorRequestAndNoAssignment();
+        when(teams.findByIdForCoordinatorAssignment(teamId))
+                .thenReturn(Optional.of(team));
+        when(teamMembers.existsEligibleRescuerByTeamId(teamId))
+                .thenReturn(true);
+        when(teamMembers.existsByTeam_IdAndUser_IdAndLeftAtIsNull(
+                teamId, owner.getId()
+        )).thenReturn(true);
+
+        assertThatThrownBy(() -> service.assign(
+                requestId, coordinatorId, command(teamId, 4L, null)
+        )).isInstanceOf(CoordinatorRequestConflictException.class)
+                .hasMessageContaining("người gửi yêu cầu");
+
+        verify(assignments, never()).save(any());
+        verify(histories, never()).save(any());
+        org.mockito.Mockito.verifyNoInteractions(notifications);
+    }
+
+    @Test
     void missingRequestOrCoordinatorIsRejected() {
         when(users.findById(coordinatorId))
                 .thenReturn(Optional.of(coordinator));
-        when(requests.findByIdForCoordinatorAssignment(requestId))
+        when(requests.findByIdForCoordinatorAction(requestId, coordinatorId))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.assign(
@@ -293,7 +320,7 @@ class CoordinatorAssignmentServiceTest {
                 .hasMessageContaining("2.000");
 
         verify(users, never()).findById(any());
-        verify(requests, never()).findByIdForCoordinatorAssignment(any());
+        verify(requests, never()).findByIdForCoordinatorAction(any(), any());
     }
 
     @Test
@@ -317,7 +344,7 @@ class CoordinatorAssignmentServiceTest {
     private void allowCoordinatorAndRequest() {
         when(users.findById(coordinatorId))
                 .thenReturn(Optional.of(coordinator));
-        when(requests.findByIdForCoordinatorAssignment(requestId))
+        when(requests.findByIdForCoordinatorAction(requestId, coordinatorId))
                 .thenReturn(Optional.of(request));
     }
 
@@ -333,8 +360,11 @@ class CoordinatorAssignmentServiceTest {
         allowCoordinatorRequestAndNoAssignment();
         when(teams.findByIdForCoordinatorAssignment(teamId))
                 .thenReturn(Optional.of(team));
-        when(teamMembers.existsByTeam_IdAndLeftAtIsNull(teamId))
+        when(teamMembers.existsEligibleRescuerByTeamId(teamId))
                 .thenReturn(true);
+        when(teamMembers.existsByTeam_IdAndUser_IdAndLeftAtIsNull(
+                teamId, owner.getId()
+        )).thenReturn(false);
         when(assignments.save(any(RescueAssignment.class)))
                 .thenAnswer(invocation -> {
                         RescueAssignment saved = invocation.getArgument(0);

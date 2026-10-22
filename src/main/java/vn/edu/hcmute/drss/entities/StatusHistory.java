@@ -32,6 +32,9 @@ public class StatusHistory {
     @JoinColumn(name = "changed_by_user_id", nullable = false)
     private User changedByUser;
 
+    @Column(name = "actor_role", nullable = false, length = 32)
+    private String actorRole;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 

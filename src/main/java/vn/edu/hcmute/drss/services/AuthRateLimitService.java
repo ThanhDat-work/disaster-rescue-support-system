@@ -267,6 +267,95 @@ public class AuthRateLimitService {
         );
     }
 
+        @Transactional(readOnly = true)
+    public RateLimitDecision checkRoleSwitchAllowed(
+            String email,
+            String ipAddress
+    ) {
+        LocalDateTime now = currentDateTime();
+
+        SubjectRecord emailSubject = findEmailIpSubject(
+                AuthRateLimitAction.ROLE_SWITCH,
+                email,
+                ipAddress
+        );
+        SubjectRecord ipSubject = findIpSubject(
+                AuthRateLimitAction.ROLE_SWITCH,
+                ipAddress
+        );
+
+        return activeBlockDecision(
+                emailSubject.record(),
+                ipSubject.record(),
+                now
+        );
+    }
+
+    @Transactional
+    public RateLimitDecision recordRoleSwitchFailure(
+            String email,
+            String ipAddress
+    ) {
+        LocalDateTime now = currentDateTime();
+
+        SubjectRecord emailSubject = lockEmailIpSubject(
+                AuthRateLimitAction.ROLE_SWITCH,
+                email,
+                ipAddress
+        );
+        SubjectRecord ipSubject = lockIpSubject(
+                AuthRateLimitAction.ROLE_SWITCH,
+                ipAddress
+        );
+
+        RateLimitDecision existingBlock = activeBlockDecision(
+                emailSubject.record(),
+                ipSubject.record(),
+                now
+        );
+        if (!existingBlock.allowed()) {
+            return existingBlock;
+        }
+
+        AuthRateLimit emailRecord = prepareFailureRecord(
+                emailSubject,
+                LOGIN_SUBJECT_FAILURE_LIMIT,
+                now
+        );
+        AuthRateLimit ipRecord = prepareFailureRecord(
+                ipSubject,
+                FAILURE_IP_LIMIT,
+                now
+        );
+
+        repository.save(emailRecord);
+        repository.save(ipRecord);
+
+        return decisionAfterFailure(
+                emailRecord,
+                ipRecord,
+                now
+        );
+    }
+
+    @Transactional
+    public void clearRoleSwitchSubjectAfterSuccess(
+            String email,
+            String ipAddress
+    ) {
+        String subjectKey = subjectKeyService.createEmailIpKey(
+                AuthRateLimitAction.ROLE_SWITCH,
+                email,
+                ipAddress
+        );
+
+        repository.deleteByActionAndScopeAndSubjectKey(
+                AuthRateLimitAction.ROLE_SWITCH,
+                AuthRateLimitScope.EMAIL_IP,
+                subjectKey
+        );
+    }
+
     private SubjectRecord lockEmailIpSubject(
             AuthRateLimitAction action,
             String email,

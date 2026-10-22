@@ -3,6 +3,7 @@ package vn.edu.hcmute.drss.controllers;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -18,6 +19,7 @@ import vn.edu.hcmute.drss.dtos.AdminUserRolesRequest;
 import vn.edu.hcmute.drss.dtos.AdminUserSummary;
 import vn.edu.hcmute.drss.exceptions.AdminDomainException;
 import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
+import vn.edu.hcmute.drss.services.AdminRescueTeamService;
 import vn.edu.hcmute.drss.services.AdminUserService;
 
 import java.util.List;
@@ -29,9 +31,20 @@ import java.util.UUID;
 public class AdminUserController {
 
     private final AdminUserService service;
+    private final AdminRescueTeamService teamService;
+
+    @Autowired
+    public AdminUserController(
+            AdminUserService service,
+            AdminRescueTeamService teamService
+    ) {
+        this.service = service;
+        this.teamService = teamService;
+    }
 
     public AdminUserController(AdminUserService service) {
         this.service = service;
+        this.teamService = null;
     }
 
     @ModelAttribute("pageSizes")
@@ -173,6 +186,14 @@ public class AdminUserController {
             AdminUserDetail user,
             AdminUserRolesRequest submittedForm) {
         model.addAttribute("user", user);
+        if (teamService != null && user.roles().contains("ROLE_RESCUER")) {
+            model.addAttribute(
+                    "rescueMemberships",
+                    teamService.findMembershipsForUser(user.id())
+            );
+        } else {
+            model.addAttribute("rescueMemberships", List.of());
+        }
 
         if (submittedForm == null) {
             model.addAttribute(

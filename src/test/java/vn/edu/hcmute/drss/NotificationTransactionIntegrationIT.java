@@ -67,7 +67,7 @@ class NotificationTransactionIntegrationIT {
 
         transactions.executeWithoutResult(status -> {
             RescueRequest request = requestRepository
-                    .findCoordinatorDetailById(REQUEST_ID)
+                    .findById(REQUEST_ID)
                     .orElseThrow();
             created.set(notifications.notifyRequestStatusChanged(
                     request,
@@ -98,7 +98,7 @@ class NotificationTransactionIntegrationIT {
         assertThatThrownBy(() ->
                 transactions.executeWithoutResult(status -> {
                     RescueRequest request = requestRepository
-                            .findCoordinatorDetailById(REQUEST_ID)
+                            .findById(REQUEST_ID)
                             .orElseThrow();
                     notifications.notifyRequestStatusChanged(
                             request,

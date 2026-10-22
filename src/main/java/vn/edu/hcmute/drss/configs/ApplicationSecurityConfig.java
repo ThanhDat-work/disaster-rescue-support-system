@@ -103,7 +103,8 @@ public class ApplicationSecurityConfig {
                                                                 "/auth/login",
                                                                 "/auth/forgot-password",
                                                                 "/auth/reset-password",
-                                                                "/auth/reset-password/**")
+                                                                "/auth/reset-password/**",
+                                                                "/auth/select-role")
                                                 .permitAll()
 
                                                 .requestMatchers(
@@ -111,7 +112,9 @@ public class ApplicationSecurityConfig {
                                                 .hasAnyAuthority(
                                                                 "ROLE_ADMIN",
                                                                 "ROLE_COORDINATOR")
-
+                                                .requestMatchers(
+                                                                "/account/**")
+                                                .authenticated()
                                                 .requestMatchers(
                                                                 "/admin/**")
                                                 .hasAuthority("ROLE_ADMIN")

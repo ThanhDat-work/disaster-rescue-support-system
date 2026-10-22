@@ -100,6 +100,7 @@ public class AdminUserService {
                 user.getEmail(),
                 user.getPhoneNumber(),
                 user.getStatus(),
+                user.getAvatarSecureUrl(),
                 rolesByUserId.getOrDefault(user.getId(), List.of())));
     }
 
@@ -118,6 +119,13 @@ public class AdminUserService {
         String newStatus = normalizeMutableStatus(requestedStatus);
         User user = findUserForUpdate(targetUserId);
 
+        if (user.getId().equals(actorId)) {
+            throw new AdminDomainException(
+                    "status",
+                    "Bạn không thể thay đổi trạng thái tài khoản của chính mình"
+            );
+        }
+
         if (INACTIVE.equals(user.getStatus())) {
             throw new AdminDomainException(
                     "status",
@@ -135,18 +143,22 @@ public class AdminUserService {
             return;
         }
 
-        if (user.getId().equals(actorId) && BANNED.equals(newStatus)) {
-            throw new AdminDomainException(
-                    "status",
-                    "Bạn không thể tự vô hiệu hóa tài khoản của mình");
-        }
-
         Set<String> currentRoles = activeRoleNames(user);
 
         if (ACTIVE.equals(user.getStatus())
                 && BANNED.equals(newStatus)
                 && currentRoles.contains(ADMIN_ROLE)) {
             requireAnotherActiveAdmin();
+        }
+
+        if (BANNED.equals(newStatus)
+                && userRoleRepository.countActiveTeamMemberships(
+                        user.getId().toString()
+                ) > 0) {
+            throw new AdminDomainException(
+                    "status",
+                    "Hãy đưa người cứu hộ ra khỏi mọi đội trước khi vô hiệu hóa tài khoản"
+            );
         }
 
         user.setStatus(newStatus);
@@ -164,6 +176,14 @@ public class AdminUserService {
                 requestedRoles);
 
         User user = findUserForUpdate(targetUserId);
+
+        if (user.getId().equals(actorId)) {
+            throw new AdminDomainException(
+                    "roles",
+                    "Bạn không thể thay đổi vai trò của chính mình"
+            );
+        }
+
         List<UserRole> assignments = userRoleRepository.findAllByUser(user);
 
         TreeSet<String> currentRoles = assignments.stream()
@@ -188,6 +208,18 @@ public class AdminUserService {
 
         if (ACTIVE.equals(user.getStatus()) && removesAdmin) {
             requireAnotherActiveAdmin();
+        }
+
+        boolean removesRescuer = currentRoles.contains("ROLE_RESCUER")
+                && !normalizedRoles.contains("ROLE_RESCUER");
+        if (removesRescuer
+                && userRoleRepository.countActiveTeamMemberships(
+                        user.getId().toString()
+                ) > 0) {
+            throw new AdminDomainException(
+                    "roles",
+                    "Hãy đưa người cứu hộ ra khỏi mọi đội trước khi thu hồi ROLE_RESCUER"
+            );
         }
 
         Map<String, Role> requestedRoleEntities = roleRepository
@@ -290,6 +322,7 @@ public class AdminUserService {
                 user.getEmail(),
                 user.getPhoneNumber(),
                 user.getStatus(),
+                user.getAvatarSecureUrl(),
                 roles.stream().sorted().toList());
     }
 
@@ -304,15 +337,17 @@ public class AdminUserService {
     }
 
     private void requireAnotherActiveAdmin() {
-        long activeAdminCount = userRoleRepository
-                .countByRole_RoleNameAndRevokedAtIsNullAndUser_Status(
+        List<UserRole> activeAdmins = userRoleRepository
+                .findActiveAssignmentsByRoleNameAndUserStatusForUpdate(
                         ADMIN_ROLE,
-                        ACTIVE);
+                        ACTIVE
+                );
 
-        if (activeAdminCount <= 1) {
+        if (activeAdmins.size() <= 1) {
             throw new AdminDomainException(
                     null,
-                    "Không thể vô hiệu hóa hoặc thu hồi quyền của quản trị viên hoạt động cuối cùng");
+                    "Không thể vô hiệu hóa hoặc thu hồi quyền của quản trị viên hoạt động cuối cùng"
+            );
         }
     }
 

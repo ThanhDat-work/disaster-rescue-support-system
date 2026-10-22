@@ -38,6 +38,8 @@ import vn.edu.hcmute.drss.repositories.StatusHistoryRepository;
 @ExtendWith(MockitoExtension.class)
 class CoordinatorRequestQueryServiceTest {
 
+    private static final UUID COORDINATOR_ID = UUID.randomUUID();
+
     @Mock
     private RescueRequestRepository requests;
     @Mock
@@ -69,10 +71,10 @@ class CoordinatorRequestQueryServiceTest {
         filter.setTo(LocalDate.of(2026, 10, 21));
 
         when(requests.searchPendingForCoordinator(
-                any(), any(), any(), any(), any(), any()
+                any(), any(), any(), any(), any(), eq(COORDINATOR_ID), any()
         )).thenReturn(Page.empty());
 
-        service.findPending(filter, -5);
+        service.findPending(COORDINATOR_ID, filter, -5);
 
         ArgumentCaptor<Pageable> pageable =
                 ArgumentCaptor.forClass(Pageable.class);
@@ -82,6 +84,7 @@ class CoordinatorRequestQueryServiceTest {
                 eq(7L),
                 eq(LocalDateTime.of(2026, 10, 1, 0, 0)),
                 eq(LocalDateTime.of(2026, 10, 22, 0, 0)),
+                eq(COORDINATOR_ID),
                 pageable.capture()
         );
         assertThat(pageable.getValue().getPageNumber()).isZero();
@@ -96,10 +99,10 @@ class CoordinatorRequestQueryServiceTest {
         filter.setUrgency("   ");
 
         when(requests.searchPendingForCoordinator(
-                any(), any(), any(), any(), any(), any()
+                any(), any(), any(), any(), any(), eq(COORDINATOR_ID), any()
         )).thenReturn(Page.empty());
 
-        service.findPending(filter, 0);
+        service.findPending(COORDINATOR_ID, filter, 0);
 
         verify(requests).searchPendingForCoordinator(
                 eq(null),
@@ -107,6 +110,7 @@ class CoordinatorRequestQueryServiceTest {
                 eq(null),
                 eq(null),
                 eq(null),
+                eq(COORDINATOR_ID),
                 any(Pageable.class)
         );
     }
@@ -126,16 +130,16 @@ class CoordinatorRequestQueryServiceTest {
         );
 
         when(requests.searchPendingForCoordinator(
-                any(), any(), any(), any(), any(), any()
+                any(), any(), any(), any(), any(), eq(COORDINATOR_ID), any()
         )).thenReturn(overflow, last);
 
-        assertThat(service.findPending(new CoordinatorRequestFilter(), 99))
+        assertThat(service.findPending(COORDINATOR_ID, new CoordinatorRequestFilter(), 99))
                 .isSameAs(last);
 
         ArgumentCaptor<Pageable> pageable =
                 ArgumentCaptor.forClass(Pageable.class);
         verify(requests, times(2)).searchPendingForCoordinator(
-                any(), any(), any(), any(), any(), pageable.capture()
+                any(), any(), any(), any(), any(), eq(COORDINATOR_ID), pageable.capture()
         );
         assertThat(pageable.getAllValues().get(1).getPageNumber())
                 .isEqualTo(2);
@@ -146,20 +150,20 @@ class CoordinatorRequestQueryServiceTest {
         CoordinatorRequestFilter invalidUrgency =
                 new CoordinatorRequestFilter();
         invalidUrgency.setUrgency("FORGED");
-        assertThatThrownBy(() -> service.findPending(invalidUrgency, 0))
+        assertThatThrownBy(() -> service.findPending(COORDINATOR_ID, invalidUrgency, 0))
                 .isInstanceOf(IllegalArgumentException.class);
 
         CoordinatorRequestFilter invalidDates =
                 new CoordinatorRequestFilter();
         invalidDates.setFrom(LocalDate.of(2026, 10, 22));
         invalidDates.setTo(LocalDate.of(2026, 10, 21));
-        assertThatThrownBy(() -> service.findPending(invalidDates, 0))
+        assertThatThrownBy(() -> service.findPending(COORDINATOR_ID, invalidDates, 0))
                 .isInstanceOf(IllegalArgumentException.class);
 
         CoordinatorRequestFilter longKeyword =
                 new CoordinatorRequestFilter();
         longKeyword.setKeyword("x".repeat(151));
-        assertThatThrownBy(() -> service.findPending(longKeyword, 0))
+        assertThatThrownBy(() -> service.findPending(COORDINATOR_ID, longKeyword, 0))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -170,7 +174,7 @@ class CoordinatorRequestQueryServiceTest {
         StatusHistory history = new StatusHistory();
         MediaAsset media = new MediaAsset();
 
-        when(requests.findCoordinatorDetailById(requestId))
+        when(requests.findCoordinatorDetailByIdAndOwnerExcluded(requestId, COORDINATOR_ID))
                 .thenReturn(Optional.of(request));
         when(histories.findByRequest_IdOrderByCreatedAtAscIdAsc(requestId))
                 .thenReturn(List.of(history));
@@ -178,7 +182,7 @@ class CoordinatorRequestQueryServiceTest {
                 .findByRequest_IdAndDeletedAtIsNullOrderByCreatedAtAsc(requestId))
                 .thenReturn(List.of(media));
 
-        CoordinatorRequestDetail detail = service.getDetail(requestId);
+        CoordinatorRequestDetail detail = service.getDetail(requestId, COORDINATOR_ID);
 
         assertThat(detail.request()).isSameAs(request);
         assertThat(detail.history()).containsExactly(history);
@@ -188,10 +192,20 @@ class CoordinatorRequestQueryServiceTest {
     @Test
     void missingDetailReturnsNotFound() {
         UUID requestId = UUID.randomUUID();
-        when(requests.findCoordinatorDetailById(requestId))
+        when(requests.findCoordinatorDetailByIdAndOwnerExcluded(requestId, COORDINATOR_ID))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getDetail(requestId))
+        assertThatThrownBy(() -> service.getDetail(requestId, COORDINATOR_ID))
+                .isInstanceOf(CoordinatorRequestNotFoundException.class);
+    }
+
+    @Test
+    void ownerCannotLoadCoordinatorDetail() {
+        UUID requestId = UUID.randomUUID();
+        when(requests.findCoordinatorDetailByIdAndOwnerExcluded(
+                requestId, COORDINATOR_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getDetail(requestId, COORDINATOR_ID))
                 .isInstanceOf(CoordinatorRequestNotFoundException.class);
     }
 

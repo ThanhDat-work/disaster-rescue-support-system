@@ -320,6 +320,41 @@ class ApplicationSecurityConfigTest {
                                                 SessionManagementFilter.class::isInstance);
         }
 
+                @Test
+        void anyAuthenticatedRoleCanAccessAccountRoutes()
+                        throws Exception {
+                allowToken("account-token", "ROLE_RESCUER");
+
+                mockMvc.perform(
+                                get("/account/test")
+                                                .cookie(
+                                                                new jakarta.servlet.http.Cookie(
+                                                                                COOKIE_NAME,
+                                                                                "account-token")))
+                                .andExpect(status().isOk())
+                                .andExpect(content().string("protected"));
+        }
+
+        @Test
+        void roleSwitchWithoutCsrfIsRejected()
+                        throws Exception {
+                allowToken("switch-token", "ROLE_CITIZEN");
+
+                mockMvc.perform(
+                                post("/account/role-switch")
+                                                .cookie(
+                                                                new jakarta.servlet.http.Cookie(
+                                                                                COOKIE_NAME,
+                                                                                "switch-token"))
+                                                .param(
+                                                                "targetRole",
+                                                                "ROLE_COORDINATOR")
+                                                .param(
+                                                                "password",
+                                                                "Correct pass 123"))
+                                .andExpect(status().isForbidden());
+        }
+
         private void allowToken(
                         String token,
                         String... roles) {
@@ -364,6 +399,7 @@ class ApplicationSecurityConfigTest {
                                 "/team/test",
                                 "/admin/test",
                                 "/stats/test",
+                                "/account/test",
                                 "/profile/test"
                 })
                 String protectedRoute() {

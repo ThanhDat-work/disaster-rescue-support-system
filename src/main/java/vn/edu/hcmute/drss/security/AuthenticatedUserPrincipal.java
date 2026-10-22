@@ -11,14 +11,14 @@ public final class AuthenticatedUserPrincipal implements Principal {
     private final String email;
     private final String fullName;
     private final int authVersion;
-    private final List<String> roles;
+    private final String activeRole;
 
     public AuthenticatedUserPrincipal(
             UUID userId,
             String email,
             String fullName,
             int authVersion,
-            List<String> roles
+            String activeRole
     ) {
         this.userId = Objects.requireNonNull(
                 userId,
@@ -27,15 +27,23 @@ public final class AuthenticatedUserPrincipal implements Principal {
         this.email = requireText(email, "Email");
         this.fullName = requireText(fullName, "Full name");
         this.authVersion = authVersion;
-        this.roles = List.copyOf(
-                Objects.requireNonNull(roles, "Roles are required")
-        );
+        this.activeRole = requireRole(activeRole);
+    }
 
-        if (this.roles.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "At least one active role is required"
-            );
-        }
+    public AuthenticatedUserPrincipal(
+            UUID userId,
+            String email,
+            String fullName,
+            int authVersion,
+            List<String> roles
+    ) {
+        this(
+                userId,
+                email,
+                fullName,
+                authVersion,
+                requireSingleRole(roles)
+        );
     }
 
     public UUID userId() {
@@ -54,8 +62,12 @@ public final class AuthenticatedUserPrincipal implements Principal {
         return authVersion;
     }
 
+    public String activeRole() {
+        return activeRole;
+    }
+
     public List<String> roles() {
-        return roles;
+        return List.of(activeRole);
     }
 
     @Override
@@ -69,9 +81,28 @@ public final class AuthenticatedUserPrincipal implements Principal {
                 + userId
                 + ", authVersion="
                 + authVersion
-                + ", roles="
-                + roles
+                + ", activeRole="
+                + activeRole
                 + "]";
+    }
+
+    private static String requireSingleRole(List<String> roles) {
+        if (roles == null || roles.size() != 1) {
+            throw new IllegalArgumentException(
+                    "Exactly one active role is required"
+            );
+        }
+        return roles.get(0);
+    }
+
+    private static String requireRole(String role) {
+        String value = requireText(role, "Active role").strip();
+        if (!value.startsWith("ROLE_")) {
+            throw new IllegalArgumentException(
+                    "Active role must start with ROLE_"
+            );
+        }
+        return value;
     }
 
     private static String requireText(
@@ -83,7 +114,6 @@ public final class AuthenticatedUserPrincipal implements Principal {
                     fieldName + " is required"
             );
         }
-
         return value;
     }
 }

@@ -61,7 +61,8 @@ public class BusinessNotificationService {
                 request.getId(),
                 "Yêu cầu cứu nạn mới",
                 "Yêu cầu " + request.getDisplayCode()
-                        + " đang chờ xác minh."
+                        + " đang chờ xác minh.",
+                request.getUser().getId()
         );
     }
 
@@ -93,7 +94,8 @@ public class BusinessNotificationService {
                 "Trạng thái yêu cầu đã thay đổi",
                 "Yêu cầu " + request.getDisplayCode()
                         + " chuyển từ " + normalizedOld
-                        + " sang " + normalizedNew + "."
+                        + " sang " + normalizedNew + ".",
+                null
         );
     }
 
@@ -126,7 +128,8 @@ public class BusinessNotificationService {
                         + assignment.getDisplayCode()
                         + " cho yêu cầu "
                         + request.getDisplayCode()
-                        + "."
+                        + ".",
+                request.getUser().getId()
         );
     }
 
@@ -138,9 +141,10 @@ public class BusinessNotificationService {
             String referenceType,
             UUID referenceId,
             String title,
-            String message
+            String message,
+            UUID excludedUserId
     ) {
-        List<User> recipients = uniqueActiveUsers(candidates);
+        List<User> recipients = uniqueActiveUsers(candidates, excludedUserId);
         if (recipients.isEmpty()) {
             return List.of();
         }
@@ -168,7 +172,10 @@ public class BusinessNotificationService {
         return List.copyOf(saved);
     }
 
-    private List<User> uniqueActiveUsers(List<User> candidates) {
+    private List<User> uniqueActiveUsers(
+            List<User> candidates,
+            UUID excludedUserId
+    ) {
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
@@ -177,7 +184,8 @@ public class BusinessNotificationService {
         for (User user : candidates) {
             if (user == null
                     || user.getId() == null
-                    || !ACTIVE.equals(user.getStatus())) {
+                    || !ACTIVE.equals(user.getStatus())
+                    || user.getId().equals(excludedUserId)) {
                 continue;
             }
             unique.putIfAbsent(user.getId(), user);

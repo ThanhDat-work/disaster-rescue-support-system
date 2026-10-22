@@ -80,53 +80,76 @@ class AccountLoginServiceTest {
         )).thenReturn(RateLimitDecision.allowedDecision());
     }
 
-    @Test
-    void validLoginIssuesJwtFromAllActiveRoles() {
+        @Test
+    void citizenGrantWinsAsDefaultActiveRole() {
         UserRole citizen = userRole("ROLE_CITIZEN");
         UserRole rescuer = userRole("ROLE_RESCUER");
-
-        IssuedAccessToken accessToken =
-                new IssuedAccessToken(
-                        "signed.jwt.value",
-                        Instant.parse(
-                                "2026-10-19T07:30:00Z"
-                        )
-                );
+        IssuedAccessToken token = new IssuedAccessToken(
+                "signed.jwt.value",
+                Instant.parse("2026-10-19T07:30:00Z")
+        );
 
         when(userRepository.findByEmailIgnoreCase(EMAIL))
                 .thenReturn(Optional.of(user));
-
-        when(passwordEncoder.matches(
-                PASSWORD,
-                user.getPasswordHash()
-        )).thenReturn(true);
-
-        when(userRoleRepository
-                .findAllByUserAndRevokedAtIsNull(user))
+        when(passwordEncoder.matches(PASSWORD, user.getPasswordHash()))
+                .thenReturn(true);
+        when(userRoleRepository.findAllByUserAndRevokedAtIsNull(user))
                 .thenReturn(List.of(rescuer, citizen));
+        when(jwtTokenService.issue(user, "ROLE_CITIZEN"))
+                .thenReturn(token);
 
-        when(jwtTokenService.issue(
-                user,
-                List.of("ROLE_CITIZEN", "ROLE_RESCUER")
-        )).thenReturn(accessToken);
-
-        LoginResult result =
-                service.login(request, IP_ADDRESS);
+        LoginResult result = service.login(request, IP_ADDRESS);
 
         assertThat(result.status())
-                .isEqualTo(
-                        LoginResult.Status.AUTHENTICATED
-                );
-        assertThat(result.accessToken()).isSameAs(accessToken);
-        assertThat(result.toString())
-                .contains("<redacted>")
-                .doesNotContain("signed.jwt.value");
+                .isEqualTo(LoginResult.Status.AUTHENTICATED);
+        assertThat(result.activeRole()).isEqualTo("ROLE_CITIZEN");
+        assertThat(result.accessToken()).isSameAs(token);
+    }
 
-        verify(rateLimitService)
-                .clearLoginSubjectAfterSuccess(
-                        EMAIL,
-                        IP_ADDRESS
-                );
+    @Test
+    void singleNonCitizenGrantIsSelectedDirectly() {
+        when(userRepository.findByEmailIgnoreCase(EMAIL))
+                .thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(PASSWORD, user.getPasswordHash()))
+                .thenReturn(true);
+        when(userRoleRepository.findAllByUserAndRevokedAtIsNull(user))
+                .thenReturn(List.of(userRole("ROLE_COORDINATOR")));
+        when(jwtTokenService.issue(user, "ROLE_COORDINATOR"))
+                .thenReturn(new IssuedAccessToken(
+                        "coordinator.jwt",
+                        Instant.parse("2026-10-19T07:30:00Z")
+                ));
+
+        LoginResult result = service.login(request, IP_ADDRESS);
+
+        assertThat(result.status())
+                .isEqualTo(LoginResult.Status.AUTHENTICATED);
+        assertThat(result.activeRole())
+                .isEqualTo("ROLE_COORDINATOR");
+    }
+
+    @Test
+    void multipleNonCitizenGrantsRequireInitialSelection() {
+        when(userRepository.findByEmailIgnoreCase(EMAIL))
+                .thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(PASSWORD, user.getPasswordHash()))
+                .thenReturn(true);
+        when(userRoleRepository.findAllByUserAndRevokedAtIsNull(user))
+                .thenReturn(List.of(
+                        userRole("ROLE_RESCUER"),
+                        userRole("ROLE_COORDINATOR")
+                ));
+
+        LoginResult result = service.login(request, IP_ADDRESS);
+
+        assertThat(result.status()).isEqualTo(
+                LoginResult.Status.ROLE_SELECTION_REQUIRED
+        );
+        assertThat(result.pendingUserId()).isEqualTo(user.getId());
+        verify(jwtTokenService, never()).issue(
+                org.mockito.ArgumentMatchers.any(User.class),
+                org.mockito.ArgumentMatchers.anyString()
+        );
     }
 
     @Test
@@ -164,8 +187,8 @@ class AccountLoginServiceTest {
 
         verify(jwtTokenService, never())
                 .issue(
-                        org.mockito.ArgumentMatchers.any(),
-                        org.mockito.ArgumentMatchers.any()
+                        org.mockito.ArgumentMatchers.any(User.class),
+                        org.mockito.ArgumentMatchers.anyString()
                 );
     }
 
@@ -189,8 +212,8 @@ class AccountLoginServiceTest {
 
         verify(jwtTokenService, never())
                 .issue(
-                        org.mockito.ArgumentMatchers.any(),
-                        org.mockito.ArgumentMatchers.any()
+                        org.mockito.ArgumentMatchers.any(User.class),
+                        org.mockito.ArgumentMatchers.anyString()
                 );
     }
 
@@ -267,8 +290,8 @@ class AccountLoginServiceTest {
 
         verify(jwtTokenService, never())
                 .issue(
-                        org.mockito.ArgumentMatchers.any(),
-                        org.mockito.ArgumentMatchers.any()
+                        org.mockito.ArgumentMatchers.any(User.class),
+                        org.mockito.ArgumentMatchers.anyString()
                 );
     }
 

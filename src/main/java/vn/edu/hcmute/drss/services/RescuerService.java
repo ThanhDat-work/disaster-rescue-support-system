@@ -2,6 +2,8 @@ package vn.edu.hcmute.drss.services;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.edu.hcmute.drss.dtos.RescueTeamMemberView;
+import vn.edu.hcmute.drss.dtos.RescueTeamView;
 import vn.edu.hcmute.drss.entities.RescueAssignment;
 import vn.edu.hcmute.drss.entities.RescueRequest;
 import vn.edu.hcmute.drss.entities.RescueTeamMember;
@@ -12,7 +14,9 @@ import vn.edu.hcmute.drss.repositories.StatusHistoryRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class RescuerService {
@@ -46,6 +50,69 @@ public class RescuerService {
     public List<RescueAssignment> getAssignmentsForUser(UUID userId) {
         requireUserId(userId);
         return assignmentRepository.findAssignmentsByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RescueTeamView> getMyTeams(UUID userId) {
+        requireUserId(userId);
+        List<RescueTeamMember> memberships = teamMemberRepository
+                .findEligibleMembershipsByUserId(userId);
+        if (memberships.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> teamIds = memberships.stream()
+                .map(row -> row.getTeam().getId())
+                .distinct()
+                .toList();
+        Map<UUID, Long> counts = teamMemberRepository
+                .countEligibleMembersByTeamIds(teamIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> row.getTeamId(),
+                        row -> row.getTotal()
+                ));
+        return memberships.stream()
+                .map(row -> new RescueTeamView(
+                        row.getTeam().getId(),
+                        row.getTeam().getDisplayCode(),
+                        row.getTeam().getTeamName(),
+                        row.getTeam().getContactNumber(),
+                        row.getTeam().getStatus(),
+                        row.getRole(),
+                        leaderView(row.getTeam()),
+                        counts.getOrDefault(row.getTeam().getId(), 0L),
+                        List.of()
+                ))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public RescueTeamView getMyTeam(UUID teamId, UUID userId) {
+        requireUserId(userId);
+        RescueTeamMember membership = teamMemberRepository
+                .findActiveMembership(userId, teamId)
+                .orElseThrow(() -> new SecurityException(
+                        "Bạn không còn thuộc đội cứu hộ này."
+                ));
+        List<RescueTeamMemberView> members = teamMemberRepository
+                .findEligibleMembersByTeamId(teamId)
+                .stream()
+                .map(this::memberView)
+                .toList();
+        return new RescueTeamView(
+                membership.getTeam().getId(),
+                membership.getTeam().getDisplayCode(),
+                membership.getTeam().getTeamName(),
+                membership.getTeam().getContactNumber(),
+                membership.getTeam().getStatus(),
+                membership.getRole(),
+                members.stream()
+                        .filter(row -> "LEADER".equals(row.teamRole()))
+                        .findFirst()
+                        .orElseGet(() -> leaderView(membership.getTeam())),
+                members.size(),
+                members
+        );
     }
 
     @Transactional(readOnly = true)
@@ -201,8 +268,34 @@ RescueTeamMember membership,
         history.setOldStatus(oldStatus);
         history.setNewStatus(newStatus);
         history.setChangedByUser(membership.getUser());
+        history.setActorRole("ROLE_RESCUER");
         history.setNotes(notes);
         return history;
+    }
+
+    private RescueTeamMemberView memberView(RescueTeamMember membership) {
+        return new RescueTeamMemberView(
+                membership.getUser().getId(),
+                membership.getUser().getDisplayCode(),
+                membership.getUser().getFullName(),
+                membership.getUser().getAvatarSecureUrl(),
+                membership.getRole()
+        );
+    }
+
+    private RescueTeamMemberView leaderView(
+            vn.edu.hcmute.drss.entities.RescueTeam team
+    ) {
+        if (team.getLeaderUser() == null) {
+            return null;
+        }
+        return new RescueTeamMemberView(
+                team.getLeaderUser().getId(),
+                team.getLeaderUser().getDisplayCode(),
+                team.getLeaderUser().getFullName(),
+                team.getLeaderUser().getAvatarSecureUrl(),
+                "LEADER"
+        );
     }
 
     private void requireUserId(UUID userId) {

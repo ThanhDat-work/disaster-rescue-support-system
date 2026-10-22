@@ -6,5 +6,6 @@ public enum AuthRateLimitAction {
     RESEND_OTP,
     VERIFY_ACTIVATION,
     FORGOT_PASSWORD,
-    VERIFY_RESET
+    VERIFY_RESET,
+    ROLE_SWITCH
 }

@@ -125,7 +125,7 @@ class AdminUserServiceTest {
                 .thenReturn(Optional.of(self));
         assertThatThrownBy(() -> service.changeStatus(
                 self.getId(), "BANNED", self.getId())).isInstanceOf(AdminDomainException.class)
-                .hasMessageContaining("tự vô hiệu hóa");
+                .hasMessageContaining("chính mình");
 
         User lastAdmin = user("ACTIVE", 0);
         Role admin = role(1L, "ROLE_ADMIN");
@@ -134,14 +134,30 @@ class AdminUserServiceTest {
         when(userRoleRepository.findAllByUserAndRevokedAtIsNull(lastAdmin))
                 .thenReturn(List.of(assignment(lastAdmin, admin, null)));
         when(userRoleRepository
-                .countByRole_RoleNameAndRevokedAtIsNullAndUser_Status(
+                .findActiveAssignmentsByRoleNameAndUserStatusForUpdate(
                         "ROLE_ADMIN",
                         "ACTIVE"))
-                .thenReturn(1L);
+                .thenReturn(List.of(assignment(lastAdmin, admin, null)));
 
         assertThatThrownBy(() -> service.changeStatus(
                 lastAdmin.getId(), "BANNED", actorId)).isInstanceOf(AdminDomainException.class)
                 .hasMessageContaining("cuối cùng");
+    }
+
+    @Test
+    void adminCannotChangeOwnStatusOrRolesEvenForNoOp() {
+        User self = user("ACTIVE", 3);
+        when(userRepository.findByIdForUpdate(self.getId()))
+                .thenReturn(Optional.of(self));
+
+        assertThatThrownBy(() -> service.changeStatus(
+                self.getId(), "ACTIVE", self.getId()
+        )).isInstanceOf(AdminDomainException.class)
+                .hasMessageContaining("chính mình");
+        assertThatThrownBy(() -> service.updateRoles(
+                self.getId(), Set.of("ROLE_ADMIN"), self.getId()
+        )).isInstanceOf(AdminDomainException.class)
+                .hasMessageContaining("chính mình");
     }
 
     @Test
@@ -180,13 +196,10 @@ class AdminUserServiceTest {
         User self = user("ACTIVE", 0);
         when(userRepository.findByIdForUpdate(self.getId()))
                 .thenReturn(Optional.of(self));
-        when(userRoleRepository.findAllByUser(self)).thenReturn(List.of(
-                assignment(self, admin, null),
-                assignment(self, citizen, null)));
 
         assertThatThrownBy(() -> service.updateRoles(
                 self.getId(), Set.of("ROLE_CITIZEN"), self.getId())).isInstanceOf(AdminDomainException.class)
-                .hasMessageContaining("tự thu hồi");
+                .hasMessageContaining("chính mình");
 
         User lastAdmin = user("ACTIVE", 0);
         when(userRepository.findByIdForUpdate(lastAdmin.getId()))
@@ -195,10 +208,10 @@ class AdminUserServiceTest {
                 assignment(lastAdmin, admin, null),
                 assignment(lastAdmin, citizen, null)));
         when(userRoleRepository
-                .countByRole_RoleNameAndRevokedAtIsNullAndUser_Status(
+                .findActiveAssignmentsByRoleNameAndUserStatusForUpdate(
                         "ROLE_ADMIN",
                         "ACTIVE"))
-                .thenReturn(1L);
+                .thenReturn(List.of(assignment(lastAdmin, admin, null)));
 
         assertThatThrownBy(() -> service.updateRoles(
                 lastAdmin.getId(),

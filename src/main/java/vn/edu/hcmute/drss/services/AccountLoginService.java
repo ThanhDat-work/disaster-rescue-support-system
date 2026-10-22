@@ -110,33 +110,48 @@ public class AccountLoginService {
             return LoginResult.banned();
         }
 
-        List<String> activeRoles = userRoleRepository
-                .findAllByUserAndRevokedAtIsNull(user)
-                .stream()
-                .map(UserRole::getRole)
-                .filter(role -> role != null)
-                .map(role -> role.getRoleName())
-                .filter(roleName ->
-                        roleName != null
-                                && !roleName.isBlank()
-                )
-                .distinct()
-                .sorted()
-                .toList();
+                List<String> activeRoles = ActiveRoleService.sortRoles(
+                userRoleRepository
+                        .findAllByUserAndRevokedAtIsNull(user)
+                        .stream()
+                        .map(UserRole::getRole)
+                        .filter(role -> role != null)
+                        .map(role -> role.getRoleName())
+                        .filter(roleName ->
+                                roleName != null
+                                        && !roleName.isBlank()
+                        )
+                        .toList()
+        );
 
         if (activeRoles.isEmpty()) {
             return LoginResult.noActiveRoles();
         }
-
-        IssuedAccessToken accessToken =
-                jwtTokenService.issue(user, activeRoles);
 
         rateLimitService.clearLoginSubjectAfterSuccess(
                 request.email(),
                 ipAddress
         );
 
-        return LoginResult.authenticated(accessToken);
+        if (activeRoles.contains(
+                ActiveRoleService.ROLE_CITIZEN
+        )) {
+            String activeRole = ActiveRoleService.ROLE_CITIZEN;
+            return LoginResult.authenticated(
+                    jwtTokenService.issue(user, activeRole),
+                    activeRole
+            );
+        }
+
+        if (activeRoles.size() == 1) {
+            String activeRole = activeRoles.get(0);
+            return LoginResult.authenticated(
+                    jwtTokenService.issue(user, activeRole),
+                    activeRole
+            );
+        }
+
+        return LoginResult.roleSelectionRequired(user.getId());
     }
 
     private LoginResult recordInvalidCredentials(

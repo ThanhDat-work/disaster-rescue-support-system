@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main-layout :: layout(~{::title}, ~{::section})}">
+<head><title>Chi tiết đội của tôi | DRSS</title></head>
+<body><section class="py-4">
+  <a class="text-decoration-none" th:href="@{/team/my-teams}">← Đội của tôi</a>
+  <div class="d-flex flex-wrap justify-content-between gap-3 mt-3 mb-4"><div><h1 class="h3 mb-1" th:text="${team.teamName}"></h1><p class="text-secondary mb-0" th:text="|${team.displayCode} · ${team.status}|"></p></div><span class="badge text-bg-primary align-self-start" th:text="|Vai trò của bạn: ${team.currentUserRole}|"></span></div>
+  <div class="card"><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Thành viên</th><th>Mã người dùng</th><th>Chức vụ</th></tr></thead><tbody><tr th:each="member : ${team.members}"><td><div class="d-flex align-items-center gap-2"><img th:if="${member.avatarSecureUrl != null}" th:src="${member.avatarSecureUrl}" alt="" class="rounded-circle object-fit-cover" width="36" height="36"/><span th:unless="${member.avatarSecureUrl != null}" class="rounded-circle bg-body-secondary d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px">👤</span><span th:text="${member.fullName}"></span></div></td><td th:text="${member.displayCode}"></td><td><span class="badge text-bg-light border" th:text="${member.teamRole}"></span></td></tr></tbody></table></div></div>
+  <p class="small text-secondary mt-3 mb-0">Trang này không hiển thị email, số điện thoại hoặc liên kết hồ sơ của thành viên khác.</p>
+</section></body></html>

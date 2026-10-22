@@ -54,13 +54,14 @@ class BusinessNotificationServiceTest {
     }
 
     @Test
-    void newRequestTargetsOnlyUniqueActiveCoordinators() {
+    void newRequestExcludesOwnerAndTargetsUniqueActiveCoordinators() {
         stubNotificationPersistence();
+        User owner = user("ACTIVE");
         User first = user("ACTIVE");
         User inactive = user("BANNED");
-        RescueRequest request = request(first);
+        RescueRequest request = request(owner);
         when(userRoles.findActiveUsersByRoleName("ROLE_COORDINATOR"))
-                .thenReturn(List.of(first, first, inactive));
+                .thenReturn(List.of(owner, first, first, inactive));
 
         List<Notification> result = service.notifyNewRequest(request);
 
@@ -89,7 +90,8 @@ class BusinessNotificationServiceTest {
     void assignmentTargetsOnlyCurrentActiveTeamMembers() {
         stubNotificationPersistence();
         User member = user("ACTIVE");
-        RescueRequest request = request(user("ACTIVE"));
+        User owner = user("ACTIVE");
+        RescueRequest request = request(owner);
         RescueTeam team = new RescueTeam();
         team.setId(UUID.randomUUID());
         RescueAssignment assignment = new RescueAssignment();
@@ -98,9 +100,12 @@ class BusinessNotificationServiceTest {
         assignment.setRequest(request);
         assignment.setTeam(team);
         when(teamMembers.findActiveUsersByTeamId(team.getId()))
-                .thenReturn(List.of(member));
+                .thenReturn(List.of(owner, member));
 
-        service.notifyAssignmentCreated(assignment);
+        List<Notification> rows = service.notifyAssignmentCreated(assignment);
+        assertThat(rows).extracting(row -> row.getRecipientUser().getId())
+                .containsExactly(member.getId())
+                .doesNotContain(owner.getId());
 
         ArgumentCaptor<NotificationBatchCreatedEvent> event =
                 ArgumentCaptor.forClass(NotificationBatchCreatedEvent.class);

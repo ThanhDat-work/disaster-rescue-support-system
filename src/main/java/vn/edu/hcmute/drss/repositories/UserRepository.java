@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import vn.edu.hcmute.drss.entities.User;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,9 +19,7 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmailIgnoreCase(String email);
-
     boolean existsByEmailIgnoreCase(String email);
-
     boolean existsByDisplayCode(String displayCode);
 
     @Query(value = """
@@ -69,7 +69,34 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             @Param("keyword") String keyword,
             @Param("status") String status,
             @Param("roleName") String roleName,
-            Pageable pageable);
+            Pageable pageable
+    );
+
+    @Query("""
+            SELECT DISTINCT user
+            FROM User user
+            JOIN UserRole grantRow ON grantRow.user = user
+            WHERE user.status = 'ACTIVE'
+              AND grantRow.revokedAt IS NULL
+              AND grantRow.role.roleName = 'ROLE_RESCUER'
+            ORDER BY user.fullName ASC, user.displayCode ASC
+            """)
+    List<User> findEligibleRescuers();
+
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("""
+            SELECT DISTINCT user
+            FROM User user
+            JOIN UserRole grantRow ON grantRow.user = user
+            WHERE user.id IN :userIds
+              AND user.status = 'ACTIVE'
+              AND grantRow.revokedAt IS NULL
+              AND grantRow.role.roleName = 'ROLE_RESCUER'
+            ORDER BY user.id
+            """)
+    List<User> findEligibleRescuersByIdInForShare(
+            @Param("userIds") Collection<UUID> userIds
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT u FROM User u WHERE u.id = :id")

@@ -64,9 +64,14 @@ public class CoordinatorAssignmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<RescueTeam> findAvailableTeams() {
+    public List<RescueTeam> findAvailableTeams(UUID requestOwnerId) {
+        if (requestOwnerId == null) {
+            return List.of();
+        }
         return List.copyOf(
-                teams.findAvailableWithActiveMembersForAssignment()
+                teams.findAvailableWithActiveMembersForAssignmentExcludingOwner(
+                        requestOwnerId
+                )
         );
     }
 
@@ -83,7 +88,7 @@ public class CoordinatorAssignmentService {
         // Khóa request trước. Hai thao tác phân công cùng request sẽ được
         // tuần tự hóa; transaction đến sau phải đọc lại trạng thái mới.
         RescueRequest request = requests
-                .findByIdForCoordinatorAssignment(requestId)
+                .findByIdForCoordinatorAction(requestId, coordinatorId)
                 .orElseThrow(CoordinatorRequestNotFoundException::new);
 
         verifyExpectedVersion(request, command.getVersion());
@@ -100,6 +105,7 @@ public class CoordinatorAssignmentService {
 
         verifyAvailableTeam(team);
         verifyActiveMember(team.getId());
+        verifyOwnerIsNotActiveTeamMember(request, team);
 
         LocalDateTime assignedAt = LocalDateTime.now();
 
@@ -120,6 +126,7 @@ public class CoordinatorAssignmentService {
         history.setOldStatus(VERIFIED);
         history.setNewStatus(ASSIGNED);
         history.setChangedByUser(coordinator);
+        history.setActorRole("ROLE_COORDINATOR");
         history.setNotes(buildHistoryNote(
                 team,
                 command.getCoordinatorNote()
@@ -212,7 +219,7 @@ public class CoordinatorAssignmentService {
     }
 
     private void verifyActiveMember(UUID teamId) {
-        if (!teamMembers.existsByTeam_IdAndLeftAtIsNull(teamId)) {
+        if (!teamMembers.existsEligibleRescuerByTeamId(teamId)) {
             throw new CoordinatorRequestConflictException(
                     "Đội cứu hộ đã chọn không có thành viên hoạt động."
             );
@@ -252,5 +259,24 @@ public class CoordinatorAssignmentService {
 
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+        private void verifyOwnerIsNotActiveTeamMember(
+            RescueRequest request,
+            RescueTeam team
+    ) {
+        UUID ownerId = Objects.requireNonNull(
+                request.getUser(),
+                "Request owner is required"
+        ).getId();
+
+        if (teamMembers.existsByTeam_IdAndUser_IdAndLeftAtIsNull(
+                team.getId(),
+                ownerId
+        )) {
+            throw new CoordinatorRequestConflictException(
+                    "Không thể phân công yêu cầu cho đội có người gửi yêu cầu."
+            );
+        }
     }
 }

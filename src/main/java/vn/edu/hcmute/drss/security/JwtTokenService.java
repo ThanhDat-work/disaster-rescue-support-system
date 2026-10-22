@@ -14,8 +14,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Objects;
-import java.util.TreeSet;
 import java.util.UUID;
 
 @Service
@@ -37,16 +35,13 @@ public class JwtTokenService {
 
     public IssuedAccessToken issue(
             User user,
-            List<String> activeRoles
+            String activeRole
     ) {
         validateUser(user);
-
-        List<String> normalizedRoles =
-                normalizeRoles(activeRoles);
+        String normalizedRole = normalizeRole(activeRole);
 
         Instant issuedAt = clock.instant()
                 .truncatedTo(ChronoUnit.SECONDS);
-
         Instant expiresAt = issuedAt.plus(
                 properties.accessTokenTtl()
         );
@@ -57,7 +52,8 @@ public class JwtTokenService {
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .id(UUID.randomUUID().toString())
-                .claim("roles", normalizedRoles)
+                .claim("active_role", normalizedRole)
+                .claim("roles", List.of(normalizedRole))
                 .claim("ver", user.getAuthVersion())
                 .build();
 
@@ -76,6 +72,22 @@ public class JwtTokenService {
         );
     }
 
+    /**
+     * Giữ overload để các helper cũ truyền List một phần tử vẫn compile.
+     * Từ T3-09, list nhiều role luôn bị từ chối.
+     */
+    public IssuedAccessToken issue(
+            User user,
+            List<String> activeRoles
+    ) {
+        if (activeRoles == null || activeRoles.size() != 1) {
+            throw new IllegalArgumentException(
+                    "Exactly one active role is required"
+            );
+        }
+        return issue(user, activeRoles.get(0));
+    }
+
     private void validateUser(User user) {
         if (user == null || user.getId() == null) {
             throw new IllegalArgumentException(
@@ -84,39 +96,21 @@ public class JwtTokenService {
         }
     }
 
-    private List<String> normalizeRoles(
-            List<String> activeRoles
-    ) {
-        if (activeRoles == null) {
+    private String normalizeRole(String activeRole) {
+        if (activeRole == null || activeRole.isBlank()) {
             throw new IllegalArgumentException(
-                    "Active roles are required"
+                    "Active role is required"
             );
         }
 
-        TreeSet<String> normalized = new TreeSet<>();
-
-        for (String role : activeRoles) {
-            if (role == null || role.isBlank()) {
-                continue;
-            }
-
-            String value = role.strip();
-
-            if (!value.startsWith("ROLE_")) {
-                throw new IllegalArgumentException(
-                        "Role must start with ROLE_"
-                );
-            }
-
-            normalized.add(value);
-        }
-
-        if (normalized.isEmpty()) {
+        String value = activeRole.strip();
+        if (!value.matches(
+                "ROLE_(CITIZEN|COORDINATOR|RESCUER|ADMIN)"
+        )) {
             throw new IllegalArgumentException(
-                    "At least one active role is required"
+                    "Active role is not supported"
             );
         }
-
-        return List.copyOf(normalized);
+        return value;
     }
 }
