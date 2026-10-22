@@ -4,6 +4,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -48,6 +50,26 @@ public interface RescueAssignmentRepository
               )
             """)
     Optional<RescueAssignment> findByIdAndUserId(
+            @Param("assignmentId") UUID assignmentId,
+            @Param("userId") UUID userId
+    );
+
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT assignment
+            FROM RescueAssignment assignment
+            JOIN FETCH assignment.request request
+            JOIN FETCH assignment.team team
+            WHERE assignment.id = :assignmentId
+              AND EXISTS (
+                  SELECT member.id
+                  FROM RescueTeamMember member
+                  WHERE member.team = team
+                    AND member.user.id = :userId
+                    AND member.leftAt IS NULL
+              )
+            """)
+    Optional<RescueAssignment> findByIdAndUserIdForUpdate(
             @Param("assignmentId") UUID assignmentId,
             @Param("userId") UUID userId
     );

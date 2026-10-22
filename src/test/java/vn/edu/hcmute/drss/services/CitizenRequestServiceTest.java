@@ -220,12 +220,13 @@ class CitizenRequestServiceTest {
     void cancelAllowedStateCreatesOneHistory(String status) {
         UUID requestId = UUID.randomUUID();
         RescueRequest request = ownedRequest(requestId, status);
-        when(requests.findWithDisasterTypeById(requestId))
+        when(requests.findOwnedByIdForUpdate(requestId, ownerId))
                 .thenReturn(Optional.of(request));
 
         service.cancel(requestId, ownerId, "  Situation resolved  ");
 
         assertThat(request.getStatus()).isEqualTo("CANCELLED");
+        verify(requests).findOwnedByIdForUpdate(requestId, ownerId);
         verify(histories).save(org.mockito.ArgumentMatchers.argThat(event ->
                 status.equals(event.getOldStatus())
                         && "CANCELLED".equals(event.getNewStatus())
@@ -245,7 +246,7 @@ class CitizenRequestServiceTest {
     void cancelRejectsEveryNonCancellableState(String status) {
         UUID requestId = UUID.randomUUID();
         RescueRequest request = ownedRequest(requestId, status);
-        when(requests.findWithDisasterTypeById(requestId))
+        when(requests.findOwnedByIdForUpdate(requestId, ownerId))
                 .thenReturn(Optional.of(request));
 
         assertThatThrownBy(() -> service.cancel(
@@ -259,7 +260,7 @@ class CitizenRequestServiceTest {
     void cancelRejectsBlankAndOversizedReason() {
         UUID requestId = UUID.randomUUID();
         RescueRequest request = ownedRequest(requestId, "PENDING");
-        when(requests.findWithDisasterTypeById(requestId))
+        when(requests.findOwnedByIdForUpdate(requestId, ownerId))
                 .thenReturn(Optional.of(request));
 
         assertThatThrownBy(() -> service.cancel(requestId, ownerId, "   "))
@@ -277,7 +278,7 @@ class CitizenRequestServiceTest {
     void repeatedCancelCannotCreateDuplicateHistory() {
         UUID requestId = UUID.randomUUID();
         RescueRequest request = ownedRequest(requestId, "PENDING");
-        when(requests.findWithDisasterTypeById(requestId))
+        when(requests.findOwnedByIdForUpdate(requestId, ownerId))
                 .thenReturn(Optional.of(request));
 
         service.cancel(requestId, ownerId, "First cancellation");

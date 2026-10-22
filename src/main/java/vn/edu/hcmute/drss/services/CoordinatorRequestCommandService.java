@@ -113,7 +113,7 @@ public class CoordinatorRequestCommandService {
             throw new CoordinatorRequestNotFoundException();
         }
 
-        return requests.findCoordinatorDetailById(requestId)
+        return requests.findByIdForCoordinatorAssignment(requestId)
                 .orElseThrow(CoordinatorRequestNotFoundException::new);
     }
 

@@ -109,6 +109,19 @@ public interface RescueRequestRepository
     );
 
         @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"user", "disasterType"})
+    @Query("""
+            SELECT request
+            FROM RescueRequest request
+            WHERE request.id = :requestId
+              AND request.user.id = :userId
+            """)
+    Optional<RescueRequest> findOwnedByIdForUpdate(
+            @Param("requestId") UUID requestId,
+            @Param("userId") UUID userId
+    );
+
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT request FROM RescueRequest request WHERE request.id = :id")
     Optional<RescueRequest> findByIdForCoordinatorAssignment(
             @Param("id") UUID id

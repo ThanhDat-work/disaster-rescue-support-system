@@ -53,7 +53,7 @@ public class RescuerService {
             UUID assignmentId,
             UUID userId
     ) {
-        return requireAccessibleAssignment(assignmentId, userId);
+        return requireAccessibleAssignment(assignmentId, userId, false);
     }
 
     @Transactional
@@ -63,7 +63,7 @@ public class RescuerService {
             String notes
     ) {
         RescueAssignment assignment =
-                requireAccessibleAssignment(assignmentId, userId);
+                requireAccessibleAssignment(assignmentId, userId, true);
 
         RescueTeamMember membership =
                 requireActiveMembership(assignment, userId);
@@ -93,6 +93,7 @@ request,
 
         assignmentRepository.save(assignment);
         statusHistoryRepository.save(history);
+        assignmentRepository.flush();
         notifications.notifyRequestStatusChanged(
                 request,
                 REQUEST_ASSIGNED,
@@ -107,7 +108,7 @@ request,
             String notes
     ) {
         RescueAssignment assignment =
-                requireAccessibleAssignment(assignmentId, userId);
+                requireAccessibleAssignment(assignmentId, userId, true);
 
         RescueTeamMember membership =
                 requireActiveMembership(assignment, userId);
@@ -139,6 +140,7 @@ request,
 
         assignmentRepository.save(assignment);
         statusHistoryRepository.save(history);
+        assignmentRepository.flush();
         notifications.notifyRequestStatusChanged(
                 request,
                 REQUEST_IN_PROGRESS,
@@ -148,7 +150,8 @@ request,
 
     private RescueAssignment requireAccessibleAssignment(
             UUID assignmentId,
-            UUID userId
+            UUID userId,
+            boolean forUpdate
     ) {
         if (assignmentId == null) {
             throw new IllegalArgumentException(
@@ -158,10 +161,15 @@ request,
 
         requireUserId(userId);
 
-        return assignmentRepository.findByIdAndUserId(
+        return (forUpdate
+                ? assignmentRepository.findByIdAndUserIdForUpdate(
                         assignmentId,
                         userId
                 )
+                : assignmentRepository.findByIdAndUserId(
+                        assignmentId,
+                        userId
+                ))
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Không tìm thấy nhiệm vụ hoặc bạn không có quyền "
                                 + "truy cập nhiệm vụ này."
