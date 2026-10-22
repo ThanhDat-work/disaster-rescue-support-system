@@ -49,6 +49,8 @@ import vn.edu.hcmute.drss.support.NoDatabaseRepositoryMocks;
 import vn.edu.hcmute.drss.dtos.CoordinatorAssignmentRequest;
 import vn.edu.hcmute.drss.entities.RescueAssignment;
 import vn.edu.hcmute.drss.entities.RescueTeam;
+import vn.edu.hcmute.drss.entities.MediaAsset;
+import vn.edu.hcmute.drss.entities.MediaResourceType;
 import vn.edu.hcmute.drss.services.CoordinatorAssignmentService;
 
 @SpringBootTest
@@ -184,6 +186,53 @@ class CoordinatorRequestControllerMvcTest {
                         List.of()
                 ));
     }
+
+    @Test
+void detailRendersImageAndVideoUsingTheirResourceTypes()
+        throws Exception {
+    RescueRequest request = request();
+    MediaAsset image = mediaAsset(
+            MediaResourceType.IMAGE,
+            "https://example.invalid/evidence.jpg",
+            "image/jpeg",
+            "jpg"
+    );
+    MediaAsset video = mediaAsset(
+            MediaResourceType.VIDEO,
+            "https://example.invalid/evidence.mp4",
+            "video/mp4",
+            "mp4"
+    );
+    CoordinatorRequestDetail detail = new CoordinatorRequestDetail(
+            request,
+            List.of(),
+            List.of(image, video)
+    );
+    when(queryService.getDetail(request.getId())).thenReturn(detail);
+
+    String html = mockMvc.perform(get(
+                    "/coordinator/requests/{requestId}",
+                    request.getId()
+            ).with(authenticatedAs("ROLE_COORDINATOR")))
+            .andExpect(status().isOk())
+            .andExpect(view().name(
+                    "pages/coordinator/request-detail"
+            ))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    assertThat(html)
+            .containsPattern(
+                    "(?s)<img[^>]+src=\"https://example\\.invalid/evidence\\.jpg\""
+            )
+            .containsPattern(
+                    "(?s)<video[^>]*>.*<source[^>]+src=\"https://example\\.invalid/evidence\\.mp4\"[^>]+type=\"video/mp4\""
+            )
+            .doesNotContainPattern(
+                    "(?s)<img[^>]+src=\"https://example\\.invalid/evidence\\.mp4\""
+            );
+}
 
     @Test
     void missingDetailReturns404() throws Exception {
@@ -629,6 +678,21 @@ class CoordinatorRequestControllerMvcTest {
                 List.of(new SimpleGrantedAuthority(role))
         ));
     }
+
+    private MediaAsset mediaAsset(
+        MediaResourceType resourceType,
+        String secureUrl,
+        String mimeType,
+        String format
+) {
+    MediaAsset asset = new MediaAsset();
+    asset.setId(UUID.randomUUID());
+    asset.setResourceType(resourceType);
+    asset.setSecureUrl(secureUrl);
+    asset.setMimeType(mimeType);
+    asset.setFormat(format);
+    return asset;
+}
 
     private RescueRequest request() {
         User citizen = new User();

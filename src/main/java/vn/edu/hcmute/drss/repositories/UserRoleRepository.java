@@ -6,7 +6,10 @@ import org.springframework.stereotype.Repository;
 import vn.edu.hcmute.drss.entities.User;
 import vn.edu.hcmute.drss.entities.UserRole;
 import vn.edu.hcmute.drss.entities.UserRoleId;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.UUID;
 import java.util.Collection;
 import java.util.List;
 
@@ -27,4 +30,33 @@ public interface UserRoleRepository
     long countByRole_RoleNameAndRevokedAtIsNullAndUser_Status(
             String roleName,
             String status);
+
+        @Query("""
+                SELECT DISTINCT userRole.user
+                FROM UserRole userRole
+                JOIN userRole.user user
+                JOIN userRole.role role
+                WHERE role.roleName = :roleName
+                AND userRole.revokedAt IS NULL
+                AND user.status = 'ACTIVE'
+                ORDER BY user.id
+                """)
+        List<User> findActiveUsersByRoleName(
+                @Param("roleName") String roleName
+        );
+
+        @Query("""
+                SELECT COUNT(userRole)
+                FROM UserRole userRole
+                JOIN userRole.user user
+                JOIN userRole.role role
+                WHERE user.id = :userId
+                AND role.roleName = :roleName
+                AND userRole.revokedAt IS NULL
+                AND user.status = 'ACTIVE'
+                """)
+        long countActiveRoleForRealtime(
+                @Param("userId") UUID userId,
+                @Param("roleName") String roleName
+        );
 }

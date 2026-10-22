@@ -13,6 +13,8 @@ import vn.edu.hcmute.drss.repositories.VerificationTokenRepository;
 import vn.edu.hcmute.drss.repositories.DisasterTypeRepository;
 import vn.edu.hcmute.drss.repositories.MediaAssetRepository;
 import vn.edu.hcmute.drss.repositories.RescueTeamRepository;
+import vn.edu.hcmute.drss.repositories.MediaCleanupTaskRepository;
+import vn.edu.hcmute.drss.repositories.NotificationRepository;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -38,6 +40,8 @@ import java.lang.annotation.Target;
         DisasterTypeRepository.class,
         MediaAssetRepository.class,
         RescueTeamRepository.class,
+        MediaCleanupTaskRepository.class,
+        NotificationRepository.class
 })
 public @interface NoDatabaseRepositoryMocks {
 }

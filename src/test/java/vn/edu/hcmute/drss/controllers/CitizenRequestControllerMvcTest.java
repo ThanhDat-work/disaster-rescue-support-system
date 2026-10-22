@@ -14,6 +14,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +31,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.mock.web.MockMultipartFile;
+import vn.edu.hcmute.drss.entities.MediaResourceType;
+import vn.edu.hcmute.drss.exceptions.MediaStorageException;
+import vn.edu.hcmute.drss.services.CitizenRequestMediaService;
 import vn.edu.hcmute.drss.entities.DisasterType;
 import vn.edu.hcmute.drss.entities.MediaAsset;
 import vn.edu.hcmute.drss.entities.RescueRequest;
@@ -37,6 +43,7 @@ import vn.edu.hcmute.drss.entities.User;
 import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
 import vn.edu.hcmute.drss.services.CitizenRequestService;
 import vn.edu.hcmute.drss.support.NoDatabaseRepositoryMocks;
+import vn.edu.hcmute.drss.exceptions.InvalidMediaUploadException;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -51,6 +58,9 @@ class CitizenRequestControllerMvcTest {
 
     @MockitoBean
     private CitizenRequestService service;
+
+    @MockitoBean
+    private CitizenRequestMediaService mediaService;
 
     @Test
     void citizenRoutesRequireAuthenticationAndCitizenRole() throws Exception {
@@ -83,7 +93,23 @@ class CitizenRequestControllerMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("pages/citizen/request-form"))
                 .andExpect(model().attribute("disasterTypes", List.of(type)))
-                .andExpect(model().attributeExists("createCitizenRequest"));
+                .andExpect(model().attributeExists("createCitizenRequest"))
+                .andExpect(model().attribute(
+                        "mediaMaxFileSizeBytes",
+                        10L * 1024L * 1024L
+                ))
+                .andExpect(model().attribute("mediaMaxFiles", 5))
+                .andExpect(model().attribute("mediaMaxVideos", 1))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString(
+                                "data-max-file-size-bytes=\"10485760\""
+                        )
+                ))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString(
+                                "/js/request-media-validation.js"
+                        )
+                ));
     }
 
     @Test
@@ -98,7 +124,7 @@ class CitizenRequestControllerMvcTest {
                 .andExpect(model().attributeHasFieldErrors(
                         "createCitizenRequest", "disasterTypeId", "urgency"
                 ));
-        verify(service, never()).create(eq(USER_ID), any());
+        verify(mediaService, never()).create(eq(USER_ID), any(), any());
     }
 
     @Test
@@ -108,14 +134,14 @@ class CitizenRequestControllerMvcTest {
                         .param("disasterTypeId", "7")
                         .param("urgency", "HIGH"))
                 .andExpect(status().isForbidden());
-        verify(service, never()).create(eq(USER_ID), any());
+        verify(mediaService, never()).create(eq(USER_ID), any(), any());
     }
 
     @Test
     void validCreateUsesPrincipalAndIgnoresForgedServerFields()
             throws Exception {
         RescueRequest created = request(USER_ID, "PENDING");
-        when(service.create(eq(USER_ID), any())).thenReturn(created);
+        when(mediaService.create(eq(USER_ID), any(), any())).thenReturn(created);
         mockMvc.perform(post("/requests")
                         .with(authenticatedAs("ROLE_CITIZEN"))
                         .with(csrf())
@@ -128,7 +154,7 @@ class CitizenRequestControllerMvcTest {
                 .andExpect(status().isFound())
                 .andExpect(redirectedUrl("/requests/" + created.getId()))
                 .andExpect(flash().attributeExists("successMsg"));
-        verify(service).create(eq(USER_ID), any());
+        verify(mediaService).create(eq(USER_ID), any(), eq(List.of()));
     }
 
     @Test
@@ -143,6 +169,8 @@ class CitizenRequestControllerMvcTest {
         MediaAsset asset = new MediaAsset();
         asset.setSecureUrl("https://example.invalid/evidence.jpg");
         asset.setFormat("jpg");
+        asset.setResourceType(MediaResourceType.IMAGE);
+        asset.setMimeType("image/jpeg");
         when(service.detail(requestId, USER_ID)).thenReturn(request);
         when(service.history(requestId, USER_ID)).thenReturn(List.of(event));
         when(service.media(requestId, USER_ID)).thenReturn(List.of(asset));
@@ -199,6 +227,83 @@ class CitizenRequestControllerMvcTest {
                 .andExpect(redirectedUrl("/requests/" + requestId))
                 .andExpect(flash().attributeExists("successMsg"));
         verify(service).cancel(requestId, USER_ID, "Situation resolved");
+    }
+
+    @Test
+        void multipartCreateForwardsSelectedMedia() throws Exception {
+        RescueRequest created = request(USER_ID, "PENDING");
+        MockMultipartFile image = new MockMultipartFile(
+                "mediaFiles",
+                "evidence.png",
+                "image/png",
+                new byte[] {(byte) 0x89, 0x50, 0x4E, 0x47,
+                        0x0D, 0x0A, 0x1A, 0x0A}
+        );
+        when(mediaService.create(eq(USER_ID), any(), any()))
+                .thenReturn(created);
+
+        mockMvc.perform(multipart("/requests")
+                        .file(image)
+                        .with(authenticatedAs("ROLE_CITIZEN"))
+                        .with(csrf())
+                        .param("disasterTypeId", "7")
+                        .param("urgency", "HIGH"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/requests/" + created.getId()))
+                .andExpect(flash().attributeExists("successMsg"));
+
+        verify(mediaService).create(
+                eq(USER_ID),
+                any(),
+                org.mockito.ArgumentMatchers.argThat(files ->
+                        files.size() == 1
+                                && "evidence.png".equals(
+                                files.get(0).getOriginalFilename()
+                        )
+                )
+        );
+        }
+
+        @Test
+        void mediaStorageFailureUsesGenericClientMessage() throws Exception {
+        when(mediaService.create(eq(USER_ID), any(), any()))
+                .thenThrow(new MediaStorageException(
+                        "internal cloud failure with implementation detail"
+                ));
+
+        mockMvc.perform(post("/requests")
+                        .with(authenticatedAs("ROLE_CITIZEN"))
+                        .with(csrf())
+                        .param("disasterTypeId", "7")
+                        .param("urgency", "HIGH"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/requests/new"))
+                .andExpect(flash().attribute(
+                        "errorMsg",
+                        "Kh\u00f4ng th\u1ec3 l\u01b0u media l\u00fac n\u00e0y. "
+                                + "Vui l\u00f2ng th\u1eed l\u1ea1i."
+                ));
+        }
+
+            @Test
+    void oversizedMediaValidationUsesSafeFlashAndNoSuccess()
+            throws Exception {
+        String message =
+                "M\u1ed7i t\u1ec7p media kh\u00f4ng \u0111\u01b0\u1ee3c "
+                        + "v\u01b0\u1ee3t qu\u00e1 10 MiB.";
+
+        when(mediaService.create(eq(USER_ID), any(), any()))
+                .thenThrow(new InvalidMediaUploadException(message));
+
+        mockMvc.perform(post("/requests")
+                        .with(authenticatedAs("ROLE_CITIZEN"))
+                        .with(csrf())
+                        .param("disasterTypeId", "7")
+                        .param("urgency", "HIGH"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/requests/new"))
+                .andExpect(flash().attribute("errorMsg", message))
+                .andExpect(flash().attributeCount(1));
     }
 
     private RequestPostProcessor authenticatedAs(String role) {

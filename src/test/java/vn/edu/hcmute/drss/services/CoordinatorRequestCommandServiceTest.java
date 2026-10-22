@@ -40,6 +40,8 @@ class CoordinatorRequestCommandServiceTest {
     private StatusHistoryRepository histories;
     @Mock
     private UserRepository users;
+    @Mock
+    private BusinessNotificationService notifications;
 
     private CoordinatorRequestCommandService service;
     private UUID requestId;
@@ -52,7 +54,8 @@ class CoordinatorRequestCommandServiceTest {
         service = new CoordinatorRequestCommandService(
                 requests,
                 histories,
-                users
+                users,
+                notifications
         );
 
         requestId = UUID.randomUUID();
@@ -84,6 +87,11 @@ class CoordinatorRequestCommandServiceTest {
                 ArgumentCaptor.forClass(StatusHistory.class);
         verify(histories).save(history.capture());
         verify(requests).flush();
+        verify(notifications).notifyRequestStatusChanged(
+                request,
+                "PENDING",
+                "VERIFIED"
+        );
 
         assertThat(history.getValue().getRequest()).isSameAs(request);
         assertThat(history.getValue().getOldStatus()).isEqualTo("PENDING");
@@ -115,6 +123,11 @@ class CoordinatorRequestCommandServiceTest {
                 ArgumentCaptor.forClass(StatusHistory.class);
         verify(histories).save(history.capture());
         verify(requests).flush();
+        verify(notifications).notifyRequestStatusChanged(
+                request,
+                "PENDING",
+                "REJECTED"
+        );
 
         assertThat(history.getValue().getOldStatus()).isEqualTo("PENDING");
         assertThat(history.getValue().getNewStatus()).isEqualTo("REJECTED");
@@ -146,6 +159,11 @@ class CoordinatorRequestCommandServiceTest {
 
         verify(histories, never()).save(any());
         verify(requests, never()).flush();
+        verify(notifications, never()).notifyRequestStatusChanged(
+                any(),
+                any(),
+                any()
+        );
     }
 
     @Test

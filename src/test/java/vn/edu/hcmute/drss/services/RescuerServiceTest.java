@@ -54,6 +54,9 @@ class RescuerServiceTest {
     @Mock
     private StatusHistoryRepository statusHistoryRepository;
 
+    @Mock
+    private BusinessNotificationService notifications;
+
     @InjectMocks
     private RescuerService rescuerService;
 
@@ -165,6 +168,11 @@ membership.setLeftAt(null);
                 .isEqualTo("Đã tiếp cận hiện trường.");
 
         verify(assignmentRepository).save(assignment);
+        verify(notifications).notifyRequestStatusChanged(
+                request,
+                "ASSIGNED",
+                "IN_PROGRESS"
+        );
     }
 
     @Test
@@ -243,6 +251,11 @@ membership.setLeftAt(null);
                 .isEqualTo("RESCUED");
 
         verify(assignmentRepository).save(assignment);
+        verify(notifications).notifyRequestStatusChanged(
+                request,
+                "IN_PROGRESS",
+                "RESCUED"
+        );
     }
 
     @Test

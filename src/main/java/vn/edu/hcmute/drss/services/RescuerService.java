@@ -28,15 +28,18 @@ public class RescuerService {
     private final RescueAssignmentRepository assignmentRepository;
     private final RescueTeamMemberRepository teamMemberRepository;
     private final StatusHistoryRepository statusHistoryRepository;
+    private final BusinessNotificationService notifications;
 
     public RescuerService(
             RescueAssignmentRepository assignmentRepository,
             RescueTeamMemberRepository teamMemberRepository,
-            StatusHistoryRepository statusHistoryRepository
+            StatusHistoryRepository statusHistoryRepository,
+            BusinessNotificationService notifications
     ) {
         this.assignmentRepository = assignmentRepository;
         this.teamMemberRepository = teamMemberRepository;
         this.statusHistoryRepository = statusHistoryRepository;
+        this.notifications = notifications;
     }
 
     @Transactional(readOnly = true)
@@ -90,6 +93,11 @@ request,
 
         assignmentRepository.save(assignment);
         statusHistoryRepository.save(history);
+        notifications.notifyRequestStatusChanged(
+                request,
+                REQUEST_ASSIGNED,
+                REQUEST_IN_PROGRESS
+        );
     }
 
     @Transactional
@@ -131,6 +139,11 @@ request,
 
         assignmentRepository.save(assignment);
         statusHistoryRepository.save(history);
+        notifications.notifyRequestStatusChanged(
+                request,
+                REQUEST_IN_PROGRESS,
+                REQUEST_RESCUED
+        );
     }
 
     private RescueAssignment requireAccessibleAssignment(

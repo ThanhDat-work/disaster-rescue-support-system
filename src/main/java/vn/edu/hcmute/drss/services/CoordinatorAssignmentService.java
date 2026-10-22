@@ -43,6 +43,7 @@ public class CoordinatorAssignmentService {
     private final RescueAssignmentRepository assignments;
     private final StatusHistoryRepository histories;
     private final UserRepository users;
+    private final BusinessNotificationService notifications;
 
     public CoordinatorAssignmentService(
             RescueRequestRepository requests,
@@ -50,7 +51,8 @@ public class CoordinatorAssignmentService {
             RescueTeamMemberRepository teamMembers,
             RescueAssignmentRepository assignments,
             StatusHistoryRepository histories,
-            UserRepository users
+            UserRepository users,
+            BusinessNotificationService notifications
     ) {
         this.requests = requests;
         this.teams = teams;
@@ -58,6 +60,7 @@ public class CoordinatorAssignmentService {
         this.assignments = assignments;
         this.histories = histories;
         this.users = users;
+        this.notifications = notifications;
     }
 
     @Transactional(readOnly = true)
@@ -122,14 +125,22 @@ public class CoordinatorAssignmentService {
                 command.getCoordinatorNote()
         ));
 
-        assignments.save(assignment);
+        RescueAssignment savedAssignment = assignments.save(assignment);
         histories.save(history);
 
         // Flush toàn persistence context khi transaction còn mở. Nếu có lỗi
         // constraint/locking, request, assignment và history cùng rollback.
+        // Dùng entity do save(...) trả về vì merge có thể tạo managed instance khác.
         requests.flush();
 
-        return assignment;
+        notifications.notifyAssignmentCreated(savedAssignment);
+        notifications.notifyRequestStatusChanged(
+                request,
+                VERIFIED,
+                ASSIGNED
+        );
+
+        return savedAssignment;
     }
 
     private void validateCommand(CoordinatorAssignmentRequest command) {
