@@ -114,6 +114,85 @@ public interface RescueRequestRepository
             @Param("id") UUID id
     );
 
+    @Query(value = """
+            SELECT DISTINCT request
+            FROM RescueRequest request
+            JOIN FETCH request.user requester
+            JOIN FETCH request.disasterType disasterType
+            LEFT JOIN RescueAssignment assignment
+                   ON assignment.request = request
+            WHERE (
+                :keyword IS NULL
+                OR LOWER(request.displayCode)
+                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(requester.fullName)
+                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(requester.phoneNumber)
+                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(request.address)
+                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+            )
+              AND (:status IS NULL OR request.status = :status)
+              AND (:urgency IS NULL OR request.urgency = :urgency)
+              AND (
+                  :disasterTypeId IS NULL
+                  OR disasterType.id = :disasterTypeId
+              )
+              AND (:teamId IS NULL OR assignment.team.id = :teamId)
+              AND (
+                  :fromInclusive IS NULL
+                  OR request.createdAt >= :fromInclusive
+              )
+              AND (
+                  :toExclusive IS NULL
+                  OR request.createdAt < :toExclusive
+              )
+            ORDER BY request.createdAt DESC, request.id DESC
+            """, countQuery = """
+            SELECT COUNT(DISTINCT request)
+            FROM RescueRequest request
+            JOIN request.user requester
+            JOIN request.disasterType disasterType
+            LEFT JOIN RescueAssignment assignment
+                   ON assignment.request = request
+            WHERE (
+                :keyword IS NULL
+                OR LOWER(request.displayCode)
+                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(requester.fullName)
+                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(requester.phoneNumber)
+                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(request.address)
+                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+            )
+              AND (:status IS NULL OR request.status = :status)
+              AND (:urgency IS NULL OR request.urgency = :urgency)
+              AND (
+                  :disasterTypeId IS NULL
+                  OR disasterType.id = :disasterTypeId
+              )
+              AND (:teamId IS NULL OR assignment.team.id = :teamId)
+              AND (
+                  :fromInclusive IS NULL
+                  OR request.createdAt >= :fromInclusive
+              )
+              AND (
+                  :toExclusive IS NULL
+                  OR request.createdAt < :toExclusive
+              )
+            """)
+    Page<RescueRequest> searchForCoordinatorTracking(
+            @Param("keyword") String keyword,
+            @Param("status") String status,
+            @Param("urgency") String urgency,
+            @Param("disasterTypeId") Long disasterTypeId,
+            @Param("teamId") UUID teamId,
+            @Param("fromInclusive") LocalDateTime fromInclusive,
+            @Param("toExclusive") LocalDateTime toExclusive,
+            Pageable pageable
+    );
+
     @Query("""
             SELECT request.status AS category,
                    COUNT(request) AS total

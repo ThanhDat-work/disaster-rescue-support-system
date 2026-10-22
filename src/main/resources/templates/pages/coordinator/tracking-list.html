@@ -1,0 +1,245 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layouts/main-layout :: layout('Theo dõi tiến độ', ~{::section})}"
+>
+  <section>
+    <div
+      class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4"
+    >
+      <div>
+        <p class="text-uppercase small fw-bold text-danger mb-1">
+          Điều phối viên
+        </p>
+        <h1 class="h2 mb-1">Theo dõi tiến độ cứu nạn</h1>
+        <p class="text-secondary mb-0">
+          Theo dõi toàn bộ trạng thái, đội phụ trách và mở chi tiết để xử lý.
+        </p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" th:href="@{/coordinator/pending}">
+          Hàng đợi xác minh
+        </a>
+        <a class="btn btn-outline-secondary" th:href="@{/coordinator/tracking}">
+          Làm mới
+        </a>
+      </div>
+    </div>
+
+    <form
+      class="card shadow-sm mb-4"
+      method="get"
+      th:action="@{/coordinator/tracking}"
+      th:object="${filter}"
+    >
+      <div class="card-body p-4">
+        <div class="row g-3 align-items-end">
+          <div class="col-xl-3 col-md-6">
+            <label class="form-label" for="keyword">Từ khóa</label>
+            <input
+              id="keyword"
+              class="form-control"
+              maxlength="150"
+              placeholder="Mã, người gửi, SĐT, địa chỉ"
+              th:field="*{keyword}"
+            />
+          </div>
+          <div class="col-xl-2 col-md-6">
+            <label class="form-label" for="status">Trạng thái</label>
+            <select id="status" class="form-select" th:field="*{status}">
+              <option value="">Tất cả</option>
+              <option value="PENDING">PENDING</option>
+              <option value="VERIFIED">VERIFIED</option>
+              <option value="ASSIGNED">ASSIGNED</option>
+              <option value="IN_PROGRESS">IN_PROGRESS</option>
+              <option value="RESCUED">RESCUED</option>
+              <option value="CLOSED">CLOSED</option>
+              <option value="REJECTED">REJECTED</option>
+              <option value="CANCELLED">CANCELLED</option>
+            </select>
+          </div>
+          <div class="col-xl-2 col-md-6">
+            <label class="form-label" for="urgency">Khẩn cấp</label>
+            <select id="urgency" class="form-select" th:field="*{urgency}">
+              <option value="">Tất cả</option>
+              <option value="LOW">LOW</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+              <option value="CRITICAL">CRITICAL</option>
+            </select>
+          </div>
+          <div class="col-xl-2 col-md-6">
+            <label class="form-label" for="disasterTypeId">Thiên tai</label>
+            <select
+              id="disasterTypeId"
+              class="form-select"
+              th:field="*{disasterTypeId}"
+            >
+              <option value="">Tất cả</option>
+              <option
+                th:each="type : ${disasterTypes}"
+                th:value="${type.id}"
+                th:text="${type.disasterName}"
+              ></option>
+            </select>
+          </div>
+          <div class="col-xl-3 col-md-6">
+            <label class="form-label" for="teamId">Đội cứu hộ</label>
+            <select id="teamId" class="form-select" th:field="*{teamId}">
+              <option value="">Tất cả</option>
+              <option
+                th:each="team : ${teams}"
+                th:value="${team.id}"
+                th:text="${team.displayCode + ' · ' + team.teamName}"
+              ></option>
+            </select>
+          </div>
+          <div class="col-xl-2 col-md-6">
+            <label class="form-label" for="from">Từ ngày</label>
+            <input
+              id="from"
+              class="form-control"
+              type="date"
+              th:field="*{from}"
+            />
+          </div>
+          <div class="col-xl-2 col-md-6">
+            <label class="form-label" for="to">Đến ngày</label>
+            <input id="to" class="form-control" type="date" th:field="*{to}" />
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button class="btn btn-primary" type="submit">Áp dụng bộ lọc</button>
+          <a
+            class="btn btn-outline-secondary"
+            th:href="@{/coordinator/tracking}"
+          >
+            Xóa bộ lọc
+          </a>
+        </div>
+      </div>
+    </form>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="h5 mb-0">Danh sách yêu cầu</h2>
+      <span
+        class="text-secondary small"
+        th:text="${pageData.totalElements + ' yêu cầu'}"
+        >0 yêu cầu</span
+      >
+    </div>
+
+    <div class="table-responsive card shadow-sm" th:if="${!pageData.empty}">
+      <table class="table align-middle mb-0">
+        <thead>
+          <tr>
+            <th scope="col">Yêu cầu</th>
+            <th scope="col">Người dân</th>
+            <th scope="col">Loại / mức độ</th>
+            <th scope="col">Trạng thái</th>
+            <th scope="col">Đội phụ trách</th>
+            <th scope="col" class="text-end">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            th:each="item : ${pageData.content}"
+            th:with="request=${item.request}"
+          >
+            <td>
+              <strong th:text="${request.displayCode}">REQ-DEMO</strong>
+              <div
+                class="small text-secondary"
+                th:text="${#temporals.format(request.createdAt, 'dd/MM/yyyy HH:mm')}"
+              ></div>
+            </td>
+            <td>
+              <span th:text="${request.user.fullName}"></span>
+              <div
+                class="small text-secondary"
+                th:text="${request.user.phoneNumber}"
+              ></div>
+            </td>
+            <td>
+              <span th:text="${request.disasterType.disasterName}"></span>
+              <div class="small fw-semibold" th:text="${request.urgency}"></div>
+            </td>
+            <td>
+              <span
+                th:replace="~{fragments/components :: status-badge(${request.status})}"
+              ></span>
+            </td>
+            <td>
+              <span
+                th:if="${item.assignment != null}"
+                th:text="${item.assignment.team.displayCode + ' · ' + item.assignment.team.teamName}"
+              ></span>
+              <span class="text-secondary" th:if="${item.assignment == null}">
+                Chưa phân công
+              </span>
+            </td>
+            <td class="text-end">
+              <a
+                class="btn btn-sm btn-outline-primary"
+                th:href="@{/coordinator/requests/{id}(id=${request.id})}"
+                >Xem chi tiết</a
+              >
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card text-center py-5" th:if="${pageData.empty}">
+      <div class="card-body">
+        <h2 class="h5">Không có yêu cầu phù hợp</h2>
+        <p class="text-secondary mb-3">
+          Thử thay đổi bộ lọc hoặc xem lại toàn bộ yêu cầu.
+        </p>
+        <a class="btn btn-outline-primary" th:href="@{/coordinator/tracking}">
+          Xem toàn bộ
+        </a>
+      </div>
+    </div>
+
+    <nav
+      class="mt-4"
+      aria-label="Phân trang"
+      th:if="${pageData.totalPages > 1}"
+    >
+      <ul class="pagination justify-content-center flex-wrap">
+        <li class="page-item" th:classappend="${pageData.first} ? 'disabled'">
+          <a
+            class="page-link"
+            th:if="${!pageData.first}"
+            th:href="@{/coordinator/tracking(page=${pageData.number - 1},keyword=${filter.keyword},status=${filter.status},urgency=${filter.urgency},disasterTypeId=${filter.disasterTypeId},teamId=${filter.teamId},from=${filter.from},to=${filter.to})}"
+            >Trang trước</a
+          >
+          <span class="page-link" th:if="${pageData.first}">Trang trước</span>
+        </li>
+        <li
+          class="page-item"
+          th:each="index : ${#numbers.sequence(0, pageData.totalPages - 1)}"
+          th:classappend="${pageData.number == index} ? 'active'"
+        >
+          <a
+            class="page-link"
+            th:href="@{/coordinator/tracking(page=${index},keyword=${filter.keyword},status=${filter.status},urgency=${filter.urgency},disasterTypeId=${filter.disasterTypeId},teamId=${filter.teamId},from=${filter.from},to=${filter.to})}"
+            th:text="${index + 1}"
+            th:attr="aria-current=${pageData.number == index ? 'page' : null}"
+            >1</a
+          >
+        </li>
+        <li class="page-item" th:classappend="${pageData.last} ? 'disabled'">
+          <a
+            class="page-link"
+            th:if="${!pageData.last}"
+            th:href="@{/coordinator/tracking(page=${pageData.number + 1},keyword=${filter.keyword},status=${filter.status},urgency=${filter.urgency},disasterTypeId=${filter.disasterTypeId},teamId=${filter.teamId},from=${filter.from},to=${filter.to})}"
+            >Trang sau</a
+          >
+          <span class="page-link" th:if="${pageData.last}">Trang sau</span>
+        </li>
+      </ul>
+    </nav>
+  </section>
+</html>

@@ -1,15 +1,15 @@
 package vn.edu.hcmute.drss.repositories;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import vn.edu.hcmute.drss.entities.RescueAssignment;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.Collection;
 
 @Repository
 public interface RescueAssignmentRepository
@@ -52,8 +52,18 @@ public interface RescueAssignmentRepository
             @Param("userId") UUID userId
     );
 
-        boolean existsByRequest_IdAndStatusIn(
+    boolean existsByRequest_IdAndStatusIn(
             UUID requestId,
             Collection<String> statuses
     );
+
+    @EntityGraph(attributePaths = {"request", "team"})
+    Optional<RescueAssignment>
+            findFirstByRequest_IdOrderByAssignedAtDescIdDesc(UUID requestId);
+
+    @EntityGraph(attributePaths = {"request", "team"})
+    List<RescueAssignment>
+            findByRequest_IdInOrderByAssignedAtDescIdDesc(
+                    Collection<UUID> requestIds
+            );
 }
