@@ -31,9 +31,6 @@
           ><strong>DRSS</strong><small>Hỗ trợ cứu nạn thiên tai</small></span
         >
       </a>
-      <div class="system-status d-none d-lg-flex" role="status">
-        <span class="status-pulse"></span> Hệ thống sẵn sàng
-      </div>
       <button
         class="navbar-toggler"
         type="button"
@@ -47,8 +44,14 @@
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
+          <li class="nav-item" sec:authorize="!isAuthenticated()">
+            <a class="nav-link" th:href="@{/#process-title}">Quy trình</a>
+          </li>
+          <li class="nav-item" sec:authorize="!isAuthenticated()">
+            <a class="nav-link" th:href="@{/#roles-title}">Vai trò sử dụng</a>
+          </li>
           <li class="nav-item" sec:authorize="hasRole('CITIZEN')">
-            <a class="nav-link" th:href="@{/requests/new}"
+            <a class="nav-link nav-emergency" th:href="@{/requests/new}"
               >Gửi yêu cầu khẩn cấp</a
             >
           </li>
@@ -106,6 +109,17 @@
           </li>
         </ul>
         <ul class="navbar-nav">
+          <li class="nav-item notification-control" sec:authorize="isAuthenticated()">
+            <button class="notification-trigger" type="button" data-notification-toggle aria-expanded="false" aria-controls="notification-panel">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Thông báo</span><span class="unread-badge" data-unread-count hidden></span>
+            </button>
+            <section class="notification-panel" id="notification-panel" data-notification-panel hidden aria-label="Hộp thư thông báo" th:attr="data-active-role=${#authentication.principal.activeRole}">
+              <header><div><h2>Thông báo</h2><p data-realtime-state role="status">Đang tải thông báo…</p></div><button type="button" data-notification-refresh aria-label="Tải lại thông báo">↻</button></header>
+              <div class="notification-list" data-notification-list aria-live="polite"><p class="notification-state">Đang tải thông báo…</p></div>
+              <footer><button type="button" data-notification-retry hidden>Thử lại</button></footer>
+            </section>
+          </li>
           <li class="nav-item" sec:authorize="isAuthenticated()">
             <a class="nav-link" th:href="@{/account/profile}">Hồ sơ cá nhân</a>
           </li>
@@ -119,6 +133,17 @@
               </button>
             </form>
           </li>
+          <li class="nav-item nav-role-item" sec:authorize="isAuthenticated()">
+            <span
+              class="nav-role-badge"
+              aria-label="Vai trò đang hoạt động"
+              title="Vai trò đang hoạt động"
+              th:text="${#authentication.principal.activeRole == 'ROLE_CITIZEN' ? 'Người dân' :
+                    #authentication.principal.activeRole == 'ROLE_COORDINATOR' ? 'Điều phối viên' :
+                    #authentication.principal.activeRole == 'ROLE_RESCUER' ? 'Cứu hộ' : 'Quản trị viên'}"
+              >Vai trò</span
+            >
+          </li>
           <li class="nav-item" sec:authorize="!isAuthenticated()">
             <a class="nav-link" th:href="@{/auth/register}">Đăng ký</a>
           </li>
@@ -128,20 +153,6 @@
             >
           </li>
         </ul>
-        <div
-          class="d-flex align-items-center"
-          sec:authorize="isAuthenticated()"
-        >
-          <span
-            class="badge rounded-pill text-bg-primary me-lg-2 my-2 my-lg-0"
-            aria-label="Vai trò đang hoạt động"
-            title="Vai trò đang hoạt động"
-            th:text="${#authentication.principal.activeRole == 'ROLE_CITIZEN' ? 'Người dân' :
-                  #authentication.principal.activeRole == 'ROLE_COORDINATOR' ? 'Điều phối viên' :
-                  #authentication.principal.activeRole == 'ROLE_RESCUER' ? 'Cứu hộ' : 'Quản trị viên'}"
-            >Vai trò</span
-          >
-        </div>
       </div>
     </div>
   </nav>

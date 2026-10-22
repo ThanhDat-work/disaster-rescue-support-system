@@ -1,34 +1,57 @@
 <!doctype html>
-<html
-  xmlns:th="http://www.thymeleaf.org"
-  th:replace="~{layouts/main-layout :: layout('Trang chủ', ~{::section})}"
->
-  <section class="auth-page">
-    <div class="auth-card auth-card-wide">
-      <div class="auth-copy">
-        <span class="aside-kicker">Disaster Rescue Support System</span>
-        <h1>Hỗ trợ đúng người,<br />đúng thời điểm.</h1>
-        <p>
-          DRSS kết nối người dân, điều phối viên và đội cứu hộ trong một quy
-          trình có thể theo dõi.
-        </p>
-        <div class="auth-actions">
-          <a class="btn btn-primary" th:href="@{/auth/register}"
-            >Tạo tài khoản</a
-          >
-          <a class="btn btn-outline-secondary" th:href="@{/auth/login}"
-            >Đăng nhập</a
-          >
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main-layout :: layout('Trang chủ', ~{::section})}">
+<section class="home-page">
+  <section class="home-hero" aria-labelledby="home-title">
+    <div class="dispatch-sheet">
+      <div class="dispatch-stripe" aria-hidden="true"></div>
+      <div class="dispatch-content">
+        <h1 id="home-title">Gửi tin báo.<br>Nhận hỗ trợ.</h1>
+        <p class="hero-lede">DRSS kết nối người dân với điều phối viên và đội cứu hộ qua một quy trình rõ ràng, có thể theo dõi.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" th:href="@{/auth/register}">Tạo tài khoản <span aria-hidden="true">→</span></a>
+          <a class="text-link" th:href="@{/auth/login}">Đăng nhập</a>
         </div>
+        <div class="dispatch-meta"><span>Tiếp nhận</span><span aria-hidden="true">→</span><span>Xác minh</span><span aria-hidden="true">→</span><span>Điều phối</span></div>
       </div>
-      <aside class="auth-aside">
-        <span class="auth-step">DRSS / AUTH</span>
-        <h2>Nền tảng xác thực đã sẵn sàng.</h2>
-        <p>
-          Tài khoản được kích hoạt bằng OTP; phiên đăng nhập dùng JWT trong
-          cookie HttpOnly.
-        </p>
-      </aside>
     </div>
+    <aside class="hero-art" aria-label="Bản đồ Việt Nam">
+      <div class="vietnam-map-frame">
+        <img src="/images/rescue/vietnam-map.svg" alt="Bản đồ đường viền Việt Nam" width="611" height="758" fetchpriority="high">
+        <span class="map-region-label">VIỆT NAM</span>
+      </div>
+      <div class="map-note"><span class="map-note-mark" aria-hidden="true"></span><span>Bản đồ tham chiếu Việt Nam</span></div>
+    </aside>
   </section>
+
+  <section class="home-carousel-section" aria-labelledby="carousel-title">
+    <div class="section-heading-row"><div><h2 id="carousel-title">Cứu hộ bắt đầu từ thông tin rõ ràng.</h2></div><p>Những tình huống thường cần phối hợp nhanh giữa người dân, điều phối viên và lực lượng tại hiện trường.</p></div>
+    <div class="rescue-carousel" data-carousel aria-roledescription="carousel" aria-label="Tình huống thiên tai và cứu hộ">
+      <div class="carousel-visuals">
+        <figure class="carousel-slide is-active" data-slide aria-roledescription="slide" aria-label="1 trên 3">
+          <img src="/images/rescue/hue-flood-relief.jpg" alt="Thuyền chở hàng cứu trợ tới khu vực ngập lụt ở Huế" loading="eager" fetchpriority="high">
+          <figcaption><strong>Cứu trợ tại vùng ngập Huế</strong><span>Thuyền đưa hàng cứu trợ tới các khu dân cư ngập lũ ở Huế.</span></figcaption>
+        </figure>
+        <figure class="carousel-slide" data-slide aria-roledescription="slide" aria-label="2 trên 3" hidden>
+          <img src="/images/rescue/vietnam-rescue-training.jpg" alt="Lực lượng Việt Nam và Hoa Kỳ phối hợp rời xuồng cứu hộ tại Quảng Trị" loading="eager" fetchpriority="low">
+          <figcaption><strong>Phối hợp diễn tập cứu hộ</strong><span>Lực lượng Việt Nam và Hoa Kỳ thực hành quy trình cứu hộ đường thủy tại Quảng Trị.</span></figcaption>
+        </figure>
+        <figure class="carousel-slide" data-slide aria-roledescription="slide" aria-label="3 trên 3" hidden>
+          <img class="carousel-vietnam-map" src="/images/rescue/vietnam-map.svg" alt="Bản đồ đường viền Việt Nam" loading="eager" fetchpriority="low">
+          <figcaption><strong>Bản đồ định hướng Việt Nam</strong><span>Bản đồ tham chiếu đặt tình huống cứu trợ trong bối cảnh địa lý của Việt Nam.</span></figcaption>
+        </figure>
+      </div>
+      <div class="carousel-controls"><div class="carousel-buttons"><button type="button" class="carousel-arrow" data-carousel-prev aria-label="Tình huống trước">←</button><button type="button" class="carousel-arrow" data-carousel-next aria-label="Tình huống tiếp theo">→</button><button type="button" class="carousel-toggle" data-carousel-toggle aria-label="Tạm dừng tự chuyển slide">Tạm dừng</button></div><div class="carousel-pips" role="group" aria-label="Chọn tình huống"><button type="button" data-carousel-to="0" aria-label="Tình huống 1" aria-current="true"></button><button type="button" data-carousel-to="1" aria-label="Tình huống 2"></button><button type="button" data-carousel-to="2" aria-label="Tình huống 3"></button></div><span class="carousel-count" aria-live="polite">1 / 3</span></div>
+    </div>
+    <p class="image-credit-note">Ảnh cứu trợ tại Huế: Nguyenngocthanhtoan, CC BY-SA 4.0 · Ảnh huấn luyện cứu hộ tại Quảng Trị: Spc. Brooke Saleem / U.S. Army, public domain · Bản đồ Việt Nam: Mouagip, public domain. <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">Điều khoản CC BY-SA 4.0</a> · <a href="https://commons.wikimedia.org/wiki/File:Boat_transport_of_relief_supplies_to_flood-affected_areas_in_Huế_during_a_period_of_severe_flooding.jpg" target="_blank" rel="noopener noreferrer">Nguồn ảnh Huế</a> · <a href="https://commons.wikimedia.org/wiki/File:Pacific_Friendship_2026-_US,_Vietnamese_partners_train_with_drones,_support_water_rescue_operations_in_Vietnam_(9788251).jpg" target="_blank" rel="noopener noreferrer">Nguồn ảnh Quảng Trị</a> · <a href="https://commons.wikimedia.org/wiki/File:Vietnam_map.svg" target="_blank" rel="noopener noreferrer">Nguồn bản đồ</a>.</p>
+  </section>
+
+  <section class="home-process" aria-labelledby="process-title"><div class="process-intro"><h2 id="process-title">Từ tin báo đến cập nhật kết quả.</h2><p>Thông tin được chuyển qua đúng vai trò để việc hỗ trợ có đầu mối và trạng thái rõ ràng.</p></div><ol class="process-list"><li><span class="process-dot"></span><div><h3>Người dân gửi yêu cầu</h3><p>Mô tả tình huống, địa điểm và thông tin cần thiết cho việc hỗ trợ.</p></div></li><li><span class="process-dot"></span><div><h3>Điều phối viên tiếp nhận</h3><p>Yêu cầu được xem xét, xác minh và cập nhật trạng thái xử lý.</p></div></li><li><span class="process-dot"></span><div><h3>Đội cứu hộ được phân công</h3><p>Điều phối viên giao nhiệm vụ cho đội phù hợp; thành viên xem nhiệm vụ được giao.</p></div></li><li><span class="process-dot"></span><div><h3>Tiến độ được cập nhật</h3><p>Đội cứu hộ cập nhật khi bắt đầu và khi hoàn tất; thông báo giúp các bên nắm thay đổi.</p></div></li></ol></section>
+
+  <section class="home-roles" aria-labelledby="roles-title"><div class="roles-title"><h2 id="roles-title">Mỗi người một phần việc rõ ràng.</h2></div><div class="role-lines"><article><span class="role-letter">N</span><div><h3>Người dân</h3><p>Gửi yêu cầu hỗ trợ và theo dõi tình trạng xử lý.</p></div><a th:href="@{/auth/register}" aria-label="Tạo tài khoản người dân">→</a></article><article><span class="role-letter">Đ</span><div><h3>Điều phối viên</h3><p>Tiếp nhận, xác minh, phân công và theo dõi yêu cầu.</p></div><span class="role-function">Điều phối</span></article><article><span class="role-letter">C</span><div><h3>Đội cứu hộ</h3><p>Xem nhiệm vụ được giao và cập nhật tiến độ thực hiện.</p></div><span class="role-function">Hiện trường</span></article><article><span class="role-letter">Q</span><div><h3>Quản trị viên</h3><p>Quản lý người dùng, vai trò, đội cứu hộ và danh mục thiên tai.</p></div><span class="role-function">Quản trị</span></article></div></section>
+
+  <section class="home-cta" aria-labelledby="cta-title"><div><h2 id="cta-title">Tạo yêu cầu để bắt đầu.</h2><p>Đăng ký hoặc đăng nhập để sử dụng các chức năng theo vai trò của bạn.</p></div><div class="cta-actions"><a class="btn btn-light" th:href="@{/auth/register}">Tạo tài khoản <span aria-hidden="true">→</span></a><a class="cta-login" th:href="@{/auth/login}">Đã có tài khoản? Đăng nhập</a></div></section>
+
+  <footer class="site-footer"><div class="footer-brand"><p>Hệ thống kết nối yêu cầu cứu hộ với quy trình tiếp nhận, điều phối và theo dõi.</p></div><div class="footer-links"><div><h2>Truy cập</h2><a th:href="@{/}">Trang chủ</a><a th:href="@{/auth/register}">Tạo tài khoản</a><a th:href="@{/auth/login}">Đăng nhập</a></div><div><h2>Hệ thống</h2><a href="#process-title">Quy trình cứu hộ</a><a href="#roles-title">Vai trò sử dụng</a></div></div><div class="footer-bottom"><span>Disaster Rescue Support System</span><span>Giao diện tiếng Việt</span></div></footer>
+</section>
 </html>

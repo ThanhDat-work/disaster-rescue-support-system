@@ -18,8 +18,7 @@
           <div class="card card-body h-100">
             <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
               <div class="d-flex align-items-center gap-3">
-                <img th:if="${user.avatarSecureUrl != null}" th:src="${user.avatarSecureUrl}" alt="" class="rounded-circle object-fit-cover" width="72" height="72" />
-                <span th:unless="${user.avatarSecureUrl != null}" class="rounded-circle bg-body-secondary d-inline-flex align-items-center justify-content-center" style="width:72px;height:72px">👤</span>
+                <span class="avatar-wrap avatar-large"><img data-avatar-fallback th:if="${user.avatarSecureUrl != null}" th:src="${user.avatarSecureUrl}" alt=""/><span data-avatar-initial th:classappend="${user.avatarSecureUrl != null} ? ' d-none'" th:text="${#strings.substring(user.fullName,0,1)}">A</span></span>
                 <div>
                   <p class="text-uppercase text-primary fw-semibold mb-1">Người dùng</p>
                   <h1 class="h3 mb-1" th:text="${user.fullName}"></h1>
@@ -150,8 +149,8 @@
         </div>
       </div>
 
-      <div class="card card-body mt-4" th:if="${user.roles.contains('ROLE_RESCUER')}">
-        <h2 class="h5">Đội cứu hộ đang tham gia</h2>
+      <div class="membership-panel mt-4" th:if="${user.roles.contains('ROLE_RESCUER')}">
+        <div class="membership-heading"><div><p class="home-kicker">Tổ chức lực lượng</p><h2>Đội cứu hộ đang tham gia</h2></div><span th:text="|${#lists.size(rescueMemberships)} đội|"></span></div>
         <div class="table-responsive" th:if="${!#lists.isEmpty(rescueMemberships)}">
           <table class="table align-middle mb-0">
             <thead><tr><th>Đội</th><th>Chức vụ</th><th>Trạng thái</th><th></th></tr></thead>

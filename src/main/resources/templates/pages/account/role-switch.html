@@ -6,7 +6,7 @@
   <section class="container py-4 py-lg-5">
     <div class="row justify-content-center">
       <div class="col-12 col-lg-7">
-        <div class="card shadow-sm border-0">
+        <div class="card shadow-sm border-0 role-switch-card">
           <div class="card-body p-4 p-lg-5">
             <p class="text-uppercase small fw-bold text-primary mb-2">
               Bảo mật tài khoản
@@ -19,7 +19,7 @@
 
             <p class="mb-4">
               Vai trò hiện tại:
-              <span class="badge text-bg-primary" th:text="${activeRole}">
+              <span class="badge text-bg-primary role-current-badge" th:text="${activeRole == 'ROLE_CITIZEN' ? 'Người dân' : activeRole == 'ROLE_COORDINATOR' ? 'Điều phối viên' : activeRole == 'ROLE_RESCUER' ? 'Cứu hộ' : 'Quản trị viên'}">
                 ROLE_CITIZEN
               </span>
             </p>

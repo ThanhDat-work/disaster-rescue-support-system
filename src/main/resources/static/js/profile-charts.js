@@ -2,123 +2,125 @@
   "use strict";
   const data = window.drssProfileCharts;
   if (!data) return;
-  const palette = [
-    "#dc2626",
-    "#2563eb",
-    "#f59e0b",
-    "#16a34a",
-    "#8b5cf6",
-    "#64748b",
-  ];
 
-  function setup(id) {
-    const canvas = document.getElementById(id);
-    if (!canvas) return null;
-    canvas.width = Math.max(
-      260,
-      Math.min(680, canvas.parentElement.clientWidth - 32),
-    );
-    canvas.height = 240;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = "13px system-ui, sans-serif";
-    return { ctx, width: canvas.width, height: canvas.height };
+  const colors = ["#1e5d99", "#2589b8", "#16795a", "#d97825", "#64748b", "#72869a"];
+  const number = new Intl.NumberFormat("vi-VN");
+  const localized = { PENDING: "Chờ xác minh", VERIFIED: "Đã xác minh", ASSIGNED: "Đã phân công", IN_PROGRESS: "Đang cứu hộ", RESCUED: "Đã cứu hộ", CLOSED: "Đã đóng", REJECTED: "Từ chối", CANCELLED: "Đã hủy", LOW: "Thấp", MEDIUM: "Trung bình", HIGH: "Cao", CRITICAL: "Nguy cấp" };
+  const labelFor = (label) => localized[label] || label.replaceAll("_", " ");
+  const colorFor = (label, index) => /critical|reject|từ chối|khẩn|nguy cấp/i.test(label) ? "#c82436" : /pending|chờ|wait/i.test(label) ? "#bd7516" : /rescu|cứu hộ|closed|đã đóng|hoàn thành/i.test(label) ? "#16795a" : colors[index % colors.length];
+  const fillFor = (label, index) => /critical|reject|từ chối|khẩn|nguy cấp/i.test(label) ? "linear-gradient(100deg,#f0444f,#bd1f3a)" : colorFor(label, index);
+
+  function node(tag, attrs = {}, text) {
+    const element = document.createElement(tag);
+    Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, String(value)));
+    if (text !== undefined) element.textContent = text;
+    return element;
+  }
+  function svgNode(tag, attrs = {}, text) {
+    const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, String(value)));
+    if (text !== undefined) element.textContent = text;
+    return element;
   }
 
-  function empty(plot) {
-    plot.ctx.fillStyle = "#64748b";
-    plot.ctx.fillText("Chưa có dữ liệu cho khoảng thời gian này.", 16, 120);
-  }
+  function renderDistribution() {
+    const host = document.getElementById("profileDistribution");
+    if (!host) return;
+    const entries = Object.entries(data.distribution || {})
+      .map(([label, raw], index) => [labelFor(label), Math.max(0, Number(raw) || 0), index])
+      .sort((a, b) => b[1] - a[1]);
+    const total = entries.reduce((sum, [, value]) => sum + value, 0);
+    if (!entries.length || !total) {
+      host.append(node("p", { class: "chart-empty" }, "Chưa có yêu cầu trong khoảng thời gian này."));
+      return;
+    }
 
-  function donut() {
-    const plot = setup("profileDistribution");
-    if (!plot) return;
-    const values = Object.values(data.distribution).map(Number);
-    const total = values.reduce((sum, value) => sum + value, 0);
-    if (!total) return empty(plot);
-    let angle = -Math.PI / 2;
-    values.forEach((value, index) => {
-      const next = angle + (2 * Math.PI * value) / total;
-      plot.ctx.beginPath();
-      plot.ctx.arc(plot.width / 2, 116, 84, angle, next);
-      plot.ctx.arc(plot.width / 2, 116, 46, next, angle, true);
-      plot.ctx.fillStyle = palette[index % palette.length];
-      plot.ctx.fill();
-      angle = next;
+    const list = node("div", { class: "chart-rows", role: "list" });
+    entries.forEach(([label, value, index]) => {
+      const row = node("div", { class: "chart-row", role: "listitem" });
+      const top = node("div", { class: "chart-row-top" });
+      top.append(node("span", { class: "chart-row-label" }, label));
+      top.append(node("strong", { class: "chart-row-value" }, `${number.format(value)} · ${Math.round((value / total) * 100)}%`));
+      const track = node("div", { class: "chart-track", "aria-hidden": "true" });
+      track.append(node("span", { class: "chart-fill", style: `--bar-color:${fillFor(label, index)};--bar-width:${(value / total) * 100}%` }));
+      row.append(top, track);
+      list.append(row);
     });
-    plot.ctx.textAlign = "center";
-    plot.ctx.fillStyle = "#1f2937";
-    plot.ctx.fillText(`${total} mục`, plot.width / 2, 120);
+    host.setAttribute("aria-label", `Phân bố ${number.format(total)} yêu cầu theo trạng thái`);
+    host.append(list, node("p", { class: "chart-summary" }, `Tổng cộng ${number.format(total)} yêu cầu · sắp xếp theo số lượng`));
   }
 
-  function trend() {
-    const plot = setup("profileTrend");
-    if (!plot) return;
+  function renderTrend() {
+    const host = document.getElementById("profileTrend");
+    if (!host) return;
     const labels = Array.isArray(data.labels) ? data.labels : [];
-    const series = Object.entries(data.series || {});
-    if (
-      !labels.length ||
-      series.every(([, values]) => values.every((v) => !Number(v)))
-    ) {
-      return empty(plot);
+    const series = Object.entries(data.series || {}).map(([name, values], index) => ({
+      name: labelFor(name),
+      values: labels.map((_, i) => Math.max(0, Number(values?.[i]) || 0)),
+      color: colorFor(labelFor(name), index),
+    }));
+    if (!labels.length || !series.length || series.every(({ values }) => values.every((value) => value === 0))) {
+      host.append(node("p", { class: "chart-empty" }, "Chưa có hoạt động để so sánh theo thời gian."));
+      return;
     }
-    const ctx = plot.ctx;
-    const left = 38,
-      bottom = 200,
-      top = 22,
-      right = plot.width - 18;
-    const max = Math.max(
-      1,
-      ...labels.map((_, i) =>
-        series.reduce((total, [, values]) => total + Number(values[i] || 0), 0),
-      ),
-    );
-    ctx.strokeStyle = "#cbd5e1";
-    ctx.beginPath();
-    ctx.moveTo(left, top);
-    ctx.lineTo(left, bottom);
-    ctx.lineTo(right, bottom);
-    ctx.stroke();
-    ctx.fillStyle = "#475569";
-    ctx.fillText(String(max), 8, top + 5);
-    labels.forEach((label, i) => {
-      const x = left + ((right - left) * (i + 0.5)) / labels.length;
-      ctx.fillText(String(label).slice(-5), x - 15, bottom + 17);
+
+    const width = 640;
+    const height = 264;
+    const margin = { top: 18, right: 18, bottom: 42, left: 42 };
+    const plotW = width - margin.left - margin.right;
+    const plotH = height - margin.top - margin.bottom;
+    const totals = labels.map((_, index) => series.reduce((sum, item) => sum + item.values[index], 0));
+    const maxValue = Math.max(1, ...totals);
+    const tickStep = Math.max(1, Math.ceil(maxValue / 4));
+    const yMax = tickStep * 4;
+    const x = (index) => margin.left + (labels.length < 2 ? plotW / 2 : (plotW * index) / (labels.length - 1));
+    const y = (value) => margin.top + plotH - (value / yMax) * plotH;
+    const svg = svgNode("svg", { class: "trend-chart", viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": "Đường xu hướng các yêu cầu theo thời gian" });
+
+    for (let tick = 0; tick <= 4; tick++) {
+      const value = tick * tickStep;
+      const yy = y(value);
+      svg.append(svgNode("line", { x1: margin.left, y1: yy, x2: width - margin.right, y2: yy, class: "chart-gridline" }));
+      const tickLabel = svgNode("text", { x: margin.left - 9, y: yy + 4, "text-anchor": "end", class: "chart-axis-label" }, number.format(value));
+      svg.append(tickLabel);
+    }
+
+    const labelStride = Math.max(1, Math.ceil(labels.length / 6));
+    labels.forEach((label, index) => {
+      if (index % labelStride !== 0 && index !== labels.length - 1) return;
+      svg.append(svgNode("text", { x: x(index), y: height - 12, "text-anchor": "middle", class: "chart-axis-label" }, String(label)));
     });
-    if (data.role === "ROLE_CITIZEN") {
-      const values = series[0]?.[1] || [];
-      ctx.beginPath();
-      values.forEach((raw, i) => {
-        const x = left + ((right - left) * (i + 0.5)) / labels.length;
-        const y = bottom - (Number(raw) / max) * (bottom - top);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+
+    const cumulative = labels.map(() => 0);
+    series.forEach(({ values, color, name }) => {
+      const lower = [...cumulative];
+      values.forEach((value, index) => { cumulative[index] += value; });
+      const upper = [...cumulative];
+      const topPoints = upper.map((value, index) => `${x(index)} ${y(value)}`);
+      const lowerPoints = lower.map((value, index) => `${x(index)} ${y(value)}`).reverse();
+      const areaPath = `M ${topPoints.join(" L ")} L ${lowerPoints.join(" L ")} Z`;
+      svg.append(svgNode("path", { d: areaPath, class: "chart-area", fill: color }));
+      const points = upper.map((value, index) => `${x(index)},${y(value)}`).join(" ");
+      svg.append(svgNode("polyline", { points, class: "chart-line", stroke: color }));
+      values.forEach((value, index) => {
+        const circle = svgNode("circle", { cx: x(index), cy: y(upper[index]), r: 3.5, class: "chart-point", fill: color });
+        circle.append(svgNode("title", {}, `${name}, ${labels[index]}: ${number.format(value)}`));
+        svg.append(circle);
       });
-      ctx.strokeStyle = palette[1];
-      ctx.lineWidth = 3;
-      ctx.stroke();
-    } else {
-      labels.forEach((_, i) => {
-        let cumulative = 0;
-        series.forEach(([, values], index) => {
-          const value = Number(values[i] || 0);
-          const height = (value / max) * (bottom - top);
-          const x = left + ((right - left) * (i + 0.2)) / labels.length;
-          const barWidth = ((right - left) * 0.6) / labels.length;
-          ctx.fillStyle = palette[index % palette.length];
-          ctx.fillRect(x, bottom - cumulative - height, barWidth, height);
-          cumulative += height;
-        });
-      });
-      series.forEach(([name], i) => {
-        ctx.fillStyle = palette[i % palette.length];
-        ctx.fillRect(44 + i * 110, 2, 8, 8);
-        ctx.fillStyle = "#334155";
-        ctx.fillText(name, 56 + i * 110, 10);
-      });
-    }
+    });
+
+    const legend = node("ul", { class: "chart-legend", "aria-label": "Chú giải" });
+    series.forEach(({ name, color }) => {
+      const item = node("li");
+      item.append(node("span", { class: "chart-legend-mark", style: `--legend-color:${color}` }), node("span", {}, name));
+      legend.append(item);
+    });
+    host.setAttribute("aria-label", `Xu hướng ${series.map(({ name }) => name).join(", ")} qua ${labels.length} mốc thời gian`);
+    const scroller = node("div", { class: "trend-chart-scroller" });
+    scroller.append(svg);
+    host.append(scroller, legend);
   }
 
-  donut();
-  trend();
+  renderDistribution();
+  renderTrend();
 })();

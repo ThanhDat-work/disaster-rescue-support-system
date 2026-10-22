@@ -92,8 +92,7 @@
               <tr th:each="item : ${result.content}">
                 <td>
                   <div class="d-flex align-items-center gap-2">
-                    <img th:if="${item.avatarSecureUrl != null}" th:src="${item.avatarSecureUrl}" alt="" class="rounded-circle object-fit-cover" width="36" height="36" />
-                    <span th:unless="${item.avatarSecureUrl != null}" class="rounded-circle bg-body-secondary d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px">👤</span>
+                    <span class="avatar-wrap"><img data-avatar-fallback th:if="${item.avatarSecureUrl != null}" th:src="${item.avatarSecureUrl}" alt=""/><span data-avatar-initial th:classappend="${item.avatarSecureUrl != null} ? ' d-none'" th:text="${#strings.substring(item.fullName,0,1)}">A</span></span>
                     <span th:text="${item.fullName}"></span>
                   </div>
                 </td>
