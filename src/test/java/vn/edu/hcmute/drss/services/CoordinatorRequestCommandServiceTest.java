@@ -204,7 +204,7 @@ class CoordinatorRequestCommandServiceTest {
     void missingRequestReturnsNotFoundWithoutHistory() {
         when(users.findById(coordinatorId))
                 .thenReturn(Optional.of(coordinator));
-        when(requests.findCoordinatorDetailById(requestId))
+        when(requests.findByIdForCoordinatorAssignment(requestId))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.decide(
@@ -272,7 +272,7 @@ class CoordinatorRequestCommandServiceTest {
     private void allowDecision() {
         when(users.findById(coordinatorId))
                 .thenReturn(Optional.of(coordinator));
-        when(requests.findCoordinatorDetailById(requestId))
+        when(requests.findByIdForCoordinatorAssignment(requestId))
                 .thenReturn(Optional.of(request));
     }
 

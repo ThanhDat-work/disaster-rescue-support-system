@@ -17,9 +17,15 @@
           th:text="${request.disasterType.disasterName + ' · ' + request.urgency}"
         ></p>
       </div>
-      <a class="btn btn-outline-secondary" th:href="@{/coordinator/pending}">
-        Quay lại hàng đợi
-      </a>
+
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" th:href="@{/coordinator/tracking}">
+          Theo dõi tiến độ
+        </a>
+        <a class="btn btn-outline-secondary" th:href="@{/coordinator/pending}">
+          Hàng đợi xác minh
+        </a>
+      </div>
     </div>
 
     <div class="row g-4">
@@ -203,7 +209,91 @@
 
         <article
           class="card shadow-sm mb-4"
-          th:if="${request.status != 'PENDING' and request.status != 'VERIFIED'}"
+          th:if="${currentAssignment != null}"
+        >
+          <div class="card-body p-4">
+            <h2 class="h5 mb-3">Tiến độ nhiệm vụ cứu hộ</h2>
+            <dl class="row mb-0">
+              <dt class="col-sm-4">Mã nhiệm vụ</dt>
+              <dd
+                class="col-sm-8"
+                th:text="${currentAssignment.displayCode}"
+              ></dd>
+              <dt class="col-sm-4">Đội phụ trách</dt>
+              <dd
+                class="col-sm-8"
+                th:text="${currentAssignment.team.displayCode + ' · ' + currentAssignment.team.teamName}"
+              ></dd>
+              <dt class="col-sm-4">Trạng thái</dt>
+              <dd class="col-sm-8" th:text="${currentAssignment.status}"></dd>
+              <dt class="col-sm-4">Hoàn thành lúc</dt>
+              <dd
+                class="col-sm-8"
+                th:text="${currentAssignment.completionTime != null ? #temporals.format(currentAssignment.completionTime, 'dd/MM/yyyy HH:mm') : 'Chưa hoàn thành'}"
+              ></dd>
+              <dt class="col-sm-4">Báo cáo hoàn thành</dt>
+              <dd
+                class="col-sm-8 mb-0"
+                th:text="${currentAssignment.notes != null and !currentAssignment.notes.isBlank() ? currentAssignment.notes : 'Chưa có báo cáo'}"
+              ></dd>
+            </dl>
+          </div>
+        </article>
+
+        <article
+          class="card shadow-sm mb-4 border-success"
+          th:if="${request.status == 'RESCUED'}"
+        >
+          <div class="card-body p-4">
+            <h2 class="h5 mb-2">Đóng yêu cầu cứu nạn</h2>
+            <p class="text-secondary">
+              Chỉ đóng sau khi nhiệm vụ COMPLETED và báo cáo hoàn thành đã đầy
+              đủ.
+            </p>
+
+            <div
+              class="alert alert-warning"
+              role="alert"
+              th:if="${currentAssignment == null or currentAssignment.status != 'COMPLETED' or currentAssignment.completionTime == null or currentAssignment.notes == null or currentAssignment.notes.isBlank()}"
+            >
+              Chưa đủ điều kiện đóng yêu cầu. Vui lòng kiểm tra nhiệm vụ và báo
+              cáo hoàn thành.
+            </div>
+
+            <form
+              method="post"
+              th:action="@{/coordinator/requests/{id}/close(id=${request.id})}"
+              th:object="${closeRequest}"
+            >
+              <input type="hidden" th:field="*{version}" />
+              <div class="mb-3">
+                <label class="form-label" for="closeNote">Ghi chú đóng</label>
+                <textarea
+                  id="closeNote"
+                  class="form-control"
+                  rows="3"
+                  minlength="10"
+                  maxlength="500"
+                  required
+                  th:field="*{closeNote}"
+                  placeholder="Tóm tắt kết quả và xác nhận đã hoàn tất cứu nạn"
+                ></textarea>
+                <div class="form-text">Bắt buộc từ 10 đến 500 ký tự.</div>
+              </div>
+              <button
+                class="btn btn-success"
+                type="submit"
+                th:disabled="${currentAssignment == null or currentAssignment.status != 'COMPLETED' or currentAssignment.completionTime == null or currentAssignment.notes == null or currentAssignment.notes.isBlank()}"
+              >
+                Đóng yêu cầu
+              </button>
+            </form>
+          </div>
+        </article>
+
+        <article
+          class="card shadow-sm mb-4"
+          th:if="${request.status != 'PENDING' and request.status != 'VERIFIED' and request.status != 'RESCUED'}"
         >
           <div class="card-body p-4">
             <h2 class="h5 mb-2">Yêu cầu đã được xử lý</h2>
@@ -211,6 +301,12 @@
               Trạng thái hiện tại:
               <strong th:text="${request.status}"></strong>. Không thể thực hiện
               lại thao tác không phù hợp với trạng thái này.
+            </p>
+            <p
+              class="text-success mb-0 mt-2"
+              th:if="${request.status == 'CLOSED'}"
+            >
+              Yêu cầu đã đóng và không thể mở lại trong flow hiện tại.
             </p>
           </div>
         </article>

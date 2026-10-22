@@ -131,7 +131,7 @@ public class CitizenRequestService {
 
     @Transactional
     public void cancel(UUID requestId, UUID userId, String reason) {
-        RescueRequest request = ownedRequest(requestId, userId);
+        RescueRequest request = ownedRequestForUpdate(requestId, userId);
         String oldStatus = request.getStatus();
         if (!CANCELLABLE_STATUSES.contains(oldStatus)) {
             throw new IllegalStateException(
@@ -177,6 +177,19 @@ public class CitizenRequestService {
             throw notFound();
         }
         return request;
+    }
+
+    private RescueRequest ownedRequestForUpdate(
+            UUID requestId,
+            UUID userId
+    ) {
+        UUID ownerId = requireUserId(userId);
+        if (requestId == null) {
+            throw notFound();
+        }
+
+        return requests.findOwnedByIdForUpdate(requestId, ownerId)
+                .orElseThrow(CitizenRequestService::notFound);
     }
 
     private String nextDisplayCode() {

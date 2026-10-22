@@ -168,6 +168,7 @@ membership.setLeftAt(null);
                 .isEqualTo("Đã tiếp cận hiện trường.");
 
         verify(assignmentRepository).save(assignment);
+        verify(assignmentRepository).flush();
         verify(notifications).notifyRequestStatusChanged(
                 request,
                 "ASSIGNED",
@@ -251,6 +252,7 @@ membership.setLeftAt(null);
                 .isEqualTo("RESCUED");
 
         verify(assignmentRepository).save(assignment);
+        verify(assignmentRepository).flush();
         verify(notifications).notifyRequestStatusChanged(
                 request,
                 "IN_PROGRESS",
@@ -315,7 +317,7 @@ verify(statusHistoryRepository, never())
     }
 
     private void allowAssignmentAccess() {
-        when(assignmentRepository.findByIdAndUserId(
+        when(assignmentRepository.findByIdAndUserIdForUpdate(
                 ASSIGNMENT_ID,
                 USER_ID
         )).thenReturn(Optional.of(assignment));
