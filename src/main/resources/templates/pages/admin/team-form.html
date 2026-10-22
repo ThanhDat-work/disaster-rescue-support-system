@@ -7,8 +7,8 @@
 <body>
 <section class="py-4">
   <a class="text-decoration-none" th:href="@{/admin/teams}">← Quay lại danh sách</a>
-  <form class="card card-body mt-3" method="post" th:object="${form}"
-        th:action="${editing ? '/admin/teams/' + teamId : '/admin/teams'}" novalidate>
+  <form class="card card-body mt-3 team-form needs-validation" method="post" th:object="${form}"
+        th:action="${editing ? '/admin/teams/' + teamId : '/admin/teams'}" data-disable-on-submit>
     <h1 class="h3" th:text="${editing ? 'Sửa đội cứu hộ' : 'Thêm đội cứu hộ'}"></h1>
     <p class="text-secondary">Chỉ user ACTIVE có ROLE_RESCUER mới được chọn. Xác nhận lựa chọn trước khi lưu đội.</p>
     <div class="alert alert-danger" th:if="${#fields.hasGlobalErrors()}">

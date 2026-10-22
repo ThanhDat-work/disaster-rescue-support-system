@@ -127,33 +127,10 @@
                 <h2 class="h5 mb-0">Phân bố tiến độ xử lý</h2>
               </div>
 
-              <div class="vstack gap-3">
-                <div th:each="item : ${dashboard.statusItems}">
-                  <div class="d-flex justify-content-between gap-3 mb-1">
-                    <div class="text-truncate">
-                      <span class="fw-semibold" th:text="${item.label}"></span>
-                      <small
-                        class="text-secondary ms-1"
-                        th:text="|(${item.code})|"
-                      ></small>
-                    </div>
-                    <strong th:text="${item.count}"></strong>
-                  </div>
-                  <div
-                    class="progress"
-                    role="progressbar"
-                    th:attr="aria-label=${item.label},aria-valuenow=${item.percentage}"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                  >
-                    <div
-                      class="progress-bar"
-                      th:classappend="${item.tone}"
-                      th:style="|width: ${item.percentage}%|"
-                      th:text="|${item.percentage}%|"
-                    ></div>
-                  </div>
-                </div>
+              <div class="stats-donut" data-stats-donut role="group" aria-label="Phân bố yêu cầu theo trạng thái">
+                <ul class="stats-donut-data visually-hidden">
+                  <li th:each="item : ${dashboard.statusItems}" th:attr="data-label=${item.label},data-code=${item.code},data-count=${item.count},data-tone=${item.tone}" th:text="${item.label + ': ' + item.count + ' yêu cầu (' + item.percentage + '%)'}">Trạng thái</li>
+                </ul>
               </div>
             </div>
           </div>
@@ -167,38 +144,16 @@
                 <h2 class="h5 mb-0">Phân bố ưu tiên cứu hộ</h2>
               </div>
 
-              <div class="vstack gap-3">
-                <div th:each="item : ${dashboard.urgencyItems}">
-                  <div class="d-flex justify-content-between gap-3 mb-1">
-                    <div class="text-truncate">
-                      <span class="fw-semibold" th:text="${item.label}"></span>
-                      <small
-                        class="text-secondary ms-1"
-                        th:text="|(${item.code})|"
-                      ></small>
-                    </div>
-                    <strong th:text="${item.count}"></strong>
-                  </div>
-                  <div
-                    class="progress"
-                    role="progressbar"
-                    th:attr="aria-label=${item.label},aria-valuenow=${item.percentage}"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                  >
-                    <div
-                      class="progress-bar"
-                      th:classappend="${item.tone}"
-                      th:style="|width: ${item.percentage}%|"
-                      th:text="|${item.percentage}%|"
-                    ></div>
-                  </div>
-                </div>
+              <div class="stats-donut stats-donut-urgency" data-stats-donut role="group" aria-label="Phân bố yêu cầu theo mức khẩn cấp">
+                <ul class="stats-donut-data visually-hidden">
+                  <li th:each="item : ${dashboard.urgencyItems}" th:attr="data-label=${item.label},data-code=${item.code},data-count=${item.count},data-tone=${item.tone}" th:text="${item.label + ': ' + item.count + ' yêu cầu (' + item.percentage + '%)'}">Mức độ</li>
+                </ul>
               </div>
             </div>
           </div>
         </div>
       </div>
+    <script th:src="@{/js/statistics-charts.js(v=2026102303)}" defer></script>
     </section>
   </body>
 </html>

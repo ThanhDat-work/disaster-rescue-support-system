@@ -2,20 +2,20 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layouts/main-layout :: layout(~{::title}, ~{::section})}">
 <head><title>Chi tiết đội cứu hộ | DRSS</title></head>
-<body><section class="py-4">
+<body><section class="py-4 team-detail-page">
   <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
     <div><a class="text-decoration-none" th:href="@{/admin/teams}">← Danh sách đội</a><h1 class="h3 mt-2 mb-1" th:text="${team.teamName}"></h1><p class="text-secondary mb-0" th:text="|${team.displayCode} · ${team.status} · ${team.memberCount} người|"></p></div>
     <a class="btn btn-outline-primary align-self-start" th:href="@{/admin/teams/{id}/edit(id=${team.id})}">Sửa đội</a>
   </div>
-  <div class="card card-body mb-4" th:if="${team.leader != null}">
-    <h2 class="h5">Đội trưởng</h2><div class="d-flex align-items-center gap-3">
-      <img th:if="${team.leader.avatarSecureUrl != null}" th:src="${team.leader.avatarSecureUrl}" alt="" class="rounded-circle object-fit-cover" width="64" height="64" />
-      <span th:unless="${team.leader.avatarSecureUrl != null}" class="rounded-circle bg-body-secondary d-inline-flex align-items-center justify-content-center" style="width:64px;height:64px">👤</span>
+  <div class="leader-panel mb-4" th:if="${team.leader != null}">
+    <div class="leader-label">Đội trưởng</div><div class="d-flex align-items-center gap-3">
+      <span class="avatar-wrap avatar-large"><img data-avatar-fallback th:if="${team.leader.avatarSecureUrl != null}" th:src="${team.leader.avatarSecureUrl}" alt=""/><span data-avatar-initial th:classappend="${team.leader.avatarSecureUrl != null} ? ' d-none'" th:text="${#strings.substring(team.leader.fullName,0,1)}">A</span></span>
       <div><div class="fw-semibold" th:text="${team.leader.fullName}"></div><div class="text-secondary" th:text="${team.leader.displayCode}"></div></div>
     </div>
   </div>
   <div class="alert alert-warning" th:if="${team.leader == null}">Đội legacy chưa liên kết đội trưởng. Hãy sửa đội trước khi phân công.</div>
   <div class="card"><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Thành viên</th><th>Mã</th><th>Chức vụ</th></tr></thead><tbody>
-    <tr th:each="member : ${team.members}"><td><div class="d-flex align-items-center gap-2"><img th:if="${member.avatarSecureUrl != null}" th:src="${member.avatarSecureUrl}" alt="" class="rounded-circle object-fit-cover" width="36" height="36"/><span th:unless="${member.avatarSecureUrl != null}" class="rounded-circle bg-body-secondary d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px">👤</span><span th:text="${member.fullName}"></span></div></td><td th:text="${member.displayCode}"></td><td><span class="badge text-bg-light border" th:text="${member.teamRole}"></span></td></tr>
+    <tr th:each="member : ${team.members}"><td><div class="member-identity"><span class="avatar-wrap"><img data-avatar-fallback th:if="${member.avatarSecureUrl != null}" th:src="${member.avatarSecureUrl}" alt=""/><span data-avatar-initial th:classappend="${member.avatarSecureUrl != null} ? ' d-none'" th:text="${#strings.substring(member.fullName,0,1)}">A</span></span><span th:text="${member.fullName}"></span></div></td><td th:text="${member.displayCode}"></td><td><span class="badge text-bg-light border" th:text="${member.teamRole}"></span></td></tr>
+    <tr th:if="${#lists.isEmpty(team.members)}"><td colspan="3" class="table-empty">Chưa có thành viên nào trong đội.</td></tr>
   </tbody></table></div></div>
 </section></body></html>

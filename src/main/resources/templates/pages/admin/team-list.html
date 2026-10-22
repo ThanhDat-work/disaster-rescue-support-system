@@ -22,8 +22,7 @@
     <tbody><tr th:each="item : ${result.content}">
       <td><div class="fw-semibold" th:text="${item.teamName}"></div><small class="text-secondary" th:text="${item.displayCode}"></small></td>
       <td><div class="d-flex align-items-center gap-2">
-        <img th:if="${item.leaderUser != null and item.leaderUser.avatarSecureUrl != null}" th:src="${item.leaderUser.avatarSecureUrl}" alt="" class="rounded-circle object-fit-cover" width="36" height="36" />
-        <span th:unless="${item.leaderUser != null and item.leaderUser.avatarSecureUrl != null}" class="rounded-circle bg-body-secondary d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px">👤</span>
+        <span class="avatar-wrap"><img data-avatar-fallback th:if="${item.leaderUser != null and item.leaderUser.avatarSecureUrl != null}" th:src="${item.leaderUser.avatarSecureUrl}" alt=""/><span data-avatar-initial th:classappend="${item.leaderUser != null and item.leaderUser.avatarSecureUrl != null} ? ' d-none'" th:text="${item.leaderName != null ? #strings.substring(item.leaderName,0,1) : '?'}">A</span></span>
         <span th:text="${item.leaderName}"></span>
       </div></td>
       <td th:text="${item.contactNumber}"></td>

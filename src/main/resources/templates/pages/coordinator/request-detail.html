@@ -406,7 +406,7 @@
                   th:text="${'Bởi ' + event.changedByUser.fullName}"
                 ></p>
                 <p
-                  class="small text-secondary mb-0 mt-1"
+                  class="small text-secondary mb-0 mt-1 history-event-notes"
                   th:if="${event.notes != null and !event.notes.isBlank()}"
                   th:text="${event.notes}"
                 ></p>

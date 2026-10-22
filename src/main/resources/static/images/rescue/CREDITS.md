@@ -1,0 +1,5 @@
+# Rescue slider image credits
+
+- `hue-flood-relief.jpg`: Nguyenngocthanhtoan, “Boat transport of relief supplies to flood-affected areas in Huế during a period of severe flooding”, CC BY-SA 4.0. Source: https://commons.wikimedia.org/wiki/File:Boat_transport_of_relief_supplies_to_flood-affected_areas_in_Hu%E1%BA%BF_during_a_period_of_severe_flooding.jpg. The source image is shown with responsive cropping and has not been edited.
+- `vietnam-rescue-training.jpg`: Spc. Brooke Saleem / U.S. Army, “Pacific Friendship 2026: US, Vietnamese partners train with drones, support water rescue operations in Vietnam”, public domain in the United States as a U.S. federal government work. Source: https://commons.wikimedia.org/wiki/File:Pacific_Friendship_2026-_US,_Vietnamese_partners_train_with_drones,_support_water_rescue_operations_in_Vietnam_(9788251).jpg. The source image is shown with responsive cropping and has not been edited.
+- `vietnam-map.svg`: Mouagip, “Vietnam map.svg”, released into the public domain. Source: https://commons.wikimedia.org/wiki/File:Vietnam_map.svg.

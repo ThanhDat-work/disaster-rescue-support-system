@@ -2,8 +2,15 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layouts/main-layout :: layout(~{::title}, ~{::section})}">
 <head><title>Đội của tôi | DRSS</title></head>
-<body><section class="py-4">
-  <div class="mb-4"><p class="text-uppercase text-primary fw-semibold mb-1">Cứu hộ</p><h1 class="h3 mb-1">Đội của tôi</h1><p class="text-secondary mb-0">Các đội mà bạn đang có membership hợp lệ.</p></div>
-  <div class="row g-3" th:if="${!#lists.isEmpty(teams)}"><div class="col-12 col-lg-6" th:each="team : ${teams}"><article class="card card-body h-100"><div class="d-flex justify-content-between gap-3"><div><h2 class="h5 mb-1" th:text="${team.teamName}"></h2><p class="text-secondary mb-2" th:text="${team.displayCode}"></p></div><span class="badge text-bg-primary align-self-start" th:text="${team.currentUserRole}"></span></div><p class="mb-3" th:text="|${team.memberCount} thành viên · ${team.status}|"></p><a class="btn btn-outline-primary align-self-start" th:href="@{/team/my-teams/{id}(id=${team.id})}">Xem thành viên</a></article></div></div>
-  <div class="card card-body text-center py-5" th:if="${#lists.isEmpty(teams)}"><h2 class="h5">Bạn chưa thuộc đội cứu hộ nào</h2><p class="text-secondary mb-0">Hãy liên hệ quản trị viên để được thêm vào đội.</p></div>
+<body><section class="py-4 rescuer-teams-page">
+  <div class="page-heading mb-4"><p class="home-kicker">Cứu hộ</p><h1>Đội của tôi</h1><p>Các đội bạn đang tham gia và vai trò của mình.</p></div>
+  <div class="team-list" th:if="${!#lists.isEmpty(teams)}">
+    <article class="rescuer-team-row" th:each="team : ${teams}" th:attr="data-realtime-team-id=${team.id}">
+      <div class="team-mark" aria-hidden="true">＋</div>
+      <div class="team-main"><h2 th:text="${team.teamName}"></h2><p><span th:text="${team.displayCode}"></span><span class="team-dot">·</span><span th:text="|${team.memberCount} thành viên|"></span></p></div>
+      <div class="team-context"><span class="team-role" th:text="${team.currentUserRole}"></span><span class="team-status" th:text="${team.status}"></span></div>
+      <a class="btn btn-outline-primary" th:href="@{/team/my-teams/{id}(id=${team.id})}">Xem đội <span aria-hidden="true">→</span></a>
+    </article>
+  </div>
+  <div class="empty-panel" th:if="${#lists.isEmpty(teams)}"><span class="empty-mark" aria-hidden="true">＋</span><h2>Bạn chưa thuộc đội cứu hộ nào</h2><p>Liên hệ quản trị viên để được thêm vào một đội.</p></div>
 </section></body></html>

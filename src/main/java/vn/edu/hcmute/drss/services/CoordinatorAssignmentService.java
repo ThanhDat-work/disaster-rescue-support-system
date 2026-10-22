@@ -249,7 +249,7 @@ public class CoordinatorAssignmentService {
 
         return normalizedNote == null
                 ? prefix
-                : prefix + " Ghi chú: " + normalizedNote;
+                : prefix + "\nGhi chú:\n" + normalizedNote;
     }
 
     private String trimToNull(String value) {
