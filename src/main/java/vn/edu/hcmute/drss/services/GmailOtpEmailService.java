@@ -1,30 +1,32 @@
 package vn.edu.hcmute.drss.services;
 
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.mail.MailException;
-import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.stereotype.Service;
 import vn.edu.hcmute.drss.configs.AuthSecurityProperties;
 import vn.edu.hcmute.drss.entities.VerificationTokenPurpose;
 import vn.edu.hcmute.drss.exceptions.OtpMailDeliveryException;
 
+import java.net.http.HttpClient;
 import java.time.Duration;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 @Service
@@ -32,19 +34,71 @@ public class GmailOtpEmailService {
 
     private static final Logger LOGGER =
             LoggerFactory.getLogger(GmailOtpEmailService.class);
+    private static final String BREVO_EMAIL_URL =
+            "https://api.brevo.com/v3/smtp/email";
 
     private static final Pattern OTP_PATTERN =
             Pattern.compile("[0-9]{6}");
 
     private final JavaMailSender mailSender;
     private final AuthSecurityProperties properties;
+    private final String provider;
+    private final String brevoApiKey;
+    private final RestClient brevoClient;
 
     public GmailOtpEmailService(
             JavaMailSender mailSender,
             AuthSecurityProperties properties
     ) {
+        this(mailSender, properties, "smtp", "", null);
+    }
+
+    @Autowired
+    public GmailOtpEmailService(
+            JavaMailSender mailSender,
+            AuthSecurityProperties properties,
+            @Value("${OTP_MAIL_PROVIDER:smtp}") String provider,
+            @Value("${BREVO_API_KEY:}") String brevoApiKey
+    ) {
+        this(
+                mailSender,
+                properties,
+                provider,
+                brevoApiKey,
+                "brevo".equalsIgnoreCase(provider.strip())
+                        ? createBrevoClient()
+                        : null
+        );
+    }
+
+    GmailOtpEmailService(
+            JavaMailSender mailSender,
+            AuthSecurityProperties properties,
+            String provider,
+            String brevoApiKey,
+            RestClient brevoClient
+    ) {
         this.mailSender = mailSender;
         this.properties = properties;
+        this.provider = provider.strip().toLowerCase(Locale.ROOT);
+        this.brevoApiKey = brevoApiKey == null ? "" : brevoApiKey.strip();
+        this.brevoClient = brevoClient;
+
+        if (!"smtp".equals(this.provider) && !"brevo".equals(this.provider)) {
+            throw new IllegalArgumentException(
+                    "OTP_MAIL_PROVIDER must be smtp or brevo"
+            );
+        }
+    }
+
+    private static RestClient createBrevoClient() {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .build();
+        JdkClientHttpRequestFactory factory =
+                new JdkClientHttpRequestFactory(httpClient);
+        factory.setReadTimeout(Duration.ofSeconds(15));
+        return RestClient.builder().requestFactory(factory).build();
     }
 
     public void sendOtp(
@@ -73,83 +127,87 @@ public class GmailOtpEmailService {
         ));
 
         String attemptId = UUID.randomUUID().toString();
-        long startedAt = System.nanoTime();
+        if ("brevo".equals(provider)) {
+            sendThroughBrevo(message, validatedRecipient, purpose, attemptId);
+            return;
+        }
 
         if (mailSender instanceof JavaMailSenderImpl smtpSender) {
             LOGGER.info(
                     "OTP_SMTP_START attempt={} purpose={} host={} port={}",
-                    attemptId,
-                    purpose,
-                    smtpSender.getHost(),
-                    smtpSender.getPort()
-            );
-        } else {
-            LOGGER.info(
-                    "OTP_SMTP_START attempt={} purpose={} senderType={}",
-                    attemptId,
-                    purpose,
-                    mailSender.getClass().getSimpleName()
+                    attemptId, purpose, smtpSender.getHost(), smtpSender.getPort()
             );
         }
-
         try {
             mailSender.send(message);
-            LOGGER.info(
-                    "OTP_SMTP_ACCEPTED attempt={} purpose={} elapsedMs={}",
-                    attemptId,
-                    purpose,
-                    TimeUnit.NANOSECONDS.toMillis(
-                            System.nanoTime() - startedAt
-                    )
-            );
+            LOGGER.info("OTP_SMTP_ACCEPTED attempt={} purpose={}",
+                    attemptId, purpose);
         } catch (MailException exception) {
-            // Log only exception types. Exception messages and failed
-            // mail objects can contain recipient addresses or OTPs.
             LOGGER.warn(
-                    "OTP_SMTP_FAILED attempt={} purpose={} elapsedMs={} types={}",
-                    attemptId,
-                    purpose,
-                    TimeUnit.NANOSECONDS.toMillis(
-                            System.nanoTime() - startedAt
-                    ),
-                    failureTypes(exception)
+                    "OTP_SMTP_FAILED attempt={} purpose={} type={} cause={}",
+                    attemptId, purpose,
+                    exception.getClass().getSimpleName(),
+                    exception.getMostSpecificCause().getClass().getSimpleName()
             );
             throw new OtpMailDeliveryException(exception);
         }
     }
 
-    private String failureTypes(MailException exception) {
-        Set<Throwable> visited = Collections.newSetFromMap(
-                new IdentityHashMap<>()
-        );
-        ArrayDeque<Throwable> pending = new ArrayDeque<>();
-        List<String> types = new ArrayList<>();
-        pending.add(exception);
-
-        while (!pending.isEmpty() && visited.size() < 16) {
-            Throwable current = pending.removeFirst();
-            if (!visited.add(current)) {
-                continue;
-            }
-            types.add(current.getClass().getSimpleName());
-
-            if (current.getCause() != null) {
-                pending.addLast(current.getCause());
-            }
-            if (current instanceof MessagingException mailFailure
-                    && mailFailure.getNextException() != null) {
-                pending.addLast(mailFailure.getNextException());
-            }
-            if (current instanceof MailSendException sendFailure) {
-                for (Exception failure : sendFailure.getMessageExceptions()) {
-                    if (failure != null) {
-                        pending.addLast(failure);
-                    }
-                }
-            }
+    private void sendThroughBrevo(
+            SimpleMailMessage message,
+            String recipient,
+            VerificationTokenPurpose purpose,
+            String attemptId
+    ) {
+        if (brevoApiKey.isBlank() || brevoClient == null) {
+            LOGGER.warn("OTP_BREVO_FAILED attempt={} reason=MISSING_CONFIGURATION",
+                    attemptId);
+            throw new OtpMailDeliveryException(new IllegalStateException(
+                    "Brevo HTTPS configuration is missing"
+            ));
         }
 
-        return String.join(" -> ", types);
+        Map<String, Object> payload = Map.of(
+                "sender", Map.of("name", "DRSS", "email", properties.mailFrom()),
+                "to", List.of(Map.of("email", recipient)),
+                "subject", message.getSubject(),
+                "textContent", message.getText()
+        );
+
+        LOGGER.info("OTP_BREVO_START attempt={} purpose={}", attemptId, purpose);
+        try {
+            ResponseEntity<Void> response = brevoClient.post()
+                    .uri(BREVO_EMAIL_URL)
+                    .header("api-key", brevoApiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(payload)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            if (response.getStatusCode().value() != 201) {
+                LOGGER.warn("OTP_BREVO_FAILED attempt={} status={}",
+                        attemptId, response.getStatusCode().value());
+                throw new OtpMailDeliveryException(new IllegalStateException(
+                        "Unexpected Brevo HTTPS response"
+                ));
+            }
+            LOGGER.info("OTP_BREVO_ACCEPTED attempt={} purpose={} status=201",
+                    attemptId, purpose);
+        } catch (RestClientResponseException exception) {
+            // Response bodies and full exceptions can contain private data.
+            LOGGER.warn("OTP_BREVO_FAILED attempt={} purpose={} status={}",
+                    attemptId, purpose, exception.getStatusCode().value());
+            throw new OtpMailDeliveryException(exception);
+        } catch (RestClientException exception) {
+            LOGGER.warn(
+                    "OTP_BREVO_FAILED attempt={} purpose={} type={} cause={}",
+                    attemptId, purpose,
+                    exception.getClass().getSimpleName(),
+                    exception.getMostSpecificCause().getClass().getSimpleName()
+            );
+            throw new OtpMailDeliveryException(exception);
+        }
     }
 
     private String subjectFor(
