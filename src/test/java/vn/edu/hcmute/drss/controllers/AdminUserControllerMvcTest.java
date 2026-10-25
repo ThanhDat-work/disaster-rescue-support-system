@@ -3,6 +3,7 @@ package vn.edu.hcmute.drss.controllers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.MDC;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
@@ -15,6 +16,7 @@ import vn.edu.hcmute.drss.dtos.AdminUserDetail;
 import vn.edu.hcmute.drss.exceptions.AdminDomainException;
 import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
 import vn.edu.hcmute.drss.services.AdminUserService;
+import vn.edu.hcmute.drss.trace.RequestCorrelation;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -32,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+import static org.hamcrest.Matchers.containsString;
 
 @ExtendWith(MockitoExtension.class)
 class AdminUserControllerMvcTest {
@@ -103,6 +107,23 @@ class AdminUserControllerMvcTest {
                 .andExpect(flash().attributeExists("successMsg"));
 
         verify(service).changeStatus(targetId, "BANNED", actorId);
+    }
+
+    @Test
+    void rejectedStatusChangeShowsSafeReferenceId() throws Exception {
+        UUID targetId = UUID.randomUUID();
+        String requestId = UUID.randomUUID().toString();
+        doThrow(new AdminDomainException("status", "Không thể cập nhật"))
+                .when(service).changeStatus(targetId, "BANNED", actorId);
+        try (MDC.MDCCloseable ignored = MDC.putCloseable(
+                RequestCorrelation.KEY, requestId)) {
+            mockMvc.perform(post("/admin/users/{id}/status", targetId)
+                            .principal(authentication)
+                            .param("status", "BANNED"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(flash().attribute("errorMsg",
+                            containsString(requestId)));
+        }
     }
 
     @Test

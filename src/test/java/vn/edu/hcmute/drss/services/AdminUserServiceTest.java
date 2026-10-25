@@ -9,12 +9,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import vn.edu.hcmute.drss.dtos.AdminUserSummary;
+import vn.edu.hcmute.drss.entities.AdminUserAudit;
+import vn.edu.hcmute.drss.entities.AdminUserAuditAction;
 import vn.edu.hcmute.drss.entities.Role;
 import vn.edu.hcmute.drss.entities.User;
 import vn.edu.hcmute.drss.entities.UserRole;
 import vn.edu.hcmute.drss.entities.UserRoleId;
 import vn.edu.hcmute.drss.exceptions.AdminDomainException;
 import vn.edu.hcmute.drss.repositories.RoleRepository;
+import vn.edu.hcmute.drss.repositories.AdminUserAuditRepository;
 import vn.edu.hcmute.drss.repositories.UserRepository;
 import vn.edu.hcmute.drss.repositories.UserRoleRepository;
 
@@ -29,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +48,9 @@ class AdminUserServiceTest {
     @Mock
     private UserRoleRepository userRoleRepository;
 
+    @Mock
+    private AdminUserAuditRepository auditRepository;
+
     private AdminUserService service;
 
     @BeforeEach
@@ -51,7 +58,8 @@ class AdminUserServiceTest {
         service = new AdminUserService(
                 userRepository,
                 roleRepository,
-                userRoleRepository);
+                userRoleRepository,
+                auditRepository);
     }
 
     @Test
@@ -168,14 +176,24 @@ class AdminUserServiceTest {
         when(userRoleRepository.findAllByUserAndRevokedAtIsNull(target))
                 .thenReturn(List.of());
 
+        UUID actorId = UUID.randomUUID();
         service.changeStatus(
                 target.getId(),
                 "BANNED",
-                UUID.randomUUID());
+                actorId);
 
         assertThat(target.getStatus()).isEqualTo("BANNED");
         assertThat(target.getAuthVersion()).isEqualTo(5);
         verify(userRepository).saveAndFlush(target);
+        ArgumentCaptor<AdminUserAudit> audit = ArgumentCaptor.forClass(
+                AdminUserAudit.class);
+        verify(auditRepository).saveAndFlush(audit.capture());
+        assertThat(audit.getValue().getActorUserId()).isEqualTo(actorId);
+        assertThat(audit.getValue().getTargetUserId()).isEqualTo(target.getId());
+        assertThat(audit.getValue().getAction()).isEqualTo(
+                AdminUserAuditAction.STATUS_CHANGED);
+        assertThat(audit.getValue().getBeforeValue()).isEqualTo("ACTIVE");
+        assertThat(audit.getValue().getAfterValue()).isEqualTo("BANNED");
     }
 
     @Test
@@ -252,6 +270,14 @@ class AdminUserServiceTest {
         assertThat(target.getAuthVersion()).isEqualTo(8);
         verify(userRoleRepository).saveAllAndFlush(any());
         verify(userRepository).saveAndFlush(target);
+        ArgumentCaptor<AdminUserAudit> audit = ArgumentCaptor.forClass(
+                AdminUserAudit.class);
+        verify(auditRepository).saveAndFlush(audit.capture());
+        assertThat(audit.getValue().getAction()).isEqualTo(
+                AdminUserAuditAction.ROLES_CHANGED);
+        assertThat(audit.getValue().getBeforeValue()).isEqualTo("ROLE_CITIZEN");
+        assertThat(audit.getValue().getAfterValue()).isEqualTo(
+                "ROLE_COORDINATOR,ROLE_RESCUER");
     }
 
     @Test
@@ -276,6 +302,7 @@ class AdminUserServiceTest {
         assertThat(target.getAuthVersion()).isEqualTo(3);
         verify(userRepository, never()).saveAndFlush(target);
         verify(userRoleRepository, never()).saveAllAndFlush(any());
+        verifyNoInteractions(auditRepository);
     }
 
     private User user(String status, int authVersion) {
