@@ -198,19 +198,16 @@ document.addEventListener("DOMContentLoaded", function () {
       "[data-realtime-state]",
     );
     const role = notificationPanel.dataset.activeRole || "";
-    let reconnectTimer = 0;
-    let handshakeTimer = 0;
-    let reconnectDelay = 1500;
-    let socket = null;
+    let client = null;
     let stompConnected = false;
-    let subscriptionSequence = 0;
-    let subscribedDestinations = new Set();
+    const subscriptions = new Map();
     let manualClose = false;
     let inboxGeneration = 0;
     let inboxController = null;
     let unreadAmount = 0;
     let lastInboxSync = 0;
     let teamIds = [];
+    let teamLookupGeneration = 0;
     const seenNotifications = new Set();
     const validUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 
@@ -374,27 +371,45 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
     function subscribe(destination) {
-      if (
-        !stompConnected ||
-        socket?.readyState !== WebSocket.OPEN ||
-        subscribedDestinations.has(destination)
-      )
-        return;
-      socket.send(
-        window.DrssStomp.frame("SUBSCRIBE", {
-          id: `drss-${++subscriptionSequence}`,
-          destination,
-          ack: "auto",
+      if (!client?.connected || subscriptions.has(destination)) return;
+      subscriptions.set(
+        destination,
+        client.subscribe(destination, (message) => {
+          let payload;
+          try {
+            payload = JSON.parse(message.body);
+          } catch (_) {
+            return;
+          }
+          if (
+            !validUuid.test(payload?.notificationId || "") ||
+            seenNotifications.has(payload.notificationId)
+          )
+            return;
+          seenNotifications.add(payload.notificationId);
+          if (seenNotifications.size > 100)
+            seenNotifications.delete(seenNotifications.values().next().value);
+          setUnread(unreadAmount + 1);
+          showToast(payload);
+          loadInbox(true);
         }),
       );
-      subscribedDestinations.add(destination);
+    }
+    function disconnectRealtime() {
+      const oldClient = client;
+      client = null;
+      stompConnected = false;
+      subscriptions.clear();
+      if (oldClient) void oldClient.deactivate({ force: true });
     }
     async function refreshTeamSubscriptions() {
       if (role !== "ROLE_RESCUER" || document.hidden) return;
+      const generation = ++teamLookupGeneration;
       try {
         const result = await window.DrssRetry.getJson(
           "/api/realtime/subscriptions",
         );
+        if (generation !== teamLookupGeneration) return;
         const nextIds = [
           ...new Set(
             (result.teamIds || []).filter(
@@ -402,33 +417,35 @@ document.addEventListener("DOMContentLoaded", function () {
             ),
           ),
         ];
-        const removed = teamIds.some((id) => !nextIds.includes(id));
         teamIds = nextIds;
-        if (removed && socket?.readyState === WebSocket.OPEN) {
-          // A removed membership must not keep an old team subscription.
-          socket.close();
-        } else {
-          teamIds.forEach((id) =>
-            subscribe(`/user/queue/teams/${id}/notifications`),
-          );
+        for (const [destination, subscription] of subscriptions) {
+          if (
+            destination.startsWith("/user/queue/teams/") &&
+            !teamIds.some(
+              (id) => destination === `/user/queue/teams/${id}/notifications`,
+            )
+          ) {
+            subscription.unsubscribe();
+            subscriptions.delete(destination);
+          }
         }
+        teamIds.forEach((id) =>
+          subscribe(`/user/queue/teams/${id}/notifications`),
+        );
+        if (!client) connectRealtime();
       } catch (_) {
-        // Membership cannot be established after a failed lookup.
+        if (generation !== teamLookupGeneration) return;
+        // A failed authorization lookup cannot preserve old team subscriptions.
         teamIds = [];
-        if (
-          subscribedDestinations.size > 1 &&
-          socket?.readyState === WebSocket.OPEN
-        )
-          socket.close();
+        disconnectRealtime();
       }
     }
     function connectRealtime() {
       if (
         manualClose ||
         document.hidden ||
-        !window.DrssStomp ||
-        socket?.readyState === WebSocket.OPEN ||
-        socket?.readyState === WebSocket.CONNECTING
+        !window.StompJs?.Client ||
+        client?.active
       )
         return;
       const csrf = csrfHeaders();
@@ -439,101 +456,50 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       try {
         const scheme = location.protocol === "https:" ? "wss:" : "ws:";
-        const currentSocket = new WebSocket(`${scheme}//${location.host}/ws`);
-        socket = currentSocket;
-        stompConnected = false;
-        subscribedDestinations = new Set();
-        subscriptionSequence = 0;
-        const parser = window.DrssStomp.createParser();
-        currentSocket.onopen = () => {
-          if (socket !== currentSocket) return;
-          currentSocket.send(
-            window.DrssStomp.frame("CONNECT", {
-              "accept-version": "1.2",
-              host: location.host,
-              "heart-beat": "0,0",
-              ...csrf,
-            }),
+        const currentClient = new window.StompJs.Client({
+          brokerURL: `${scheme}//${location.host}/ws`,
+          connectHeaders: csrf,
+          connectionTimeout: 8000,
+          heartbeatIncoming: 10000,
+          heartbeatOutgoing: 10000,
+          discardWebsocketOnCommFailure: true,
+          reconnectDelay: 1500,
+          reconnectTimeMode: window.StompJs.ReconnectionTimeMode.EXPONENTIAL,
+          maxReconnectDelay: 30000,
+          debug: () => {}, // Never log frames or authorization headers.
+        });
+        client = currentClient;
+        currentClient.onConnect = () => {
+          if (client !== currentClient) return;
+          stompConnected = true;
+          subscriptions.clear();
+          subscribe("/user/queue/notifications");
+          if (role === "ROLE_COORDINATOR")
+            subscribe("/user/queue/coordinator/notifications");
+          teamIds.forEach((id) =>
+            subscribe(`/user/queue/teams/${id}/notifications`),
           );
-          handshakeTimer = window.setTimeout(() => {
-            if (socket === currentSocket && !stompConnected)
-              currentSocket.close();
-          }, 8000);
+          refreshTeamSubscriptions();
+          loadInbox(true); // Reconcile notifications missed during downtime.
           if (realtimeState)
-            realtimeState.textContent = "Đang kết nối thông báo trực tiếp…";
+            realtimeState.textContent = "Đang nhận thông báo trực tiếp";
         };
-        currentSocket.onmessage = (event) => {
-          if (socket !== currentSocket) return;
-          let frames;
-          try {
-            frames = parser.push(event.data);
-          } catch (_) {
-            currentSocket.close();
-            return;
-          }
-          frames.forEach((frame) => {
-            if (frame.command === "CONNECTED") {
-              window.clearTimeout(handshakeTimer);
-              stompConnected = true;
-              reconnectDelay = 1500;
-              subscribe("/user/queue/notifications");
-              if (role === "ROLE_COORDINATOR")
-                subscribe("/user/queue/coordinator/notifications");
-              teamIds.forEach((id) =>
-                subscribe(`/user/queue/teams/${id}/notifications`),
-              );
-              refreshTeamSubscriptions();
-              loadInbox(true); // Reconcile notifications missed during downtime.
-              if (realtimeState)
-                realtimeState.textContent = "Đang nhận thông báo trực tiếp";
-            } else if (frame.command === "MESSAGE") {
-              let payload;
-              try {
-                payload = JSON.parse(frame.body);
-              } catch (_) {
-                return;
-              }
-              if (
-                !validUuid.test(payload?.notificationId || "") ||
-                seenNotifications.has(payload.notificationId)
-              )
-                return;
-              seenNotifications.add(payload.notificationId);
-              if (seenNotifications.size > 100)
-                seenNotifications.delete(
-                  seenNotifications.values().next().value,
-                );
-              setUnread(unreadAmount + 1);
-              showToast(payload);
-              loadInbox(true);
-            } else if (frame.command === "ERROR") {
-              if (realtimeState)
-                realtimeState.textContent =
-                  "Kết nối thông báo bị từ chối; đang thử lại…";
-              currentSocket.close();
-            }
-          });
+        currentClient.onStompError = () => {
+          if (client === currentClient && realtimeState)
+            realtimeState.textContent = "Kết nối thông báo bị từ chối.";
         };
-        currentSocket.onerror = () => currentSocket.close();
-        currentSocket.onclose = () => {
-          if (socket !== currentSocket) return;
-          window.clearTimeout(handshakeTimer);
-          socket = null;
+        currentClient.onWebSocketClose = () => {
+          if (client !== currentClient) return;
           stompConnected = false;
-          subscribedDestinations.clear();
-          if (manualClose || document.hidden) return;
-          if (realtimeState)
+          subscriptions.clear();
+          if (!manualClose && !document.hidden && realtimeState)
             realtimeState.textContent = "Mất kết nối, đang thử kết nối lại…";
-          window.clearTimeout(reconnectTimer);
-          reconnectTimer = window.setTimeout(connectRealtime, reconnectDelay);
-          reconnectDelay = Math.min(30000, reconnectDelay * 2);
         };
+        currentClient.activate();
       } catch (_) {
+        disconnectRealtime();
         if (realtimeState)
           realtimeState.textContent = "Không thể mở kết nối trực tiếp.";
-        window.clearTimeout(reconnectTimer);
-        reconnectTimer = window.setTimeout(connectRealtime, reconnectDelay);
-        reconnectDelay = Math.min(30000, reconnectDelay * 2);
       }
     }
     toggle?.addEventListener("click", () => {
@@ -578,13 +544,12 @@ document.addEventListener("DOMContentLoaded", function () {
         connectRealtime();
       } else {
         manualClose = true;
-        window.clearTimeout(reconnectTimer);
-        socket?.close();
+        disconnectRealtime();
       }
     });
     window.addEventListener("beforeunload", () => {
       manualClose = true;
-      socket?.close();
+      disconnectRealtime();
     });
   }
 

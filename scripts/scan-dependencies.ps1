@@ -7,8 +7,9 @@ $repository = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 if ((Resolve-Path ".").Path -ne $repository) {
     throw "Chạy từ thư mục gốc repository."
 }
-if ((git branch --show-current) -ne "feat/ltw-backend-hardening") {
-    throw "Sai branch."
+& git rev-parse --show-toplevel *> $null
+if ($LASTEXITCODE -ne 0) {
+    throw "Không ở trong Git repository."
 }
 if (-not (Test-Path -LiteralPath "pom.xml" -PathType Leaf)) {
     throw "Không tìm thấy pom.xml."
