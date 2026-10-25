@@ -17,6 +17,9 @@ public interface RequestCreateAttemptRepository
     Optional<RequestCreateAttempt> findOwnedForUpdate(
             @Param("userId") UUID userId, @Param("key") UUID key);
 
+    Optional<RequestCreateAttempt> findByUser_IdAndOperationKey(
+            UUID userId, UUID key);
+
     @Query("SELECT COUNT(a) FROM RequestCreateAttempt a WHERE a.user.id = :userId AND a.startedAt > :since")
     long countNewSince(@Param("userId") UUID userId,
                        @Param("since") LocalDateTime since);

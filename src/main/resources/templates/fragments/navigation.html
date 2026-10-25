@@ -109,15 +109,57 @@
           </li>
         </ul>
         <ul class="navbar-nav">
-          <li class="nav-item notification-control" sec:authorize="isAuthenticated()">
-            <button class="notification-trigger" type="button" data-notification-toggle aria-expanded="false" aria-controls="notification-panel">
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <span>Thông báo</span><span class="unread-badge" data-unread-count hidden></span>
+          <li
+            class="nav-item notification-control"
+            sec:authorize="isAuthenticated()"
+          >
+            <button
+              class="notification-trigger"
+              type="button"
+              data-notification-toggle
+              aria-expanded="false"
+              aria-controls="notification-panel"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span>Thông báo</span
+              ><span class="unread-badge" data-unread-count hidden></span>
             </button>
-            <section class="notification-panel" id="notification-panel" data-notification-panel hidden aria-label="Hộp thư thông báo" th:attr="data-active-role=${#authentication.principal.activeRole}">
-              <header><div><h2>Thông báo</h2><p data-realtime-state role="status">Đang tải thông báo…</p></div><button type="button" data-notification-refresh aria-label="Tải lại thông báo">↻</button></header>
-              <div class="notification-list" data-notification-list aria-live="polite"><p class="notification-state">Đang tải thông báo…</p></div>
-              <footer><button type="button" data-notification-retry hidden>Thử lại</button></footer>
+            <section
+              class="notification-panel"
+              id="notification-panel"
+              data-notification-panel
+              hidden
+              aria-label="Hộp thư thông báo"
+              th:attr="data-active-role=${#authentication.principal.activeRole}"
+            >
+              <header>
+                <div>
+                  <h2>Thông báo</h2>
+                  <p data-realtime-state role="status">Đang tải thông báo…</p>
+                </div>
+                <button
+                  type="button"
+                  data-notification-refresh
+                  aria-label="Tải lại thông báo"
+                >
+                  ↻
+                </button>
+              </header>
+              <div
+                class="notification-list"
+                data-notification-list
+                aria-live="polite"
+              >
+                <p class="notification-state">Đang tải thông báo…</p>
+              </div>
             </section>
           </li>
           <li class="nav-item" sec:authorize="isAuthenticated()">

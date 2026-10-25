@@ -102,6 +102,23 @@ class RequestCreationGateServiceTest {
         verify(attempts, never()).countNewSince(eq(OWNER), any());
     }
 
+    @Test
+    void failedOperationRetriesSameKeyOnlyTwice() {
+        var attempt = attempt(RequestCreateAttempt.State.FAILED);
+        when(attempts.findOwnedForUpdate(OWNER, KEY)).thenReturn(Optional.of(attempt));
+        assertThat(gate.claim(OWNER, KEY, HASH).kind())
+                .isEqualTo(RequestCreationDecision.Kind.NEW);
+        assertThat(attempt.getRetryCount()).isEqualTo(1);
+        attempt.setState(RequestCreateAttempt.State.FAILED);
+        assertThat(gate.claim(OWNER, KEY, HASH).kind())
+                .isEqualTo(RequestCreationDecision.Kind.NEW);
+        assertThat(attempt.getRetryCount()).isEqualTo(2);
+        attempt.setState(RequestCreateAttempt.State.FAILED);
+        assertThat(gate.claim(OWNER, KEY, HASH).kind())
+                .isEqualTo(RequestCreationDecision.Kind.FAILED);
+        verify(attempts, never()).countNewSince(eq(OWNER), any());
+    }
+
     private RequestCreateAttempt attempt(RequestCreateAttempt.State state) {
         RequestCreateAttempt attempt = new RequestCreateAttempt();
         attempt.setUser(owner);

@@ -25,7 +25,7 @@
       method="post"
       enctype="multipart/form-data"
       class="card shadow-sm"
-      data-disable-on-submit
+      th:attr="data-request-owner-id=${requestCreateOwnerId}"
     >
       <input type="hidden" name="operationKey" th:value="${operationKey}" />
       <div class="card-body p-4">
@@ -153,14 +153,9 @@
             >Quay lại</a
           >
         </div>
-        <p
-          class="text-secondary small mt-3 mb-0"
-          role="status"
-          aria-live="polite"
-          data-submit-status
-        ></p>
       </div>
     </form>
     <script th:src="@{/js/request-media-validation.js}" defer></script>
+    <script th:src="@{/js/request-create.js(v=2026102502)}" defer></script>
   </section>
 </html>

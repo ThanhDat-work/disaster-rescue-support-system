@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,6 +45,8 @@ import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
 import vn.edu.hcmute.drss.services.CitizenRequestService;
 import vn.edu.hcmute.drss.services.CitizenCreateWorkflowService;
 import vn.edu.hcmute.drss.services.RequestCreationDecision;
+import vn.edu.hcmute.drss.services.RequestCreationGateService;
+import vn.edu.hcmute.drss.services.RequestCreationStatus;
 import vn.edu.hcmute.drss.support.NoDatabaseRepositoryMocks;
 import vn.edu.hcmute.drss.exceptions.InvalidMediaUploadException;
 
@@ -66,6 +69,49 @@ class CitizenRequestControllerMvcTest {
 
     @MockitoBean
     private CitizenCreateWorkflowService workflow;
+
+    @MockitoBean
+    private RequestCreationGateService creationGate;
+
+    @Test
+    void creationStatusIsOwnerScopedAndRequiresCitizenRole() throws Exception {
+        UUID key = UUID.randomUUID();
+        when(creationGate.status(USER_ID, key))
+                .thenReturn(new RequestCreationStatus("PROCESSING", null, false));
+        mockMvc.perform(get("/api/request-creations/" + key)
+                        .with(authenticatedAs("ROLE_CITIZEN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("PROCESSING"));
+        mockMvc.perform(get("/api/request-creations/" + key)
+                        .with(authenticatedAs("ROLE_RESCUER")))
+                .andExpect(status().isForbidden());
+        verify(creationGate).status(USER_ID, key);
+    }
+
+    @Test
+    void jsonCreateRequiresCsrfAndReturnsCommittedRequestId() throws Exception {
+        UUID key = UUID.randomUUID();
+        UUID requestId = UUID.randomUUID();
+        when(workflow.create(eq(USER_ID), eq(key), any(), any()))
+                .thenReturn(new RequestCreationDecision(
+                        RequestCreationDecision.Kind.NEW, requestId, null));
+        var request = multipart("/api/request-creations")
+                .param("disasterTypeId", "7")
+                .param("urgency", "HIGH")
+                .param("operationKey", key.toString())
+                .accept("application/json")
+                .with(authenticatedAs("ROLE_CITIZEN"));
+        mockMvc.perform(request).andExpect(status().isForbidden());
+        mockMvc.perform(multipart("/api/request-creations")
+                        .param("disasterTypeId", "7")
+                        .param("urgency", "HIGH")
+                        .param("operationKey", key.toString())
+                        .accept("application/json")
+                        .with(authenticatedAs("ROLE_CITIZEN"))
+                        .with(csrf()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.requestId").value(requestId.toString()));
+    }
 
     @Test
     void citizenRoutesRequireAuthenticationAndCitizenRole() throws Exception {

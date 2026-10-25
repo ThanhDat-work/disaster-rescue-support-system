@@ -120,6 +120,28 @@ class RequestCreationIdempotencyIntegrationIT {
         }
     }
 
+    @Test
+    void statusIsOwnerScopedAndFailedKeyCanRetryWithoutNewKey() {
+        UUID key = UUID.randomUUID();
+        try {
+            assertThat(gate.status(CITIZEN, key).state()).isEqualTo("NOT_FOUND");
+            assertThat(gate.claim(CITIZEN, key, HASH).kind())
+                    .isEqualTo(RequestCreationDecision.Kind.NEW);
+            assertThat(gate.status(CITIZEN, key).state()).isEqualTo("PROCESSING");
+            UUID otherCitizen = UUID.fromString("11111111-1111-1111-1111-111111111111");
+            assertThat(gate.status(otherCitizen, key).state()).isEqualTo("NOT_FOUND");
+            gate.fail(CITIZEN, key);
+            assertThat(gate.status(CITIZEN, key).retryAllowed()).isTrue();
+            assertThat(gate.claim(CITIZEN, key, HASH).kind())
+                    .isEqualTo(RequestCreationDecision.Kind.NEW);
+            assertThat(gate.status(CITIZEN, key).state()).isEqualTo("PROCESSING");
+            assertThatThrownBy(() -> gate.claim(CITIZEN, key, "b".repeat(64)))
+                    .isInstanceOf(IllegalArgumentException.class);
+        } finally {
+            cleanup(List.of(key), null, null);
+        }
+    }
+
     private CreateCitizenRequest form(String description) {
         Long type = sql.queryForObject("SELECT MIN(id) FROM disaster_types WHERE is_active = 1",
                 Long.class);

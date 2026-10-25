@@ -128,6 +128,11 @@ public class ApplicationSecurityConfig {
                                                 .hasAuthority("ROLE_RESCUER")
 
                                                 .requestMatchers(
+                                                                "/api/request-creations",
+                                                                "/api/request-creations/**")
+                                                .hasAuthority("ROLE_CITIZEN")
+
+                                                .requestMatchers(
                                                                 "/requests/**")
                                                 .hasAuthority("ROLE_CITIZEN")
 

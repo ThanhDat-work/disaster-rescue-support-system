@@ -50,6 +50,9 @@ public class RequestCreateAttempt extends BaseEntity {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
+    @Column(name = "retry_count", nullable = false)
+    private int retryCount;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "request_id")
     private RescueRequest request;

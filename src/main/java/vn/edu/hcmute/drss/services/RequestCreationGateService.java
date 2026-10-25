@@ -14,6 +14,7 @@ import vn.edu.hcmute.drss.repositories.UserRepository;
 
 @Service
 public class RequestCreationGateService {
+    private static final int MAX_FAILURE_RETRIES = 2;
     private final RequestCreateAttemptRepository attempts;
     private final UserRepository users;
     private final Clock clock;
@@ -54,7 +55,19 @@ public class RequestCreationGateService {
                 case SUCCEEDED -> new RequestCreationDecision(
                         RequestCreationDecision.Kind.REPLAY,
                         existing.getRequest().getId(), null);
-                case FAILED -> RequestCreationDecision.of(RequestCreationDecision.Kind.FAILED);
+                case FAILED -> {
+                    if (existing.getRetryCount() >= MAX_FAILURE_RETRIES) {
+                        yield RequestCreationDecision.of(RequestCreationDecision.Kind.FAILED);
+                    }
+                    // Same owner, key and exact payload; failure was persisted
+                    // only after the prior request transaction rolled back.
+                    existing.setRetryCount(existing.getRetryCount() + 1);
+                    existing.setState(RequestCreateAttempt.State.PROCESSING);
+                    existing.setStartedAt(now);
+                    existing.setExpiresAt(now.plusMinutes(3));
+                    attempts.saveAndFlush(existing);
+                    yield RequestCreationDecision.of(RequestCreationDecision.Kind.NEW);
+                }
                 case UNKNOWN -> RequestCreationDecision.of(RequestCreationDecision.Kind.UNKNOWN);
                 case PROCESSING -> {
                     if (now.isAfter(existing.getExpiresAt())) {
@@ -106,5 +119,26 @@ public class RequestCreationGateService {
                 attempts.saveAndFlush(attempt);
             }
         });
+    }
+
+    @Transactional(readOnly = true)
+    public RequestCreationStatus status(UUID userId, UUID key) {
+        if (userId == null || key == null) {
+            throw new IllegalArgumentException("Invalid request operation");
+        }
+        return attempts.findByUser_IdAndOperationKey(userId, key)
+                .map(attempt -> {
+                    RequestCreateAttempt.State state = attempt.getState();
+                    if (state == RequestCreateAttempt.State.PROCESSING
+                            && LocalDateTime.now(clock).isAfter(attempt.getExpiresAt())) {
+                        state = RequestCreateAttempt.State.UNKNOWN;
+                    }
+                    UUID requestId = state == RequestCreateAttempt.State.SUCCEEDED
+                            ? attempt.getRequest().getId() : null;
+                    return new RequestCreationStatus(state.name(), requestId,
+                            state == RequestCreateAttempt.State.FAILED
+                                    && attempt.getRetryCount() < MAX_FAILURE_RETRIES);
+                })
+                .orElse(new RequestCreationStatus("NOT_FOUND", null, true));
     }
 }

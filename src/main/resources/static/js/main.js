@@ -197,14 +197,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const realtimeState = notificationPanel.querySelector(
       "[data-realtime-state]",
     );
-    const retry = notificationPanel.querySelector("[data-notification-retry]");
     const role = notificationPanel.dataset.activeRole || "";
     let reconnectTimer = 0;
     let reconnectDelay = 1500;
     let socket = null;
     let frameBuffer = "";
     let manualClose = false;
-    let loadFailed = false;
+    let inboxGeneration = 0;
+    let inboxController = null;
     const teamIds = [
       ...new Set(
         [...document.querySelectorAll("[data-realtime-team-id]")]
@@ -229,14 +229,13 @@ document.addEventListener("DOMContentLoaded", function () {
         amount ? `Thông báo, ${amount} chưa đọc` : "Thông báo",
       );
     }
-    function showState(message, failed) {
+    function showState(message) {
       list.replaceChildren(
         Object.assign(document.createElement("p"), {
           className: "notification-state",
           textContent: message,
         }),
       );
-      if (retry) retry.hidden = !failed;
     }
     function formatDate(value) {
       if (!value) return "";
@@ -249,14 +248,22 @@ document.addEventListener("DOMContentLoaded", function () {
           }).format(date);
     }
     async function loadInbox() {
+      const generation = ++inboxGeneration;
+      inboxController?.abort();
+      const controller = new AbortController();
+      inboxController = controller;
+      showState("Đang tải thông báo…");
       if (realtimeState) realtimeState.textContent = "Đang tải thông báo…";
       try {
-        const response = await fetch("/api/notifications", {
-          headers: { Accept: "application/json" },
-          credentials: "same-origin",
+        const inbox = await window.DrssRetry.getJson("/api/notifications", {
+          controller,
+          retry: loadInbox,
+          shouldShow: () =>
+            generation === inboxGeneration && !notificationPanel.hidden,
+          message:
+            "Hộp thư tải quá lâu hoặc kết nối bị gián đoạn. Bấm Thử lại để tải lại thông báo.",
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const inbox = await response.json();
+        if (generation !== inboxGeneration) return false;
         setUnread(inbox.unreadCount);
         const fragment = document.createDocumentFragment();
         (inbox.items || []).forEach((item) => {
@@ -283,14 +290,24 @@ document.addEventListener("DOMContentLoaded", function () {
             button.addEventListener("click", async () => {
               button.disabled = true;
               try {
-                const result = await fetch(
-                  `/api/notifications/${encodeURIComponent(item.id)}/read`,
-                  {
-                    method: "POST",
-                    credentials: "same-origin",
-                    headers: { Accept: "application/json", ...csrfHeaders() },
-                  },
-                );
+                const result = await window.DrssRetry.run({
+                  retry: loadInbox,
+                  message:
+                    "Chưa xác định được trạng thái đã đọc. Bấm Thử lại để tải lại hộp thư.",
+                  request: (signal) =>
+                    fetch(
+                      `/api/notifications/${encodeURIComponent(item.id)}/read`,
+                      {
+                        method: "POST",
+                        credentials: "same-origin",
+                        headers: {
+                          Accept: "application/json",
+                          ...csrfHeaders(),
+                        },
+                        signal,
+                      },
+                    ),
+                });
                 if (!result.ok) throw new Error(`HTTP ${result.status}`);
                 await loadInbox();
               } catch (_) {
@@ -306,21 +323,18 @@ document.addEventListener("DOMContentLoaded", function () {
           fragment.append(row);
         });
         if (inbox.items?.length) list.replaceChildren(fragment);
-        else showState("Chưa có thông báo nào.", false);
-        loadFailed = false;
-        if (retry) retry.hidden = true;
+        else showState("Chưa có thông báo nào.");
         if (realtimeState && !socket?.OPEN)
           realtimeState.textContent = "Cập nhật khi mở hộp thư";
         return true;
-      } catch (_) {
-        loadFailed = true;
-        showState(
-          "Không tải được thông báo. Kiểm tra kết nối rồi thử lại.",
-          true,
-        );
+      } catch (error) {
+        if (generation !== inboxGeneration) return false;
+        showState("Chưa tải được thông báo.");
         if (realtimeState)
           realtimeState.textContent = "Không kết nối được với hộp thư.";
         return false;
+      } finally {
+        if (generation === inboxGeneration) inboxController = null;
       }
     }
     async function connectRealtime() {
@@ -421,7 +435,6 @@ document.addEventListener("DOMContentLoaded", function () {
     notificationPanel
       .querySelector("[data-notification-refresh]")
       ?.addEventListener("click", loadInbox);
-    retry?.addEventListener("click", loadInbox);
     loadInbox().then(connectRealtime);
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) {

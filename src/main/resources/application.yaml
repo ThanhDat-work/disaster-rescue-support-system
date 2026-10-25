@@ -66,6 +66,7 @@ app:
     api-key: ${CLOUDINARY_API_KEY}
     api-secret: ${CLOUDINARY_API_SECRET}
     folder: ${CLOUDINARY_FOLDER:drss/local/dat}
+    http-timeout-seconds: ${CLOUDINARY_HTTP_TIMEOUT_SECONDS:60}
     max-file-size: 10MB
     max-files-per-request: 5
     max-video-files-per-request: 1

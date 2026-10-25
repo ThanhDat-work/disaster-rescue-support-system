@@ -63,7 +63,8 @@ public class CitizenRequestController {
     }
 
     @GetMapping("/new")
-    public String createForm(Model model) {
+    public String createForm(Model model,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
         if (!model.containsAttribute("operationKey")) {
             model.addAttribute("operationKey", UUID.randomUUID());
         }
@@ -71,6 +72,7 @@ public class CitizenRequestController {
                 "createCitizenRequest",
                 new CreateCitizenRequest()
         );
+        model.addAttribute("requestCreateOwnerId", principal.userId());
         return showCreateForm(model);
     }
 
@@ -88,6 +90,7 @@ public class CitizenRequestController {
             RedirectAttributes flash
     ) {
         if (binding.hasErrors()) {
+            model.addAttribute("requestCreateOwnerId", principal.userId());
             model.addAttribute("operationKey", operationKey == null
                     ? UUID.randomUUID() : operationKey);
             return showCreateForm(model);
@@ -112,30 +115,28 @@ public class CitizenRequestController {
                                 : "Đã gửi yêu cầu.");
                 return "redirect:/requests/" + outcome.requestId();
             }
-            flash.addFlashAttribute("operationKey",
-                    outcome.kind() == RequestCreationDecision.Kind.FAILED
-                            ? UUID.randomUUID() : operationKey);
+            flash.addFlashAttribute("operationKey", operationKey);
             String reason = switch (outcome.kind()) {
                 case LIMITED -> "Bạn đã đạt giới hạn tạo yêu cầu. Vui lòng thử lại sau "
                         + Math.max(1, java.time.Duration.between(
                                 java.time.LocalDateTime.now(), outcome.retryAt()
                         ).toSeconds()) + " giây.";
                 case PROCESSING -> "Yêu cầu đang được xử lý; đừng gửi một yêu cầu mới.";
-                case FAILED -> "Lần gửi trước thất bại. Hãy mở biểu mẫu mới nếu muốn thử lại.";
+                case FAILED -> "Lần gửi trước thất bại nhiều lần. Kiểm tra danh sách yêu cầu trước khi mở biểu mẫu mới.";
                 case UNKNOWN -> "Chưa xác định được kết quả. Vui lòng kiểm tra danh sách yêu cầu trước khi thử lại.";
                 default -> "Không thể xác định kết quả gửi yêu cầu.";
             };
             flash.addFlashAttribute("errorMsg", reason);
             return "redirect:/requests/new";
         } catch (IllegalArgumentException exception) {
-            flash.addFlashAttribute("operationKey", UUID.randomUUID());
+            flash.addFlashAttribute("operationKey", operationKey);
             flash.addFlashAttribute(
                     "errorMsg",
                     exception.getMessage()
             );
             return "redirect:/requests/new";
         } catch (MediaStorageException exception) {
-            flash.addFlashAttribute("operationKey", UUID.randomUUID());
+            flash.addFlashAttribute("operationKey", operationKey);
             flash.addFlashAttribute(
                     "errorMsg",
                     "Kh\u00f4ng th\u1ec3 l\u01b0u media l\u00fac n\u00e0y. "
