@@ -199,19 +199,20 @@ document.addEventListener("DOMContentLoaded", function () {
     );
     const role = notificationPanel.dataset.activeRole || "";
     let reconnectTimer = 0;
+    let handshakeTimer = 0;
     let reconnectDelay = 1500;
     let socket = null;
-    let frameBuffer = "";
+    let stompConnected = false;
+    let subscriptionSequence = 0;
+    let subscribedDestinations = new Set();
     let manualClose = false;
     let inboxGeneration = 0;
     let inboxController = null;
-    const teamIds = [
-      ...new Set(
-        [...document.querySelectorAll("[data-realtime-team-id]")]
-          .map((node) => node.dataset.realtimeTeamId)
-          .filter((id) => /^[0-9a-f-]{36}$/i.test(id)),
-      ),
-    ];
+    let unreadAmount = 0;
+    let lastInboxSync = 0;
+    let teamIds = [];
+    const seenNotifications = new Set();
+    const validUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 
     function csrfHeaders() {
       const token = document.querySelector('meta[name="_csrf"]')?.content;
@@ -222,6 +223,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     function setUnread(value) {
       const amount = Math.max(0, Number(value) || 0);
+      unreadAmount = amount;
       unread.hidden = amount === 0;
       unread.textContent = amount > 99 ? "99+" : String(amount);
       toggle.setAttribute(
@@ -247,13 +249,46 @@ document.addEventListener("DOMContentLoaded", function () {
             timeStyle: "short",
           }).format(date);
     }
-    async function loadInbox() {
+    function showToast(payload) {
+      let host = document.querySelector("[data-realtime-toast-host]");
+      if (!host) {
+        host = document.createElement("div");
+        host.className = "drss-toast-host";
+        host.dataset.realtimeToastHost = "";
+        host.setAttribute("aria-live", "polite");
+        document.body.append(host);
+      }
+      const toast = document.createElement("div");
+      toast.className = "drss-notification-toast";
+      toast.setAttribute("role", "status");
+      const title = document.createElement("strong");
+      title.textContent =
+        typeof payload.title === "string"
+          ? payload.title.slice(0, 120)
+          : "Có thông báo mới";
+      const action = document.createElement("button");
+      action.type = "button";
+      action.textContent = "Xem thông báo";
+      action.addEventListener("click", () => {
+        toast.remove();
+        if (notificationPanel.hidden) toggle?.click();
+        else loadInbox();
+      });
+      toast.append(title, action);
+      host.append(toast);
+      while (host.childElementCount > 3) host.firstElementChild.remove();
+      window.setTimeout(() => toast.remove(), 7000);
+    }
+    async function loadInbox(options) {
+      const silent = options === true;
       const generation = ++inboxGeneration;
       inboxController?.abort();
       const controller = new AbortController();
       inboxController = controller;
-      showState("Đang tải thông báo…");
-      if (realtimeState) realtimeState.textContent = "Đang tải thông báo…";
+      if (!silent) {
+        showState("Đang tải thông báo…");
+        if (realtimeState) realtimeState.textContent = "Đang tải thông báo…";
+      }
       try {
         const inbox = await window.DrssRetry.getJson("/api/notifications", {
           controller,
@@ -265,6 +300,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         if (generation !== inboxGeneration) return false;
         setUnread(inbox.unreadCount);
+        lastInboxSync = Date.now();
         const fragment = document.createDocumentFragment();
         (inbox.items || []).forEach((item) => {
           const row = document.createElement("article");
@@ -324,80 +360,167 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         if (inbox.items?.length) list.replaceChildren(fragment);
         else showState("Chưa có thông báo nào.");
-        if (realtimeState && !socket?.OPEN)
+        if (realtimeState && !stompConnected && !silent)
           realtimeState.textContent = "Cập nhật khi mở hộp thư";
         return true;
       } catch (error) {
         if (generation !== inboxGeneration) return false;
-        showState("Chưa tải được thông báo.");
-        if (realtimeState)
+        if (!silent) showState("Chưa tải được thông báo.");
+        if (realtimeState && !silent)
           realtimeState.textContent = "Không kết nối được với hộp thư.";
         return false;
       } finally {
         if (generation === inboxGeneration) inboxController = null;
       }
     }
-    async function connectRealtime() {
+    function subscribe(destination) {
+      if (
+        !stompConnected ||
+        socket?.readyState !== WebSocket.OPEN ||
+        subscribedDestinations.has(destination)
+      )
+        return;
+      socket.send(
+        window.DrssStomp.frame("SUBSCRIBE", {
+          id: `drss-${++subscriptionSequence}`,
+          destination,
+          ack: "auto",
+        }),
+      );
+      subscribedDestinations.add(destination);
+    }
+    async function refreshTeamSubscriptions() {
+      if (role !== "ROLE_RESCUER" || document.hidden) return;
+      try {
+        const result = await window.DrssRetry.getJson(
+          "/api/realtime/subscriptions",
+        );
+        const nextIds = [
+          ...new Set(
+            (result.teamIds || []).filter(
+              (id) => typeof id === "string" && validUuid.test(id),
+            ),
+          ),
+        ];
+        const removed = teamIds.some((id) => !nextIds.includes(id));
+        teamIds = nextIds;
+        if (removed && socket?.readyState === WebSocket.OPEN) {
+          // A removed membership must not keep an old team subscription.
+          socket.close();
+        } else {
+          teamIds.forEach((id) =>
+            subscribe(`/user/queue/teams/${id}/notifications`),
+          );
+        }
+      } catch (_) {
+        // Membership cannot be established after a failed lookup.
+        teamIds = [];
+        if (
+          subscribedDestinations.size > 1 &&
+          socket?.readyState === WebSocket.OPEN
+        )
+          socket.close();
+      }
+    }
+    function connectRealtime() {
       if (
         manualClose ||
         document.hidden ||
+        !window.DrssStomp ||
         socket?.readyState === WebSocket.OPEN ||
         socket?.readyState === WebSocket.CONNECTING
       )
         return;
-      if (role === "ROLE_RESCUER" && teamIds.length === 0) {
+      const csrf = csrfHeaders();
+      if (Object.keys(csrf).length !== 1) {
         if (realtimeState)
-          realtimeState.textContent =
-            "Thông báo đội được làm mới khi mở hộp thư.";
+          realtimeState.textContent = "Không thể xác thực kết nối trực tiếp.";
         return;
       }
       try {
         const scheme = location.protocol === "https:" ? "wss:" : "ws:";
-        socket = new WebSocket(`${scheme}//${location.host}/ws`);
-        socket.onopen = () => {
-          reconnectDelay = 1500;
-          socket.send(
-            "CONNECT\naccept-version:1.2\nheart-beat:10000,10000\n\u0000",
+        const currentSocket = new WebSocket(`${scheme}//${location.host}/ws`);
+        socket = currentSocket;
+        stompConnected = false;
+        subscribedDestinations = new Set();
+        subscriptionSequence = 0;
+        const parser = window.DrssStomp.createParser();
+        currentSocket.onopen = () => {
+          if (socket !== currentSocket) return;
+          currentSocket.send(
+            window.DrssStomp.frame("CONNECT", {
+              "accept-version": "1.2",
+              host: location.host,
+              "heart-beat": "0,0",
+              ...csrf,
+            }),
           );
+          handshakeTimer = window.setTimeout(() => {
+            if (socket === currentSocket && !stompConnected)
+              currentSocket.close();
+          }, 8000);
           if (realtimeState)
             realtimeState.textContent = "Đang kết nối thông báo trực tiếp…";
         };
-        socket.onmessage = (event) => {
-          frameBuffer += String(event.data || "");
-          const frames = frameBuffer.split("\u0000");
-          frameBuffer = frames.pop() || "";
+        currentSocket.onmessage = (event) => {
+          if (socket !== currentSocket) return;
+          let frames;
+          try {
+            frames = parser.push(event.data);
+          } catch (_) {
+            currentSocket.close();
+            return;
+          }
           frames.forEach((frame) => {
-            const separator = frame.indexOf("\n\n");
-            if (separator < 0) return;
-            if (frame.startsWith("CONNECTED")) {
-              const destinations =
-                role === "ROLE_COORDINATOR"
-                  ? ["/user/queue/coordinator/notifications"]
-                  : role === "ROLE_RESCUER"
-                    ? teamIds.map(
-                        (id) => `/user/queue/teams/${id}/notifications`,
-                      )
-                    : ["/user/queue/notifications"];
-              destinations.forEach((destination, index) =>
-                socket?.send(
-                  `SUBSCRIBE\nid=drss-notifications-${index}\ndestination=${destination}\nack=auto\n\u0000`,
-                ),
+            if (frame.command === "CONNECTED") {
+              window.clearTimeout(handshakeTimer);
+              stompConnected = true;
+              reconnectDelay = 1500;
+              subscribe("/user/queue/notifications");
+              if (role === "ROLE_COORDINATOR")
+                subscribe("/user/queue/coordinator/notifications");
+              teamIds.forEach((id) =>
+                subscribe(`/user/queue/teams/${id}/notifications`),
               );
+              refreshTeamSubscriptions();
+              loadInbox(true); // Reconcile notifications missed during downtime.
               if (realtimeState)
                 realtimeState.textContent = "Đang nhận thông báo trực tiếp";
-            }
-            if (frame.startsWith("MESSAGE")) {
+            } else if (frame.command === "MESSAGE") {
+              let payload;
               try {
-                JSON.parse(frame.slice(separator + 2));
-                loadInbox();
+                payload = JSON.parse(frame.body);
               } catch (_) {
-                /* Ignore malformed frame without rendering it. */
+                return;
               }
+              if (
+                !validUuid.test(payload?.notificationId || "") ||
+                seenNotifications.has(payload.notificationId)
+              )
+                return;
+              seenNotifications.add(payload.notificationId);
+              if (seenNotifications.size > 100)
+                seenNotifications.delete(
+                  seenNotifications.values().next().value,
+                );
+              setUnread(unreadAmount + 1);
+              showToast(payload);
+              loadInbox(true);
+            } else if (frame.command === "ERROR") {
+              if (realtimeState)
+                realtimeState.textContent =
+                  "Kết nối thông báo bị từ chối; đang thử lại…";
+              currentSocket.close();
             }
           });
         };
-        socket.onerror = () => socket?.close();
-        socket.onclose = () => {
+        currentSocket.onerror = () => currentSocket.close();
+        currentSocket.onclose = () => {
+          if (socket !== currentSocket) return;
+          window.clearTimeout(handshakeTimer);
+          socket = null;
+          stompConnected = false;
+          subscribedDestinations.clear();
           if (manualClose || document.hidden) return;
           if (realtimeState)
             realtimeState.textContent = "Mất kết nối, đang thử kết nối lại…";
@@ -408,6 +531,9 @@ document.addEventListener("DOMContentLoaded", function () {
       } catch (_) {
         if (realtimeState)
           realtimeState.textContent = "Không thể mở kết nối trực tiếp.";
+        window.clearTimeout(reconnectTimer);
+        reconnectTimer = window.setTimeout(connectRealtime, reconnectDelay);
+        reconnectDelay = Math.min(30000, reconnectDelay * 2);
       }
     }
     toggle?.addEventListener("click", () => {
@@ -435,11 +561,20 @@ document.addEventListener("DOMContentLoaded", function () {
     notificationPanel
       .querySelector("[data-notification-refresh]")
       ?.addEventListener("click", loadInbox);
-    loadInbox().then(connectRealtime);
+    loadInbox();
+    refreshTeamSubscriptions();
+    connectRealtime();
+    window.setInterval(() => {
+      if (document.hidden) return;
+      if (!stompConnected && Date.now() - lastInboxSync > 15000)
+        loadInbox(true);
+      if (role === "ROLE_RESCUER") refreshTeamSubscriptions();
+    }, 15000);
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) {
         manualClose = false;
         loadInbox();
+        refreshTeamSubscriptions();
         connectRealtime();
       } else {
         manualClose = true;
