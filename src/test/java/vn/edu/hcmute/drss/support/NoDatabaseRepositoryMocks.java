@@ -2,6 +2,7 @@ package vn.edu.hcmute.drss.support;
 
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import vn.edu.hcmute.drss.repositories.AuthRateLimitRepository;
+import vn.edu.hcmute.drss.repositories.RequestCreateAttemptRepository;
 import vn.edu.hcmute.drss.repositories.DisasterTypeRepository;
 import vn.edu.hcmute.drss.repositories.MediaAssetRepository;
 import vn.edu.hcmute.drss.repositories.MediaCleanupTaskRepository;
@@ -30,6 +31,7 @@ import java.lang.annotation.Target;
 @MockitoBean(types = {
         VerificationTokenRepository.class,
         AuthRateLimitRepository.class,
+        RequestCreateAttemptRepository.class,
         UserRepository.class,
         RoleRepository.class,
         UserRoleRepository.class,

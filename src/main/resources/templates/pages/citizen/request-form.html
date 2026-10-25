@@ -25,7 +25,9 @@
       method="post"
       enctype="multipart/form-data"
       class="card shadow-sm"
+      data-disable-on-submit
     >
+      <input type="hidden" name="operationKey" th:value="${operationKey}" />
       <div class="card-body p-4">
         <div class="row g-3">
           <div class="col-md-6">
@@ -151,6 +153,12 @@
             >Quay lại</a
           >
         </div>
+        <p
+          class="text-secondary small mt-3 mb-0"
+          role="status"
+          aria-live="polite"
+          data-submit-status
+        ></p>
       </div>
     </form>
     <script th:src="@{/js/request-media-validation.js}" defer></script>

@@ -47,6 +47,8 @@ spring:
       "[mail.smtp.writetimeout]": 5000
 
 app:
+  request-create:
+    max-per-minute: ${REQUEST_CREATE_MAX_PER_MINUTE:5}
   auth:
     jwt-secret: ${JWT_SECRET}
     otp-hmac-secret: ${OTP_HMAC_SECRET}

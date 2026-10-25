@@ -48,7 +48,17 @@ public class CitizenRequestMediaService {
             CreateCitizenRequest form,
             List<MultipartFile> files
     ) {
-        List<ValidatedMediaUpload> validated = validator.validate(files);
+        return createValidated(userId, null, form, validator.validate(files));
+    }
+
+    public RescueRequest createAdmitted(UUID userId, UUID key,
+            CreateCitizenRequest form, List<ValidatedMediaUpload> validated) {
+        if (key == null) throw new IllegalArgumentException("Operation key required");
+        return createValidated(userId, key, form, validated);
+    }
+
+    private RescueRequest createValidated(UUID userId, UUID key,
+            CreateCitizenRequest form, List<ValidatedMediaUpload> validated) {
         List<UploadedMedia> uploaded = new ArrayList<>(validated.size());
 
         try {
@@ -67,7 +77,9 @@ public class CitizenRequestMediaService {
         }
 
         try {
-            return persistence.create(userId, form, uploaded);
+            return key == null
+                    ? persistence.create(userId, form, uploaded)
+                    : persistence.createAdmitted(userId, key, form, uploaded);
         } catch (IllegalArgumentException businessFailure) {
             compensate(uploaded, businessFailure);
             throw businessFailure;
