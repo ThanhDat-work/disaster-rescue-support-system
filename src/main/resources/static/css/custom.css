@@ -4055,7 +4055,7 @@ form .input-group > .form-select {
   stroke-linejoin: round;
 }
 .chart-area {
-  fill-opacity: 0.28;
+  fill-opacity: 0.1;
   stroke: none;
 }
 .chart-point {

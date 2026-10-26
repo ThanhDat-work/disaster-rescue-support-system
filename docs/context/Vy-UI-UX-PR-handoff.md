@@ -29,6 +29,11 @@ Tài liệu này tóm tắt các thay đổi chưa commit trong workspace để 
 - Các số liệu tổng quan trang chủ lấy từ dữ liệu controller thay vì giá trị cố định.
 - Đã bỏ thanh phân trang phía trên bị trùng trong danh sách yêu cầu của người dân.
 
+### Biểu đồ thống kê theo vai trò
+
+- Sửa biểu đồ hành động điều phối theo tuần trên trang hồ sơ: mỗi đường biểu diễn số lượng riêng của trạng thái tương ứng, không cộng dồn thành các mức 2, 3, 4, 5.
+- Điều chỉnh thang trục theo giá trị lớn nhất của từng chuỗi và dùng màu riêng cho trạng thái phân công để dễ phân biệt với trạng thái đã đóng.
+
 ### Xử lý quay lại sau khi đổi vai trò
 
 - Endpoint đổi vai trò nhận vai trò đích và đường dẫn quay lại.
@@ -37,13 +42,13 @@ Tài liệu này tóm tắt các thay đổi chưa commit trong workspace để 
 ## Các file chính có thay đổi
 
 - **Backend:** `ActiveRoleController`, `HomeController`, `NotificationController`, `NotificationRepository`, `RescueTeamRepository` và `NotificationAccessService`.
-- **Template:** thanh điều hướng dùng chung, layout chính, trang đổi vai trò, danh sách yêu cầu của người dân và trang chủ.
-- **Frontend:** `main.js`, `async-retry.js`, `home-earth.js`, `page-skeleton.js` và các CSS liên quan (`custom.css`, `style-tokens.css`, `realtime-notifications.css`, `async-retry.css`, `home-page.css`, `page-skeleton.css`).
+- **Template:** thanh điều hướng dùng chung, layout chính, trang đổi vai trò, hồ sơ, danh sách yêu cầu của người dân và trang chủ.
+- **Frontend:** `main.js`, `async-retry.js`, `profile-charts.js`, `home-earth.js`, `page-skeleton.js` và các CSS liên quan (`custom.css`, `style-tokens.css`, `realtime-notifications.css`, `async-retry.css`, `home-page.css`, `page-skeleton.css`).
 
 ## Phạm vi và lưu ý khi review
 
 - Tài liệu `LTW-02-Vy-UI-UX-impact-inventory.md` của leader ghi không tạo skeleton giả cho các trang SSR chỉ vì chúng dùng chung layout. Skeleton khi điều hướng GET ở trên theo yêu cầu UX mới nhất, nhưng khác với ghi chú đó. Cần nêu rõ đây là khác biệt có chủ đích để reviewer xác nhận.
-- Biểu đồ thống kê của điều phối chưa được sửa trong diff hiện tại. `request-statistics.html` và `statistics-charts.js` không có thay đổi.
+- Biểu đồ hành động điều phối theo tuần trên trang hồ sơ đã được sửa ở `profile-charts.js`. Trang thống kê yêu cầu riêng (`request-statistics.html` và `statistics-charts.js`) không nằm trong thay đổi này.
 - Thiết kế lại trang chủ và luồng đổi vai trò rộng hơn phạm vi UI CP02–CP07 trong tài liệu. Nếu PR chỉ dành cho milestone đó, cân nhắc tách các phần này sang PR riêng.
 - Cơ chế điều hướng hiện tải/kiểm tra toàn bộ HTML trước, rồi mới điều hướng trình duyệt bình thường. Mốc 10 giây áp dụng cho bước kiểm tra đó; cần xác nhận hành vi thực tế với mạng bị giới hạn trước khi merge.
 - Chưa chạy kiểm thử tự động hoặc kiểm tra bố cục trên trình duyệt.
@@ -55,12 +60,13 @@ Tài liệu này tóm tắt các thay đổi chưa commit trong workspace để 
 3. Mở thông báo của yêu cầu/nhiệm vụ thuộc vai trò hiện tại và vai trò khác; xác nhận đổi vai trò xong quay lại đúng trang chi tiết.
 4. Đánh dấu một tin, tất cả tin và các tin được chọn; xác nhận chỉ thông báo của người đăng nhập bị cập nhật và badge thay đổi đúng.
 5. Kiểm tra badge với 0, 1, 99 và trên 99 thông báo chưa đọc.
-6. Kiểm tra quả địa cầu và bố cục trang chủ ở kích thước desktop, tablet và mobile.
+6. Kiểm tra biểu đồ hồ sơ điều phối với một tuần có số liệu 2, 1, 1, 1; các đường cần lần lượt dừng ở 2, 1, 1, 1, không bị cộng dồn.
+7. Kiểm tra quả địa cầu và bố cục trang chủ ở kích thước desktop, tablet và mobile.
 
 ## Comment để đăng lên pull request
 
 ```text
-Đã cập nhật hộp thông báo (mở chi tiết yêu cầu/nhiệm vụ, chuyển vai trò khi cần, đánh dấu đã đọc từng tin/tất cả/các tin được chọn và badge 99+), luồng điều hướng GET có skeleton chờ tối đa 10 giây trước khi hiện lớp phủ “Thử lại”, cùng giao diện trang chủ và quả địa cầu WebGL.
+Đã cập nhật hộp thông báo (mở chi tiết yêu cầu/nhiệm vụ, chuyển vai trò khi cần, đánh dấu đã đọc từng tin/tất cả/các tin được chọn và badge 99+), luồng điều hướng GET có skeleton chờ tối đa 10 giây trước khi hiện lớp phủ “Thử lại”, giao diện trang chủ/quả địa cầu WebGL và biểu đồ hành động điều phối theo tuần (các chuỗi không còn cộng dồn).
 
-Lớp phủ có thể đóng bằng nút ×, click bên ngoài hoặc phím Esc; thao tác đóng hủy điều hướng đang chờ. Lưu ý: skeleton cho điều hướng GET khác ghi chú trong LTW-02 về việc không tạo skeleton giả cho trang SSR. Lỗi biểu đồ thống kê điều phối chưa được chỉnh trong diff này. Chưa chạy kiểm thử tự động hoặc kiểm tra giao diện trên trình duyệt; nhờ review và xác nhận phạm vi trước khi merge.
+Lớp phủ có thể đóng bằng nút ×, click bên ngoài hoặc phím Esc; thao tác đóng hủy điều hướng đang chờ. Biểu đồ điều phối trên trang hồ sơ hiện vẽ từng chuỗi độc lập, không cộng dồn. Lưu ý: skeleton cho điều hướng GET khác ghi chú trong LTW-02 về việc không tạo skeleton giả cho trang SSR. Chưa chạy kiểm thử tự động hoặc kiểm tra giao diện trên trình duyệt; nhờ review và xác nhận phạm vi trước khi merge.
 ```
