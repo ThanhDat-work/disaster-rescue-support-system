@@ -1,0 +1,112 @@
+.drss-citizen-request-table,
+.drss-admin-user-table,
+.drss-rescuer-task-table {
+  width: 100%;
+  min-width: 1320px;
+  table-layout: fixed;
+}
+
+.drss-rescuer-task-table {
+  min-width: 1400px;
+}
+
+.drss-citizen-request-table th:nth-child(1) {
+  width: 18%;
+}
+.drss-citizen-request-table th:nth-child(2) {
+  width: 12%;
+}
+.drss-citizen-request-table th:nth-child(3) {
+  width: 14%;
+}
+.drss-citizen-request-table th:nth-child(4) {
+  width: 18%;
+}
+.drss-citizen-request-table th:nth-child(5) {
+  width: 10%;
+}
+.drss-citizen-request-table th:nth-child(6) {
+  width: 13%;
+}
+.drss-citizen-request-table th:nth-child(7) {
+  width: 15%;
+}
+
+.drss-admin-user-table th:nth-child(1) {
+  width: 18%;
+}
+.drss-admin-user-table th:nth-child(2) {
+  width: 14%;
+}
+.drss-admin-user-table th:nth-child(3) {
+  width: 25%;
+}
+.drss-admin-user-table th:nth-child(4) {
+  width: 10%;
+}
+.drss-admin-user-table th:nth-child(5) {
+  width: 23%;
+}
+.drss-admin-user-table th:nth-child(6) {
+  width: 10%;
+}
+
+.drss-rescuer-task-table th:nth-child(1) {
+  width: 18%;
+}
+.drss-rescuer-task-table th:nth-child(2) {
+  width: 20%;
+}
+.drss-rescuer-task-table th:nth-child(3) {
+  width: 17%;
+}
+.drss-rescuer-task-table th:nth-child(4) {
+  width: 12%;
+}
+.drss-rescuer-task-table th:nth-child(5) {
+  width: 10%;
+}
+.drss-rescuer-task-table th:nth-child(6) {
+  width: 11%;
+}
+.drss-rescuer-task-table th:nth-child(7) {
+  width: 12%;
+}
+
+.drss-citizen-request-table td:first-child,
+.drss-admin-user-table td:nth-child(2),
+.drss-rescuer-task-table td:first-child,
+.drss-rescuer-task-table td:nth-child(2) > .fw-semibold,
+.drss-citizen-request-table td:nth-child(6),
+.drss-rescuer-task-table td:nth-child(6),
+.drss-citizen-request-table td:last-child,
+.drss-admin-user-table td:last-child,
+.drss-rescuer-task-table td:last-child {
+  white-space: nowrap;
+}
+
+.drss-citizen-request-table td:last-child > div {
+  flex-wrap: nowrap !important;
+}
+
+.drss-citizen-request-table td:last-child .btn,
+.drss-admin-user-table td:last-child .btn,
+.drss-rescuer-task-table td:last-child .btn {
+  white-space: nowrap;
+}
+
+.drss-citizen-request-table td:nth-child(4),
+.drss-admin-user-table td:nth-child(3),
+.drss-rescuer-task-table td:nth-child(3) {
+  overflow-wrap: anywhere;
+}
+
+.drss-profile-page .drss-profile-stat-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 126px;
+}
+
+.drss-profile-page .drss-profile-stat-card > strong {
+  margin-top: 0.35rem;
+}

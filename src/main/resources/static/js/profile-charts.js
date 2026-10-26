@@ -7,7 +7,7 @@
   const number = new Intl.NumberFormat("vi-VN");
   const localized = { PENDING: "Chờ xác minh", VERIFIED: "Đã xác minh", ASSIGNED: "Đã phân công", IN_PROGRESS: "Đang cứu hộ", RESCUED: "Đã cứu hộ", CLOSED: "Đã đóng", REJECTED: "Từ chối", CANCELLED: "Đã hủy", LOW: "Thấp", MEDIUM: "Trung bình", HIGH: "Cao", CRITICAL: "Nguy cấp" };
   const labelFor = (label) => localized[label] || label.replaceAll("_", " ");
-  const colorFor = (label, index) => /critical|reject|từ chối|khẩn|nguy cấp/i.test(label) ? "#c82436" : /pending|chờ|wait/i.test(label) ? "#bd7516" : /rescu|cứu hộ|closed|đã đóng|hoàn thành/i.test(label) ? "#16795a" : colors[index % colors.length];
+  const colorFor = (label, index) => /critical|reject|từ chối|khẩn|nguy cấp/i.test(label) ? "#c82436" : /pending|chờ|wait/i.test(label) ? "#bd7516" : /assigned|phân công/i.test(label) ? "#d97825" : /rescu|cứu hộ|closed|đã đóng|hoàn thành/i.test(label) ? "#16795a" : colors[index % colors.length];
   const fillFor = (label, index) => /critical|reject|từ chối|khẩn|nguy cấp/i.test(label) ? "linear-gradient(100deg,#f0444f,#bd1f3a)" : colorFor(label, index);
 
   function node(tag, attrs = {}, text) {
@@ -69,8 +69,7 @@
     const margin = { top: 18, right: 18, bottom: 42, left: 42 };
     const plotW = width - margin.left - margin.right;
     const plotH = height - margin.top - margin.bottom;
-    const totals = labels.map((_, index) => series.reduce((sum, item) => sum + item.values[index], 0));
-    const maxValue = Math.max(1, ...totals);
+    const maxValue = Math.max(1, ...series.flatMap(({ values }) => values));
     const tickStep = Math.max(1, Math.ceil(maxValue / 4));
     const yMax = tickStep * 4;
     const x = (index) => margin.left + (labels.length < 2 ? plotW / 2 : (plotW * index) / (labels.length - 1));
@@ -91,19 +90,17 @@
       svg.append(svgNode("text", { x: x(index), y: height - 12, "text-anchor": "middle", class: "chart-axis-label" }, String(label)));
     });
 
-    const cumulative = labels.map(() => 0);
     series.forEach(({ values, color, name }) => {
-      const lower = [...cumulative];
-      values.forEach((value, index) => { cumulative[index] += value; });
-      const upper = [...cumulative];
-      const topPoints = upper.map((value, index) => `${x(index)} ${y(value)}`);
-      const lowerPoints = lower.map((value, index) => `${x(index)} ${y(value)}`).reverse();
-      const areaPath = `M ${topPoints.join(" L ")} L ${lowerPoints.join(" L ")} Z`;
+      const topPoints = values.map((value, index) => `${x(index)} ${y(value)}`);
+      const baselinePoints = values
+        .map((_, index) => `${x(index)} ${y(0)}`)
+        .reverse();
+      const areaPath = `M ${topPoints.join(" L ")} L ${baselinePoints.join(" L ")} Z`;
       svg.append(svgNode("path", { d: areaPath, class: "chart-area", fill: color }));
-      const points = upper.map((value, index) => `${x(index)},${y(value)}`).join(" ");
+      const points = values.map((value, index) => `${x(index)},${y(value)}`).join(" ");
       svg.append(svgNode("polyline", { points, class: "chart-line", stroke: color }));
       values.forEach((value, index) => {
-        const circle = svgNode("circle", { cx: x(index), cy: y(upper[index]), r: 3.5, class: "chart-point", fill: color });
+        const circle = svgNode("circle", { cx: x(index), cy: y(value), r: 3.5, class: "chart-point", fill: color });
         circle.append(svgNode("title", {}, `${name}, ${labels[index]}: ${number.format(value)}`));
         svg.append(circle);
       });

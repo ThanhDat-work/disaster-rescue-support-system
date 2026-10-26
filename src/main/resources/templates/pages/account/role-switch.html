@@ -30,6 +30,10 @@
               method="post"
               class="vstack gap-3"
             >
+              <input type="hidden" name="returnTo" th:value="${roleSwitchReturnTo}" />
+              <p class="mb-0 text-primary-emphasis" th:if="${roleSwitchReturnTo}">
+                Xác nhận mật khẩu để chuyển vai trò và mở chi tiết thông báo.
+              </p>
               <div
                 class="alert alert-danger"
                 th:if="${#fields.hasGlobalErrors()}"

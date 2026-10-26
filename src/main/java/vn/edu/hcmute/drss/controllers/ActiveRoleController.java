@@ -13,6 +13,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import vn.edu.hcmute.drss.dtos.InitialRoleSelectionRequest;
 import vn.edu.hcmute.drss.dtos.RoleSwitchRequest;
 import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
@@ -123,10 +124,14 @@ public class ActiveRoleController {
     @GetMapping("/account/role-switch")
     public String roleSwitchForm(
             Authentication authentication,
-            Model model
+            Model model,
+            @RequestParam(name = "targetRole", required = false)
+            String targetRole,
+            @RequestParam(name = "returnTo", required = false)
+            String returnTo
     ) {
         AuthenticatedUserPrincipal principal = principal(authentication);
-        prepareSwitchModel(model, principal);
+        prepareSwitchModel(model, principal, targetRole, returnTo);
         return "pages/account/role-switch";
     }
 
@@ -138,12 +143,14 @@ public class ActiveRoleController {
             Authentication authentication,
             HttpServletRequest request,
             HttpServletResponse response,
-            Model model
+            Model model,
+            @RequestParam(name = "returnTo", required = false)
+            String returnTo
     ) {
         AuthenticatedUserPrincipal principal = principal(authentication);
 
         if (bindingResult.hasErrors()) {
-            prepareSwitchModel(model, principal);
+            prepareSwitchModel(model, principal, form.targetRole(), returnTo);
             return "pages/account/role-switch";
         }
 
@@ -168,28 +175,69 @@ public class ActiveRoleController {
             );
         } else {
             addCookie(response, result);
-            return "redirect:" + result.redirectPath();
+            String destination = safeRoleReturnPath(
+                    returnTo,
+                    form.targetRole()
+            );
+            return "redirect:" + (destination == null
+                    ? result.redirectPath()
+                    : destination);
         }
 
-        prepareSwitchModel(model, principal);
+        prepareSwitchModel(model, principal, form.targetRole(), returnTo);
         return "pages/account/role-switch";
     }
 
     private void prepareSwitchModel(
             Model model,
-            AuthenticatedUserPrincipal principal
+            AuthenticatedUserPrincipal principal,
+            String requestedRole,
+            String returnTo
     ) {
+        var availableRoles = activeRoleService.activeRoles(principal.userId());
+        String normalizedRequestedRole = ActiveRoleService.normalizeRole(
+                requestedRole
+        );
+        if (normalizedRequestedRole != null
+                && (!availableRoles.contains(normalizedRequestedRole)
+                || normalizedRequestedRole.equals(principal.activeRole()))) {
+            normalizedRequestedRole = null;
+        }
         if (!model.containsAttribute("roleSwitchRequest")) {
             model.addAttribute(
                     "roleSwitchRequest",
-                    new RoleSwitchRequest(null, null)
+                    new RoleSwitchRequest(normalizedRequestedRole, null)
             );
         }
         model.addAttribute("activeRole", principal.activeRole());
+        model.addAttribute("availableRoles", availableRoles);
         model.addAttribute(
-                "availableRoles",
-                activeRoleService.activeRoles(principal.userId())
+                "roleSwitchReturnTo",
+                safeRoleReturnPath(returnTo, normalizedRequestedRole)
         );
+    }
+
+    private String safeRoleReturnPath(String returnTo, String targetRole) {
+        if (returnTo == null || returnTo.isBlank()) return null;
+        String normalizedRole = ActiveRoleService.normalizeRole(targetRole);
+        if (normalizedRole == null) return null;
+        String prefix = switch (normalizedRole) {
+            case ActiveRoleService.ROLE_CITIZEN -> "/requests/";
+            case ActiveRoleService.ROLE_COORDINATOR -> "/coordinator/requests/";
+            case ActiveRoleService.ROLE_RESCUER -> "/team/tasks/";
+            default -> null;
+        };
+        if (prefix == null || !returnTo.startsWith(prefix)) return null;
+
+        String id = returnTo.substring(prefix.length());
+        if (id.contains("/") || id.contains("?") || id.contains("#")) return null;
+        try {
+            UUID requestId = UUID.fromString(id);
+            if (!requestId.toString().equalsIgnoreCase(id)) return null;
+            return prefix + requestId;
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
     }
 
     private AuthenticatedUserPrincipal principal(

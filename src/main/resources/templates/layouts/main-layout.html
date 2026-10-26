@@ -24,15 +24,54 @@
       crossorigin="anonymous"
     />
     <!-- Custom Style Tokens -->
-    <link rel="stylesheet" th:href="@{/css/style-tokens.css(v=2026102303)}" />
-    <link rel="stylesheet" th:href="@{/css/custom.css(v=2026102502)}" />
-    <link rel="stylesheet" th:href="@{/css/async-retry.css(v=2026102503)}" />
+    <link rel="stylesheet" th:href="@{/css/style-tokens.css(v=2026102602)}" />
+    <link rel="stylesheet" th:href="@{/css/custom.css(v=2026102603)}" />
+    <link rel="stylesheet" th:href="@{/css/ui-table-fixes.css(v=2026102601)}" />
+    <link rel="stylesheet" th:href="@{/css/home-page.css(v=2026102609)}" />
+    <link rel="stylesheet" th:href="@{/css/async-retry.css(v=2026102601)}" />
     <link
       rel="stylesheet"
-      th:href="@{/css/realtime-notifications.css(v=2026102501)}"
+      th:href="@{/css/realtime-notifications.css(v=2026102504)}"
     />
+    <link rel="stylesheet" th:href="@{/css/page-skeleton.css(v=2026102601)}" />
+    <script th:src="@{/js/page-skeleton.js(v=2026102602)}" defer></script>
   </head>
   <body>
+    <div
+      class="page-skeleton-screen"
+      data-page-skeleton-screen
+      role="status"
+      aria-live="polite"
+    >
+      <span class="visually-hidden">Đang tải trang…</span>
+      <div class="page-skeleton-nav" aria-hidden="true">
+        <i class="skeleton-block skeleton-brand-mark"></i>
+        <i class="skeleton-block skeleton-brand-name"></i>
+        <i class="skeleton-block skeleton-nav-link"></i>
+        <i class="skeleton-block skeleton-nav-link"></i>
+        <i class="skeleton-block skeleton-nav-action"></i>
+      </div>
+      <div class="page-skeleton-content" aria-hidden="true">
+        <div class="skeleton-block skeleton-eyebrow"></div>
+        <div class="skeleton-block skeleton-heading"></div>
+        <div
+          class="skeleton-block skeleton-heading skeleton-heading-short"
+        ></div>
+        <div class="skeleton-block skeleton-copy"></div>
+        <div class="skeleton-block skeleton-copy skeleton-copy-short"></div>
+        <div class="skeleton-block skeleton-action"></div>
+        <div class="page-skeleton-stats">
+          <i class="skeleton-block skeleton-stat"></i>
+          <i class="skeleton-block skeleton-stat"></i>
+          <i class="skeleton-block skeleton-stat"></i>
+          <i class="skeleton-block skeleton-stat"></i>
+        </div>
+        <div class="page-skeleton-panels">
+          <i class="skeleton-block skeleton-panel"></i>
+          <i class="skeleton-block skeleton-panel"></i>
+        </div>
+      </div>
+    </div>
     <!-- Navbar -->
     <div th:replace="~{fragments/navigation :: navbar}"></div>
 
@@ -50,8 +89,9 @@
       integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
       crossorigin="anonymous"
     ></script>
-    <script th:src="@{/js/async-retry.js(v=2026102503)}"></script>
+    <script th:src="@{/js/async-retry.js(v=2026102603)}"></script>
     <script th:src="@{/js/vendor/stompjs-7.2.0.min.js(v=7.2.0)}"></script>
-    <script th:src="@{/js/main.js(v=2026102505)}"></script>
+    <script th:src="@{/js/main.js(v=2026102602)}"></script>
+    <script th:src="@{/js/notification-open.js(v=2026102601)}"></script>
   </body>
 </html>

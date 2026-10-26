@@ -3798,7 +3798,7 @@ a {
 .btn-emergency,
 .nav-emergency,
 .btn-outline-danger:hover {
-  background-image: var(--drss-emergency-gradient);
+  background: var(--drss-emergency);
 }
 .btn-danger,
 .btn-emergency {
@@ -4055,7 +4055,7 @@ form .input-group > .form-select {
   stroke-linejoin: round;
 }
 .chart-area {
-  fill-opacity: 0.28;
+  fill-opacity: 0.1;
   stroke: none;
 }
 .chart-point {
@@ -4418,4 +4418,68 @@ form .input-group > .form-select {
   .carousel-slide.is-active {
     animation: none !important;
   }
+}
+
+/* Shared clean light theme applied to every page using the main layout. */
+body {
+  background: var(--bg-body);
+  color: var(--text-main);
+  font-family: var(--font-body);
+}
+
+a { color: var(--primary); }
+a:hover { color: var(--primary-hover); }
+.btn.btn-primary {
+  border-color: #0369a1;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 54%, #0369a1 100%);
+}
+.btn.btn-primary:hover,
+.btn.btn-primary:focus-visible {
+  border-color: #075985;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 58%, #075985 100%);
+}
+.app-navbar {
+  margin-bottom: 1.35rem;
+  border-bottom-color: var(--glass-border);
+  background: var(--glass-bg) !important;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.035);
+  backdrop-filter: var(--blur) saturate(125%);
+}
+.brand-mark {
+  border-color: rgba(2, 132, 199, 0.18);
+  background: var(--primary-light);
+  color: var(--primary);
+  box-shadow: none;
+}
+.app-navbar .nav-emergency,
+.app-navbar .nav-emergency:hover,
+.app-navbar .nav-emergency:focus-visible {
+  border-radius: var(--radius-pill);
+  background: var(--drss-emergency-gradient);
+  color: #fff !important;
+}
+.app-navbar .nav-emergency:hover,
+.app-navbar .nav-emergency:focus-visible { background: linear-gradient(135deg, #e33849 0%, #c51e3d 58%, #9e1734 100%); }
+.btn.btn-danger,
+.btn.btn-emergency,
+.btn.btn-outline-danger:hover,
+.navbar-nav .nav-emergency {
+  background: var(--drss-emergency-gradient);
+  color: #fff;
+}
+.btn.btn-danger:hover,
+.btn.btn-danger:focus-visible,
+.btn.btn-emergency:hover,
+.btn.btn-emergency:focus-visible,
+.btn.btn-outline-danger:hover,
+.navbar-nav .nav-emergency:hover,
+.navbar-nav .nav-emergency:focus-visible {
+  background: linear-gradient(135deg, #e33849 0%, #c51e3d 58%, #9e1734 100%);
+}
+.card {
+  border-color: var(--glass-border);
+  border-radius: var(--radius-card);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--blur);
 }

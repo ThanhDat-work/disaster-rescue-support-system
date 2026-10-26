@@ -41,6 +41,78 @@
   outline-offset: 3px;
 }
 
+.notification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--drss-border, #d9e2ec);
+}
+
+.notification-actions button {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #b8d8ed;
+  border-radius: 7px;
+  background: #f3f9fd;
+  color: #145b84;
+  font: 600 0.76rem/1.25 var(--font-body, sans-serif);
+  cursor: pointer;
+}
+
+.notification-actions button:hover:not(:disabled) {
+  background: #e5f3fc;
+  border-color: #7db8dd;
+}
+
+.notification-actions button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.notification-actions button:focus-visible,
+.notification-select:focus-visible {
+  outline: 2px solid #1688d4;
+  outline-offset: 2px;
+}
+
+.notification-item {
+  grid-template-columns: 8px minmax(0, 1fr);
+}
+
+.notification-list.is-selecting .notification-item {
+  grid-template-columns: 8px 20px minmax(0, 1fr);
+  column-gap: 6px;
+  padding-left: 20px;
+  padding-right: 18px;
+}
+
+.notification-item > div { min-width: 0; }
+
+.notification-content-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.notification-content-link:hover h3 { color: #087ec1; text-decoration: underline; }
+
+.notification-content-link:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid #1688d4;
+  outline-offset: 3px;
+}
+
+.notification-select {
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  accent-color: #087ec1;
+  cursor: pointer;
+}
+
+.notification-select-spacer { width: 16px; }
+
 @media (max-width: 575px) {
   .drss-toast-host {
     top: 4.75rem;

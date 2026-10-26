@@ -1,27 +1,27 @@
 :root {
   color-scheme: light;
-  --drss-bg-light: #f2f6fb;
+  --drss-bg-light: #f8fafc;
   --drss-surface: #ffffff;
   --drss-surface-raised: #ffffff;
-  --drss-text-main: #152b43;
-  --drss-text-muted: #344b65;
-  --drss-primary: #1e5d99;
-  --drss-primary-hover: #164876;
-  --drss-primary-soft: #e3effa;
+  --drss-text-main: #0f172a;
+  --drss-text-muted: #475569;
+  --drss-primary: #0284c7;
+  --drss-primary-hover: #0369a1;
+  --drss-primary-soft: #e0f2fe;
   --drss-emergency: #c82436;
   --drss-emergency-soft: #fff0f1;
-  --drss-emergency-gradient: linear-gradient(135deg, #f0444f 0%, #d8223b 54%, #ad1838 100%);
-  --drss-success: #18704f;
-  --drss-success-soft: #e8f5ef;
-  --drss-warning: #865416;
+  --drss-emergency-gradient: linear-gradient(135deg, #f04452 0%, #d92743 54%, #b51c3b 100%);
+  --drss-success: #047857;
+  --drss-success-soft: #ecfdf5;
+  --drss-warning: #b45309;
   --drss-warning-soft: #fff5df;
-  --drss-info: #1e5d99;
-  --drss-info-soft: #e7f1fb;
-  --drss-border: #d4e0ed;
-  --drss-focus: #196db2;
-  --drss-disabled: #e5ebf1;
-  --drss-hover: #edf4fb;
-  --drss-active: #e2edf8;
+  --drss-info: #0284c7;
+  --drss-info-soft: #e0f2fe;
+  --drss-border: #e2e8f0;
+  --drss-focus: #0284c7;
+  --drss-disabled: #e2e8f0;
+  --drss-hover: #f1f5f9;
+  --drss-active: #e0f2fe;
   --urgency-low: #18704f;
   --urgency-medium: #865416;
   --urgency-high: #bd5b21;
@@ -35,4 +35,28 @@
   --transition-smooth: 180ms ease;
   --font-body: 'Be Vietnam Pro', 'Inter', Arial, sans-serif;
   --font-display: 'Be Vietnam Pro', 'Inter', Arial, sans-serif;
+
+  /* Shared clean light theme aliases for page and component styles. */
+  --bg-body: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-subtle: #f1f5f9;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-light: #94a3b8;
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
+  --primary-light: #e0f2fe;
+  --primary-glow: rgba(56, 189, 248, 0.28);
+  --danger-sos: #c82436;
+  --danger-light: #fff0f1;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-bg-hover: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(226, 232, 240, 0.88);
+  --glass-shadow: 0 10px 30px -5px rgba(2, 132, 199, 0.08),
+    0 4px 6px -2px rgba(15, 23, 42, 0.04);
+  --radius-card: 16px;
+  --radius-pill: 9999px;
+  --blur: blur(14px);
 }

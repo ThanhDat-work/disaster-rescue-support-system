@@ -22,27 +22,33 @@ $output = Join-Path (Split-Path -Parent $repository) (
 )
 New-Item -ItemType Directory -Path $output -ErrorAction Stop | Out-Null
 
-$templates = @(
+$frontendSources = @(
     Get-ChildItem -Path "src/main/resources/templates" `
         -Filter "*.html" -File -Recurse
+    Get-ChildItem -Path "src/main/resources/static/js" `
+        -Filter "*.js" -File -Recurse
 )
-$cdnPattern = 'https://cdn\.jsdelivr\.net/npm/([A-Za-z0-9._-]+)@([0-9A-Za-z.+-]+)'
+$cdnPattern = 'https://cdn\.jsdelivr\.net/(?:npm|gh)/(?<component>[^''"\s<>]+?)@(?<version>[A-Za-z0-9.+-]+)(?=/|["''\s<>]|$)'
 $cdnRows = @(
-    foreach ($template in $templates) {
-        $html = Get-Content -LiteralPath $template.FullName -Raw
-        foreach ($tag in [regex]::Matches(
-                $html, '(?is)<(?:script|link)\b[^>]*>')) {
-            foreach ($hit in [regex]::Matches($tag.Value, $cdnPattern)) {
-                [pscustomobject]@{
-                    source = $template.FullName.Substring($repository.Length + 1)
-                    line = ([regex]::Matches(
-                            $html.Substring(0, $tag.Index + $hit.Index),
-                            "`n")).Count + 1
-                    component = $hit.Groups[1].Value
-                    version = $hit.Groups[2].Value
-                    sri_present = ($tag.Value -match '(?i)\bintegrity\s*=')
-                    scan_status = "MANUAL_REVIEW_REQUIRED"
+    foreach ($source in $frontendSources) {
+        $raw = Get-Content -LiteralPath $source.FullName -Raw
+        foreach ($hit in [regex]::Matches($raw, $cdnPattern)) {
+            $tagStart = $raw.LastIndexOf('<', $hit.Index)
+            $tag = ""
+            if ($tagStart -ge 0) {
+                $tagEnd = $raw.IndexOf('>', $tagStart)
+                if ($tagEnd -ge $hit.Index) {
+                    $tag = $raw.Substring($tagStart, $tagEnd - $tagStart + 1)
                 }
+            }
+            [pscustomobject]@{
+                source = $source.FullName.Substring($repository.Length + 1)
+                line = ([regex]::Matches(
+                        $raw.Substring(0, $hit.Index), "`n")).Count + 1
+                component = $hit.Groups['component'].Value
+                version = $hit.Groups['version'].Value
+                sri_present = ($tag -match '(?i)^<(?:script|link)\b[^>]*\bintegrity\s*=')
+                scan_status = "MANUAL_REVIEW_REQUIRED"
             }
         }
     }

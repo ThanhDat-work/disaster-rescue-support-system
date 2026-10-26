@@ -194,6 +194,15 @@ document.addEventListener("DOMContentLoaded", function () {
     const toggle = document.querySelector("[data-notification-toggle]");
     const list = notificationPanel.querySelector("[data-notification-list]");
     const unread = document.querySelector("[data-unread-count]");
+    const markAllButton = notificationPanel.querySelector(
+      "[data-notification-mark-all]",
+    );
+    const markSelectedButton = notificationPanel.querySelector(
+      "[data-notification-mark-selected]",
+    );
+    const selectionToggle = notificationPanel.querySelector(
+      "[data-notification-selection-toggle]",
+    );
     const realtimeState = notificationPanel.querySelector(
       "[data-realtime-state]",
     );
@@ -205,6 +214,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let inboxGeneration = 0;
     let inboxController = null;
     let unreadAmount = 0;
+    let selectionMode = false;
     let lastInboxSync = 0;
     let teamIds = [];
     let teamLookupGeneration = 0;
@@ -223,6 +233,7 @@ document.addEventListener("DOMContentLoaded", function () {
       unreadAmount = amount;
       unread.hidden = amount === 0;
       unread.textContent = amount > 99 ? "99+" : String(amount);
+      if (markAllButton) markAllButton.disabled = amount === 0;
       toggle.setAttribute(
         "aria-label",
         amount ? `Thông báo, ${amount} chưa đọc` : "Thông báo",
@@ -235,6 +246,101 @@ document.addEventListener("DOMContentLoaded", function () {
           textContent: message,
         }),
       );
+    }
+    function syncSelectedAction() {
+      const selectedCount = list.querySelectorAll(
+        "[data-notification-select]:checked",
+      ).length;
+      if (markSelectedButton) {
+        markSelectedButton.hidden = !selectionMode;
+        markSelectedButton.disabled = selectedCount === 0;
+        markSelectedButton.textContent = selectedCount
+          ? `Đánh dấu đã chọn (${selectedCount})`
+          : "Đánh dấu đã chọn";
+      }
+    }
+    function setSelectionMode(enabled) {
+      selectionMode = enabled;
+      list.classList.toggle("is-selecting", selectionMode);
+      if (selectionToggle) {
+        selectionToggle.textContent = selectionMode ? "Hủy chọn" : "Chọn";
+        selectionToggle.setAttribute("aria-pressed", String(selectionMode));
+      }
+      list.querySelectorAll(".notification-item").forEach((row) => {
+        row
+          .querySelector(
+            "[data-notification-select], .notification-select-spacer",
+          )
+          ?.remove();
+        if (!selectionMode) return;
+
+        let selector = document.createElement("span");
+        selector.className = "notification-select-spacer";
+        if (row.classList.contains("is-unread") && row.dataset.notificationId) {
+          selector = document.createElement("input");
+          selector.type = "checkbox";
+          selector.className = "notification-select";
+          selector.dataset.notificationSelect = row.dataset.notificationId;
+          selector.setAttribute("aria-label", "Chọn thông báo");
+          selector.addEventListener("change", syncSelectedAction);
+        }
+        row.insertBefore(selector, row.lastElementChild);
+      });
+      if (!selectionMode) {
+        list.querySelectorAll("[data-notification-select]").forEach((input) => {
+          input.checked = false;
+        });
+      }
+      syncSelectedAction();
+    }
+    async function submitReadAction(path, notificationIds) {
+      const hasBody = Array.isArray(notificationIds);
+      const response = await window.DrssRetry.run({
+        retry: () => submitReadAction(path, notificationIds),
+        message:
+          "Không thể cập nhật trạng thái thông báo. Bấm Thử lại để tiếp tục.",
+        request: async (signal) => {
+          const result = await fetch(path, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              Accept: "application/json",
+              ...(hasBody ? { "Content-Type": "application/json" } : {}),
+              ...csrfHeaders(),
+            },
+            ...(hasBody ? { body: JSON.stringify(notificationIds) } : {}),
+            signal,
+          });
+          if (!result.ok) throw new Error(`HTTP ${result.status}`);
+          return result;
+        },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      await loadInbox();
+    }
+    function notificationDestination(item) {
+      const referenceId = String(item.referenceId || "");
+      if (!validUuid.test(referenceId)) return null;
+      if (item.referenceType === "RESCUE_REQUEST") {
+        const targetRole =
+          item.eventType === "REQUEST_CREATED"
+            ? "ROLE_COORDINATOR"
+            : "ROLE_CITIZEN";
+        return {
+          role: targetRole,
+          url:
+            targetRole === "ROLE_COORDINATOR"
+              ? `/coordinator/requests/${referenceId}`
+              : `/requests/${referenceId}`,
+        };
+      }
+      if (item.referenceType === "RESCUE_ASSIGNMENT") {
+        return {
+          role: "ROLE_RESCUER",
+          url: `/team/tasks/${referenceId}`,
+        };
+      }
+      return null;
     }
     function formatDate(value) {
       if (!value) return "";
@@ -266,10 +372,19 @@ document.addEventListener("DOMContentLoaded", function () {
       const action = document.createElement("button");
       action.type = "button";
       action.textContent = "Xem thông báo";
-      action.addEventListener("click", () => {
+      action.addEventListener("click", async () => {
         toast.remove();
-        if (notificationPanel.hidden) toggle?.click();
-        else loadInbox();
+        notificationPanel.hidden = false;
+        toggle?.setAttribute("aria-expanded", "true");
+        const loaded = await loadInbox();
+        const notificationId = String(payload.notificationId || "");
+        if (!loaded || !validUuid.test(notificationId)) return;
+        const row = [
+          ...notificationPanel.querySelectorAll("[data-notification-id]"),
+        ].find(
+          (candidate) => candidate.dataset.notificationId === notificationId,
+        );
+        row?.querySelector(".notification-content-link")?.click();
       });
       toast.append(title, action);
       host.append(toast);
@@ -302,20 +417,48 @@ document.addEventListener("DOMContentLoaded", function () {
         (inbox.items || []).forEach((item) => {
           const row = document.createElement("article");
           row.className = `notification-item${item.read ? "" : " is-unread"}`;
+          row.dataset.notificationId = item.id || "";
           const marker = document.createElement("span");
           marker.setAttribute("aria-hidden", "true");
+          const rowContent = [marker];
+          if (selectionMode) {
+            let selector = document.createElement("span");
+            selector.className = "notification-select-spacer";
+            if (!item.read && item.id) {
+              selector = document.createElement("input");
+              selector.type = "checkbox";
+              selector.className = "notification-select";
+              selector.dataset.notificationSelect = item.id;
+              selector.setAttribute(
+                "aria-label",
+                `Chọn thông báo: ${item.title || "Thông báo"}`,
+              );
+              selector.addEventListener("change", syncSelectedAction);
+            }
+            rowContent.push(selector);
+          }
           const copy = document.createElement("div");
+          const destination = notificationDestination(item);
+          const content = document.createElement(destination ? "a" : "div");
+          if (destination) {
+            content.href =
+              destination.role === role
+                ? destination.url
+                : `/account/role-switch?targetRole=${encodeURIComponent(destination.role)}&returnTo=${encodeURIComponent(destination.url)}`;
+            content.className = "notification-content-link";
+          }
           const title = document.createElement("h3");
           title.textContent = item.title || "Thông báo";
           const message = document.createElement("p");
           message.textContent = item.message || "";
-          copy.append(title, message);
+          content.append(title, message);
           if (item.createdAt) {
             const time = document.createElement("time");
             time.dateTime = item.createdAt;
             time.textContent = formatDate(item.createdAt);
-            copy.append(time);
+            content.append(time);
           }
+          copy.append(content);
           if (!item.read && item.id) {
             const button = document.createElement("button");
             button.type = "button";
@@ -323,26 +466,9 @@ document.addEventListener("DOMContentLoaded", function () {
             button.addEventListener("click", async () => {
               button.disabled = true;
               try {
-                const result = await window.DrssRetry.run({
-                  retry: loadInbox,
-                  message:
-                    "Chưa xác định được trạng thái đã đọc. Bấm Thử lại để tải lại hộp thư.",
-                  request: (signal) =>
-                    fetch(
-                      `/api/notifications/${encodeURIComponent(item.id)}/read`,
-                      {
-                        method: "POST",
-                        credentials: "same-origin",
-                        headers: {
-                          Accept: "application/json",
-                          ...csrfHeaders(),
-                        },
-                        signal,
-                      },
-                    ),
-                });
-                if (!result.ok) throw new Error(`HTTP ${result.status}`);
-                await loadInbox();
+                await submitReadAction(
+                  `/api/notifications/${encodeURIComponent(item.id)}/read`,
+                );
               } catch (_) {
                 button.disabled = false;
                 if (realtimeState)
@@ -352,13 +478,16 @@ document.addEventListener("DOMContentLoaded", function () {
             });
             copy.append(button);
           }
-          row.append(marker, copy);
+          row.append(...rowContent, copy);
           fragment.append(row);
         });
         if (inbox.items?.length) list.replaceChildren(fragment);
         else showState("Chưa có thông báo nào.");
-        if (realtimeState && !stompConnected && !silent)
-          realtimeState.textContent = "Cập nhật khi mở hộp thư";
+        syncSelectedAction();
+        if (realtimeState)
+          realtimeState.textContent = stompConnected
+            ? "Đang nhận thông báo trực tiếp"
+            : "Cập nhật khi mở hộp thư";
         return true;
       } catch (error) {
         if (generation !== inboxGeneration) return false;
@@ -527,6 +656,37 @@ document.addEventListener("DOMContentLoaded", function () {
     notificationPanel
       .querySelector("[data-notification-refresh]")
       ?.addEventListener("click", loadInbox);
+    markAllButton?.addEventListener("click", async () => {
+      markAllButton.disabled = true;
+      try {
+        await submitReadAction("/api/notifications/read-all");
+      } catch (_) {
+        markAllButton.disabled = false;
+        if (realtimeState)
+          realtimeState.textContent = "Không thể đánh dấu tất cả đã đọc.";
+      }
+    });
+    selectionToggle?.addEventListener("click", () => {
+      setSelectionMode(!selectionMode);
+    });
+    markSelectedButton?.addEventListener("click", async () => {
+      const notificationIds = [
+        ...list.querySelectorAll("[data-notification-select]:checked"),
+      ].map((checkbox) => checkbox.dataset.notificationSelect);
+      if (!notificationIds.length) return;
+      markSelectedButton.disabled = true;
+      try {
+        await submitReadAction(
+          "/api/notifications/read-selected",
+          notificationIds,
+        );
+        setSelectionMode(false);
+      } catch (_) {
+        syncSelectedAction();
+        if (realtimeState)
+          realtimeState.textContent = "Không thể đánh dấu thông báo đã chọn.";
+      }
+    });
     loadInbox();
     refreshTeamSubscriptions();
     connectRealtime();
