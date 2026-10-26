@@ -4,7 +4,9 @@
   let overlay;
   let messageNode;
   let retryButton;
+  let closeButton;
   let retryAction;
+  let dismissAction;
   let previousFocus;
 
   function ensureOverlay() {
@@ -18,6 +20,11 @@
     overlay.setAttribute("aria-describedby", "drss-retry-message");
     overlay.innerHTML = `
       <div class="drss-retry-card">
+        <button type="button" class="drss-retry-close" aria-label="Đóng thông báo">
+          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
+            <path d="m5 5 10 10M15 5 5 15" />
+          </svg>
+        </button>
         <h2 id="drss-retry-title">Kết nối bị gián đoạn</h2>
         <p id="drss-retry-message"></p>
         <div class="drss-retry-actions">
@@ -26,6 +33,7 @@
       </div>`;
     messageNode = overlay.querySelector("#drss-retry-message");
     retryButton = overlay.querySelector("[data-retry-action]");
+    closeButton = overlay.querySelector(".drss-retry-close");
     retryButton.addEventListener("click", () => {
       const action = retryAction;
       hide();
@@ -34,21 +42,45 @@
           .then(action)
           .catch(() => {});
     });
+    closeButton.addEventListener("click", dismiss);
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) dismiss();
+    });
     overlay.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" || event.key === "Tab") {
+      if (event.key === "Escape") {
         event.preventDefault();
-        retryButton.focus();
+        dismiss();
+        return;
+      }
+      if (event.key === "Tab") {
+        const focusable = [closeButton, retryButton];
+        const currentIndex = focusable.indexOf(document.activeElement);
+        if (event.shiftKey && currentIndex <= 0) {
+          event.preventDefault();
+          retryButton.focus();
+        } else if (!event.shiftKey && currentIndex === focusable.length - 1) {
+          event.preventDefault();
+          closeButton.focus();
+        }
       }
     });
     document.body.append(overlay);
   }
 
-  function show(message, onRetry) {
+  function dismiss() {
+    const action = dismissAction;
+    hide();
+    if (action) action();
+  }
+
+  function show(message, onRetry, onDismiss) {
     if (typeof onRetry !== "function") return;
+    window.DrssPageSkeleton?.hide();
     ensureOverlay();
     if (overlay.hidden) previousFocus = document.activeElement;
     messageNode.textContent = message;
     retryAction = onRetry;
+    dismissAction = typeof onDismiss === "function" ? onDismiss : null;
     overlay.hidden = false;
     retryButton.focus();
   }
@@ -57,6 +89,7 @@
     if (!overlay || overlay.hidden) return;
     overlay.hidden = true;
     retryAction = null;
+    dismissAction = null;
     if (previousFocus?.isConnected) previousFocus.focus();
     previousFocus = null;
   }
@@ -67,6 +100,7 @@
     message,
     timeoutMs = 10000,
     shouldShow = () => true,
+    onDismiss,
     controller = new AbortController(),
   }) {
     if (
@@ -92,6 +126,7 @@
         show(
           message || "Không thể tải dữ liệu. Kiểm tra kết nối rồi thử lại.",
           retry,
+          onDismiss,
         );
       }
       throw error;
@@ -134,11 +169,18 @@
     navigationController?.abort();
     const controller = new AbortController();
     navigationController = controller;
+    window.DrssPageSkeleton?.show();
     try {
       const destination = await run({
         controller,
         timeoutMs: 10000,
         retry: () => navigateGet(url),
+        onDismiss: () => {
+          if (sequence !== navigationSequence) return;
+          navigationSequence++;
+          controller.abort();
+          navigationController = null;
+        },
         shouldShow: () => sequence === navigationSequence,
         message: "Trang tải quá lâu. Thử lại để tải trang này.",
         request: async (signal) => {

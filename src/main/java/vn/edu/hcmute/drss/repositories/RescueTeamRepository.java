@@ -18,6 +18,8 @@ import java.util.UUID;
 public interface RescueTeamRepository
         extends JpaRepository<RescueTeam, UUID> {
 
+    long countByStatus(String status);
+
     @Query(value = """
             SELECT team
             FROM RescueTeam team

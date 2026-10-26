@@ -13,6 +13,7 @@
   backdrop-filter: blur(3px);
 }
 .drss-retry-card {
+  position: relative;
   width: min(100%, 460px);
   padding: clamp(22px, 4vw, 36px);
   border: 1px solid #dae5e4;
@@ -20,6 +21,39 @@
   background: #fff;
   box-shadow: 0 18px 48px rgba(15, 45, 67, 0.12);
   text-align: center;
+}
+.drss-retry-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #526471;
+  font: 400 1.7rem/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.drss-retry-close:hover {
+  background: #edf3f7;
+  color: #19364b;
+}
+.drss-retry-close:focus-visible {
+  outline: 2px solid #1688d4;
+  outline-offset: 2px;
+}
+.drss-retry-close svg {
+  display: block;
+}
+.drss-retry-close svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
 }
 .drss-retry-card h2 {
   margin: 0 0 12px;

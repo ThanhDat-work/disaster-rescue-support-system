@@ -81,6 +81,40 @@ public class NotificationAccessService {
         return toItem(notification);
     }
 
+    @Transactional
+    public int markAllRead(UUID recipientUserId) {
+        UUID safeRecipientId = Objects.requireNonNull(
+                recipientUserId,
+                "Recipient user ID is required"
+        );
+        return notifications.markAllUnreadAsRead(
+                safeRecipientId,
+                LocalDateTime.now(clock)
+        );
+    }
+
+    @Transactional
+    public int markSelectedRead(
+            List<UUID> notificationIds,
+            UUID recipientUserId
+    ) {
+        UUID safeRecipientId = Objects.requireNonNull(
+                recipientUserId,
+                "Recipient user ID is required"
+        );
+        List<UUID> safeIds = Objects.requireNonNull(
+                notificationIds,
+                "Notification IDs are required"
+        ).stream().filter(Objects::nonNull).distinct().toList();
+        if (safeIds.isEmpty()) return 0;
+
+        return notifications.markSelectedUnreadAsRead(
+                safeRecipientId,
+                safeIds,
+                LocalDateTime.now(clock)
+        );
+    }
+
     private NotificationItem toItem(Notification notification) {
         return new NotificationItem(
                 notification.getId(),
