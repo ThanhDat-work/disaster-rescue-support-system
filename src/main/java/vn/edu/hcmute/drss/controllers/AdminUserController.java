@@ -1,6 +1,8 @@
 package vn.edu.hcmute.drss.controllers;
 
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,7 @@ import vn.edu.hcmute.drss.exceptions.AdminDomainException;
 import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
 import vn.edu.hcmute.drss.services.AdminRescueTeamService;
 import vn.edu.hcmute.drss.services.AdminUserService;
+import vn.edu.hcmute.drss.trace.RequestCorrelation;
 
 import java.util.List;
 import java.util.Set;
@@ -29,6 +32,9 @@ import java.util.UUID;
 @Controller
 @RequestMapping("/admin/users")
 public class AdminUserController {
+
+    private static final Logger AUDIT_LOG = LoggerFactory.getLogger(
+            AdminUserController.class);
 
     private final AdminUserService service;
     private final AdminRescueTeamService teamService;
@@ -120,9 +126,10 @@ public class AdminUserController {
                     "successMsg",
                     "Đã cập nhật trạng thái người dùng");
         } catch (AdminDomainException exception) {
+            logDenied("STATUS_REJECTED", id, authentication, exception.getField());
             redirectAttributes.addFlashAttribute(
                     "errorMsg",
-                    exception.getMessage());
+                    referencedError(exception.getMessage()));
         }
 
         return "redirect:/admin/users/" + id;
@@ -137,6 +144,7 @@ public class AdminUserController {
             Model model,
             RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
+            logDenied("ROLES_VALIDATION", id, authentication, "roles");
             return renderRoleErrors(id, form, model, redirectAttributes);
         }
 
@@ -146,15 +154,16 @@ public class AdminUserController {
                     form.getRoles(),
                     actorId(authentication));
         } catch (AdminDomainException exception) {
+            logDenied("ROLES_REJECTED", id, authentication, exception.getField());
             if (exception.getField() != null) {
                 bindingResult.rejectValue(
                         exception.getField(),
                         "admin.user",
-                        exception.getMessage());
+                        referencedError(exception.getMessage()));
             } else {
                 bindingResult.reject(
                         "admin.user",
-                        exception.getMessage());
+                        referencedError(exception.getMessage()));
             }
             return renderRoleErrors(id, form, model, redirectAttributes);
         }
@@ -211,5 +220,24 @@ public class AdminUserController {
         }
 
         return principal.userId();
+    }
+
+    private String referencedError(String safeMessage) {
+        String requestId = RequestCorrelation.currentId();
+        return requestId == null ? safeMessage
+                : safeMessage + " (Mã tham chiếu: " + requestId + ")";
+    }
+
+    private void logDenied(String action, UUID targetId,
+            Authentication authentication, String field) {
+        UUID actor = authentication != null
+                && authentication.getPrincipal() instanceof AuthenticatedUserPrincipal principal
+                ? principal.userId() : null;
+        String reason = "roles".equals(field) || "status".equals(field)
+                ? field : "domain";
+        AUDIT_LOG.warn(
+                "admin_user_action_denied requestId={} actorId={} targetId={} "
+                        + "action={} reason={}",
+                RequestCorrelation.currentId(), actor, targetId, action, reason);
     }
 }

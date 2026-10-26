@@ -31,6 +31,8 @@ class CitizenRequestMediaPersistenceServiceTest {
     private MediaAssetRepository mediaAssets;
     @Mock
     private BusinessNotificationService notifications;
+    @Mock
+    private RequestCreationGateService gate;
 
     private CitizenRequestMediaPersistenceService service;
     private UUID userId;
@@ -40,7 +42,7 @@ class CitizenRequestMediaPersistenceServiceTest {
     @BeforeEach
     void setUp() {
         service = new CitizenRequestMediaPersistenceService(
-                citizenRequests, mediaAssets, notifications
+                citizenRequests, mediaAssets, notifications, gate
         );
         userId = UUID.randomUUID();
         form = new CreateCitizenRequest();

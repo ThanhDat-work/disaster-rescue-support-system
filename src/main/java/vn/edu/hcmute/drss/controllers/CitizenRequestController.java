@@ -24,25 +24,26 @@ import vn.edu.hcmute.drss.dtos.CreateCitizenRequest;
 import vn.edu.hcmute.drss.entities.RescueRequest;
 import vn.edu.hcmute.drss.exceptions.MediaStorageException;
 import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
-import vn.edu.hcmute.drss.services.CitizenRequestMediaService;
 import vn.edu.hcmute.drss.services.CitizenRequestService;
+import vn.edu.hcmute.drss.services.CitizenCreateWorkflowService;
+import vn.edu.hcmute.drss.services.RequestCreationDecision;
 
 @Controller
 @RequestMapping("/requests")
 public class CitizenRequestController {
 
     private final CitizenRequestService service;
-    private final CitizenRequestMediaService mediaService;
     private final MediaStorageProperties mediaProperties;
+    private final CitizenCreateWorkflowService workflow;
 
     public CitizenRequestController(
             CitizenRequestService service,
-            CitizenRequestMediaService mediaService,
-            MediaStorageProperties mediaProperties
+            MediaStorageProperties mediaProperties,
+            CitizenCreateWorkflowService workflow
     ) {
         this.service = service;
-        this.mediaService = mediaService;
         this.mediaProperties = mediaProperties;
+        this.workflow = workflow;
     }
 
     @GetMapping
@@ -62,11 +63,16 @@ public class CitizenRequestController {
     }
 
     @GetMapping("/new")
-    public String createForm(Model model) {
+    public String createForm(Model model,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        if (!model.containsAttribute("operationKey")) {
+            model.addAttribute("operationKey", UUID.randomUUID());
+        }
         model.addAttribute(
                 "createCitizenRequest",
                 new CreateCitizenRequest()
         );
+        model.addAttribute("requestCreateOwnerId", principal.userId());
         return showCreateForm(model);
     }
 
@@ -77,34 +83,60 @@ public class CitizenRequestController {
             BindingResult binding,
             @RequestParam(name = "mediaFiles", required = false)
             List<MultipartFile> mediaFiles,
+            @RequestParam(name = "operationKey", required = false)
+            UUID operationKey,
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             Model model,
             RedirectAttributes flash
     ) {
         if (binding.hasErrors()) {
+            model.addAttribute("requestCreateOwnerId", principal.userId());
+            model.addAttribute("operationKey", operationKey == null
+                    ? UUID.randomUUID() : operationKey);
             return showCreateForm(model);
         }
 
+        if (operationKey == null) {
+            flash.addFlashAttribute("errorMsg", "Thiếu mã thao tác. Vui lòng mở lại biểu mẫu.");
+            return "redirect:/requests/new";
+        }
+
         try {
-            RescueRequest created = mediaService.create(
+            RequestCreationDecision outcome = workflow.create(
                     principal.userId(),
+                    operationKey,
                     form,
                     normalizeMediaFiles(mediaFiles)
             );
-            flash.addFlashAttribute(
-                    "successMsg",
-                    "\u0110\u00e3 g\u1eedi y\u00eau c\u1ea7u "
-                            + created.getDisplayCode()
-                            + "."
-            );
-            return "redirect:/requests/" + created.getId();
+            if (outcome.requestId() != null) {
+                flash.addFlashAttribute("successMsg",
+                        outcome.kind() == RequestCreationDecision.Kind.REPLAY
+                                ? "Yêu cầu này đã được gửi trước đó."
+                                : "Đã gửi yêu cầu.");
+                return "redirect:/requests/" + outcome.requestId();
+            }
+            flash.addFlashAttribute("operationKey", operationKey);
+            String reason = switch (outcome.kind()) {
+                case LIMITED -> "Bạn đã đạt giới hạn tạo yêu cầu. Vui lòng thử lại sau "
+                        + Math.max(1, java.time.Duration.between(
+                                java.time.LocalDateTime.now(), outcome.retryAt()
+                        ).toSeconds()) + " giây.";
+                case PROCESSING -> "Yêu cầu đang được xử lý; đừng gửi một yêu cầu mới.";
+                case FAILED -> "Lần gửi trước thất bại nhiều lần. Kiểm tra danh sách yêu cầu trước khi mở biểu mẫu mới.";
+                case UNKNOWN -> "Chưa xác định được kết quả. Vui lòng kiểm tra danh sách yêu cầu trước khi thử lại.";
+                default -> "Không thể xác định kết quả gửi yêu cầu.";
+            };
+            flash.addFlashAttribute("errorMsg", reason);
+            return "redirect:/requests/new";
         } catch (IllegalArgumentException exception) {
+            flash.addFlashAttribute("operationKey", operationKey);
             flash.addFlashAttribute(
                     "errorMsg",
                     exception.getMessage()
             );
             return "redirect:/requests/new";
         } catch (MediaStorageException exception) {
+            flash.addFlashAttribute("operationKey", operationKey);
             flash.addFlashAttribute(
                     "errorMsg",
                     "Kh\u00f4ng th\u1ec3 l\u01b0u media l\u00fac n\u00e0y. "

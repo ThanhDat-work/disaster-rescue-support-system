@@ -20,15 +20,18 @@ public class CitizenRequestMediaPersistenceService {
     private final CitizenRequestService citizenRequests;
     private final MediaAssetRepository mediaAssets;
     private final BusinessNotificationService notifications;
+    private final RequestCreationGateService gate;
 
     public CitizenRequestMediaPersistenceService(
         CitizenRequestService citizenRequests,
         MediaAssetRepository mediaAssets,
-        BusinessNotificationService notifications
+        BusinessNotificationService notifications,
+        RequestCreationGateService gate
     ) {
         this.citizenRequests = citizenRequests;
         this.mediaAssets = mediaAssets;
         this.notifications = notifications;
+        this.gate = gate;
     }
 
     @Transactional
@@ -37,6 +40,18 @@ public class CitizenRequestMediaPersistenceService {
             CreateCitizenRequest form,
             List<UploadedMedia> uploadedMedia
     ) {
+        return persist(userId, null, form, uploadedMedia);
+    }
+
+    @Transactional
+    public RescueRequest createAdmitted(UUID userId, UUID key,
+            CreateCitizenRequest form, List<UploadedMedia> uploadedMedia) {
+        if (key == null) throw new IllegalArgumentException("Operation key required");
+        return persist(userId, key, form, uploadedMedia);
+    }
+
+    private RescueRequest persist(UUID userId, UUID key,
+            CreateCitizenRequest form, List<UploadedMedia> uploadedMedia) {
         RescueRequest request = citizenRequests.create(userId, form);
         List<UploadedMedia> uploaded = uploadedMedia == null
                 ? List.of()
@@ -57,6 +72,7 @@ public class CitizenRequestMediaPersistenceService {
         }
 
         notifications.notifyNewRequest(request);
+        if (key != null) gate.complete(userId, key, request);
         return request;
     }
 

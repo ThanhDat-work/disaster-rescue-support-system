@@ -9,14 +9,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.hcmute.drss.dtos.AdminUserDetail;
 import vn.edu.hcmute.drss.dtos.AdminUserSummary;
+import vn.edu.hcmute.drss.entities.AdminUserAudit;
+import vn.edu.hcmute.drss.entities.AdminUserAuditAction;
 import vn.edu.hcmute.drss.entities.Role;
 import vn.edu.hcmute.drss.entities.User;
 import vn.edu.hcmute.drss.entities.UserRole;
 import vn.edu.hcmute.drss.entities.UserRoleId;
 import vn.edu.hcmute.drss.exceptions.AdminDomainException;
 import vn.edu.hcmute.drss.repositories.RoleRepository;
+import vn.edu.hcmute.drss.repositories.AdminUserAuditRepository;
 import vn.edu.hcmute.drss.repositories.UserRepository;
 import vn.edu.hcmute.drss.repositories.UserRoleRepository;
+import vn.edu.hcmute.drss.trace.RequestCorrelation;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -59,14 +63,17 @@ public class AdminUserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
+    private final AdminUserAuditRepository auditRepository;
 
     public AdminUserService(
             UserRepository userRepository,
             RoleRepository roleRepository,
-            UserRoleRepository userRoleRepository) {
+            UserRoleRepository userRoleRepository,
+            AdminUserAuditRepository auditRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
+        this.auditRepository = auditRepository;
     }
 
     public List<String> allowedRoles() {
@@ -161,9 +168,12 @@ public class AdminUserService {
             );
         }
 
+        String oldStatus = user.getStatus();
         user.setStatus(newStatus);
         incrementAuthVersion(user);
         saveUser(user);
+        recordChange(actorId, user.getId(),
+                AdminUserAuditAction.STATUS_CHANGED, oldStatus, newStatus);
     }
 
     @Transactional
@@ -282,6 +292,23 @@ public class AdminUserService {
                     "roles",
                     "Không thể cập nhật vai trò do dữ liệu vừa thay đổi");
         }
+        recordChange(actorId, user.getId(),
+                AdminUserAuditAction.ROLES_CHANGED,
+                String.join(",", currentRoles),
+                String.join(",", new TreeSet<>(normalizedRoles)));
+    }
+
+    private void recordChange(UUID actorId, UUID targetId,
+            AdminUserAuditAction action, String before, String after) {
+        AdminUserAudit audit = new AdminUserAudit();
+        audit.setActorUserId(actorId);
+        audit.setTargetUserId(targetId);
+        audit.setAction(action);
+        audit.setBeforeValue(before);
+        audit.setAfterValue(after);
+        audit.setRequestId(RequestCorrelation.currentIdOrNew());
+        // Flush in the same transaction: an audit write failure aborts the mutation.
+        auditRepository.saveAndFlush(audit);
     }
 
     private Map<UUID, List<String>> loadRoleMap(List<User> users) {

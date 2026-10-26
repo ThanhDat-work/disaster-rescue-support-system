@@ -25,7 +25,9 @@
       method="post"
       enctype="multipart/form-data"
       class="card shadow-sm"
+      th:attr="data-request-owner-id=${requestCreateOwnerId}"
     >
+      <input type="hidden" name="operationKey" th:value="${operationKey}" />
       <div class="card-body p-4">
         <div class="row g-3">
           <div class="col-md-6">
@@ -154,5 +156,6 @@
       </div>
     </form>
     <script th:src="@{/js/request-media-validation.js}" defer></script>
+    <script th:src="@{/js/request-create.js(v=2026102502)}" defer></script>
   </section>
 </html>

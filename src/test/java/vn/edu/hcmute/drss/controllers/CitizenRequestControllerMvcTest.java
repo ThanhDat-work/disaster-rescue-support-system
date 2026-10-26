@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,6 +43,10 @@ import vn.edu.hcmute.drss.entities.StatusHistory;
 import vn.edu.hcmute.drss.entities.User;
 import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
 import vn.edu.hcmute.drss.services.CitizenRequestService;
+import vn.edu.hcmute.drss.services.CitizenCreateWorkflowService;
+import vn.edu.hcmute.drss.services.RequestCreationDecision;
+import vn.edu.hcmute.drss.services.RequestCreationGateService;
+import vn.edu.hcmute.drss.services.RequestCreationStatus;
 import vn.edu.hcmute.drss.support.NoDatabaseRepositoryMocks;
 import vn.edu.hcmute.drss.exceptions.InvalidMediaUploadException;
 
@@ -61,6 +66,52 @@ class CitizenRequestControllerMvcTest {
 
     @MockitoBean
     private CitizenRequestMediaService mediaService;
+
+    @MockitoBean
+    private CitizenCreateWorkflowService workflow;
+
+    @MockitoBean
+    private RequestCreationGateService creationGate;
+
+    @Test
+    void creationStatusIsOwnerScopedAndRequiresCitizenRole() throws Exception {
+        UUID key = UUID.randomUUID();
+        when(creationGate.status(USER_ID, key))
+                .thenReturn(new RequestCreationStatus("PROCESSING", null, false));
+        mockMvc.perform(get("/api/request-creations/" + key)
+                        .with(authenticatedAs("ROLE_CITIZEN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("PROCESSING"));
+        mockMvc.perform(get("/api/request-creations/" + key)
+                        .with(authenticatedAs("ROLE_RESCUER")))
+                .andExpect(status().isForbidden());
+        verify(creationGate).status(USER_ID, key);
+    }
+
+    @Test
+    void jsonCreateRequiresCsrfAndReturnsCommittedRequestId() throws Exception {
+        UUID key = UUID.randomUUID();
+        UUID requestId = UUID.randomUUID();
+        when(workflow.create(eq(USER_ID), eq(key), any(), any()))
+                .thenReturn(new RequestCreationDecision(
+                        RequestCreationDecision.Kind.NEW, requestId, null));
+        var request = multipart("/api/request-creations")
+                .param("disasterTypeId", "7")
+                .param("urgency", "HIGH")
+                .param("operationKey", key.toString())
+                .accept("application/json")
+                .with(authenticatedAs("ROLE_CITIZEN"));
+        mockMvc.perform(request).andExpect(status().isForbidden());
+        mockMvc.perform(multipart("/api/request-creations")
+                        .param("disasterTypeId", "7")
+                        .param("urgency", "HIGH")
+                        .param("operationKey", key.toString())
+                        .accept("application/json")
+                        .with(authenticatedAs("ROLE_CITIZEN"))
+                        .with(csrf()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.requestId").value(requestId.toString()));
+    }
 
     @Test
     void citizenRoutesRequireAuthenticationAndCitizenRole() throws Exception {
@@ -94,6 +145,7 @@ class CitizenRequestControllerMvcTest {
                 .andExpect(view().name("pages/citizen/request-form"))
                 .andExpect(model().attribute("disasterTypes", List.of(type)))
                 .andExpect(model().attributeExists("createCitizenRequest"))
+                .andExpect(model().attributeExists("operationKey"))
                 .andExpect(model().attribute(
                         "mediaMaxFileSizeBytes",
                         10L * 1024L * 1024L
@@ -124,7 +176,7 @@ class CitizenRequestControllerMvcTest {
                 .andExpect(model().attributeHasFieldErrors(
                         "createCitizenRequest", "disasterTypeId", "urgency"
                 ));
-        verify(mediaService, never()).create(eq(USER_ID), any(), any());
+        verify(workflow, never()).create(eq(USER_ID), any(), any(), any());
     }
 
     @Test
@@ -134,19 +186,35 @@ class CitizenRequestControllerMvcTest {
                         .param("disasterTypeId", "7")
                         .param("urgency", "HIGH"))
                 .andExpect(status().isForbidden());
-        verify(mediaService, never()).create(eq(USER_ID), any(), any());
+        verify(workflow, never()).create(eq(USER_ID), any(), any(), any());
+    }
+
+    @Test
+    void missingOperationKeyCannotReachWorkflow() throws Exception {
+        mockMvc.perform(post("/requests")
+                        .with(authenticatedAs("ROLE_CITIZEN"))
+                        .with(csrf())
+                        .param("disasterTypeId", "7")
+                        .param("urgency", "HIGH"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/requests/new"))
+                .andExpect(flash().attributeExists("errorMsg"));
+        verify(workflow, never()).create(any(), any(), any(), any());
     }
 
     @Test
     void validCreateUsesPrincipalAndIgnoresForgedServerFields()
             throws Exception {
         RescueRequest created = request(USER_ID, "PENDING");
-        when(mediaService.create(eq(USER_ID), any(), any())).thenReturn(created);
+        when(workflow.create(eq(USER_ID), any(), any(), any())).thenReturn(
+                new RequestCreationDecision(RequestCreationDecision.Kind.NEW,
+                        created.getId(), null));
         mockMvc.perform(post("/requests")
                         .with(authenticatedAs("ROLE_CITIZEN"))
                         .with(csrf())
                         .param("disasterTypeId", "7")
                         .param("urgency", "HIGH")
+                        .param("operationKey", UUID.randomUUID().toString())
                         .param("address", "123 Demo")
                         .param("userId", UUID.randomUUID().toString())
                         .param("status", "CLOSED")
@@ -154,7 +222,7 @@ class CitizenRequestControllerMvcTest {
                 .andExpect(status().isFound())
                 .andExpect(redirectedUrl("/requests/" + created.getId()))
                 .andExpect(flash().attributeExists("successMsg"));
-        verify(mediaService).create(eq(USER_ID), any(), eq(List.of()));
+        verify(workflow).create(eq(USER_ID), any(), any(), eq(List.of()));
     }
 
     @Test
@@ -239,21 +307,24 @@ class CitizenRequestControllerMvcTest {
                 new byte[] {(byte) 0x89, 0x50, 0x4E, 0x47,
                         0x0D, 0x0A, 0x1A, 0x0A}
         );
-        when(mediaService.create(eq(USER_ID), any(), any()))
-                .thenReturn(created);
+        when(workflow.create(eq(USER_ID), any(), any(), any()))
+                .thenReturn(new RequestCreationDecision(
+                        RequestCreationDecision.Kind.NEW, created.getId(), null));
 
         mockMvc.perform(multipart("/requests")
                         .file(image)
                         .with(authenticatedAs("ROLE_CITIZEN"))
                         .with(csrf())
                         .param("disasterTypeId", "7")
-                        .param("urgency", "HIGH"))
+                        .param("urgency", "HIGH")
+                        .param("operationKey", UUID.randomUUID().toString()))
                 .andExpect(status().isFound())
                 .andExpect(redirectedUrl("/requests/" + created.getId()))
                 .andExpect(flash().attributeExists("successMsg"));
 
-        verify(mediaService).create(
+        verify(workflow).create(
                 eq(USER_ID),
+                any(),
                 any(),
                 org.mockito.ArgumentMatchers.argThat(files ->
                         files.size() == 1
@@ -266,7 +337,7 @@ class CitizenRequestControllerMvcTest {
 
         @Test
         void mediaStorageFailureUsesGenericClientMessage() throws Exception {
-        when(mediaService.create(eq(USER_ID), any(), any()))
+        when(workflow.create(eq(USER_ID), any(), any(), any()))
                 .thenThrow(new MediaStorageException(
                         "internal cloud failure with implementation detail"
                 ));
@@ -275,7 +346,8 @@ class CitizenRequestControllerMvcTest {
                         .with(authenticatedAs("ROLE_CITIZEN"))
                         .with(csrf())
                         .param("disasterTypeId", "7")
-                        .param("urgency", "HIGH"))
+                        .param("urgency", "HIGH")
+                        .param("operationKey", UUID.randomUUID().toString()))
                 .andExpect(status().isFound())
                 .andExpect(redirectedUrl("/requests/new"))
                 .andExpect(flash().attribute(
@@ -292,18 +364,19 @@ class CitizenRequestControllerMvcTest {
                 "M\u1ed7i t\u1ec7p media kh\u00f4ng \u0111\u01b0\u1ee3c "
                         + "v\u01b0\u1ee3t qu\u00e1 10 MiB.";
 
-        when(mediaService.create(eq(USER_ID), any(), any()))
+        when(workflow.create(eq(USER_ID), any(), any(), any()))
                 .thenThrow(new InvalidMediaUploadException(message));
 
         mockMvc.perform(post("/requests")
                         .with(authenticatedAs("ROLE_CITIZEN"))
                         .with(csrf())
                         .param("disasterTypeId", "7")
-                        .param("urgency", "HIGH"))
+                        .param("urgency", "HIGH")
+                        .param("operationKey", UUID.randomUUID().toString()))
                 .andExpect(status().isFound())
                 .andExpect(redirectedUrl("/requests/new"))
                 .andExpect(flash().attribute("errorMsg", message))
-                .andExpect(flash().attributeCount(1));
+                .andExpect(flash().attributeCount(2));
     }
 
     private RequestPostProcessor authenticatedAs(String role) {

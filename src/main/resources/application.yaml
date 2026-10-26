@@ -11,7 +11,7 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate # CHUẨN YÊU CẦU: Chỉ validate, không tự động tạo bảng
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -47,6 +47,8 @@ spring:
       "[mail.smtp.writetimeout]": 5000
 
 app:
+  request-create:
+    max-per-minute: ${REQUEST_CREATE_MAX_PER_MINUTE:5}
   auth:
     jwt-secret: ${JWT_SECRET}
     otp-hmac-secret: ${OTP_HMAC_SECRET}
@@ -64,6 +66,7 @@ app:
     api-key: ${CLOUDINARY_API_KEY}
     api-secret: ${CLOUDINARY_API_SECRET}
     folder: ${CLOUDINARY_FOLDER:drss/local/dat}
+    http-timeout-seconds: ${CLOUDINARY_HTTP_TIMEOUT_SECONDS:60}
     max-file-size: 10MB
     max-files-per-request: 5
     max-video-files-per-request: 1

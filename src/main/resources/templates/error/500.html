@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Không thể xử lý yêu cầu | DRSS</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #f5f7fb;
+        color: #172335;
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+      }
+      main {
+        width: min(100%, 34rem);
+        background: #fff;
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow: 0 0.5rem 2rem #17233518;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      a {
+        color: #084298;
+        font-weight: 700;
+      }
+      code {
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Tạm thời không xử lý được yêu cầu</h1>
+      <p>
+        Vui lòng thử lại sau. Nếu lỗi tiếp diễn, hãy gửi mã tham chiếu cho nhóm
+        hỗ trợ.
+      </p>
+      <p th:if="${requestCorrelationId != null}">
+        Mã tham chiếu: <code th:text="${requestCorrelationId}"></code>
+      </p>
+      <a th:href="@{/}">Về trang chủ</a>
+    </main>
+  </body>
+</html>

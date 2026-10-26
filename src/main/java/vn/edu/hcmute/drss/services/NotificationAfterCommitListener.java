@@ -29,10 +29,17 @@ public class NotificationAfterCommitListener {
         for (NotificationDelivery delivery : event.deliveries()) {
             try {
                 gateway.send(delivery);
+                LOGGER.info(
+                        "notification_dispatched requestId={} notificationId={} event={}",
+                        event.requestId(),
+                        delivery.notificationId(),
+                        delivery.eventType()
+                );
             } catch (RuntimeException exception) {
                 LOGGER.warn(
-                        "Realtime notification delivery failed after commit "
-                                + "for notification {} and event {}",
+                        "notification_dispatch_failed requestId={} "
+                                + "notificationId={} event={}",
+                        event.requestId(),
                         delivery.notificationId(),
                         delivery.eventType()
                 );

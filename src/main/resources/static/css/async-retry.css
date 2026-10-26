@@ -1,0 +1,50 @@
+.drss-retry-overlay[hidden] {
+  display: none !important;
+}
+.drss-retry-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.42);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.drss-retry-card {
+  width: min(100%, 460px);
+  padding: clamp(22px, 4vw, 36px);
+  border: 1px solid #dae5e4;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(15, 45, 67, 0.12);
+  text-align: center;
+}
+.drss-retry-card h2 {
+  margin: 0 0 12px;
+  color: #19364b;
+  font-size: clamp(1.2rem, 3vw, 1.5rem);
+  font-weight: 700;
+}
+.drss-retry-card p {
+  margin: 0;
+  color: #526471;
+  line-height: 1.65;
+}
+.drss-retry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+.drss-retry-actions .btn {
+  min-width: 116px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drss-retry-overlay {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

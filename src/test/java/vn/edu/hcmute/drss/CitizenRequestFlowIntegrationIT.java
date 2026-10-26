@@ -82,6 +82,7 @@ class CitizenRequestFlowIntegrationIT {
                         .with(csrf())
                         .param("disasterTypeId", disasterTypeId.toString())
                         .param("urgency", "HIGH")
+                        .param("operationKey", UUID.randomUUID().toString())
                         .param("address", "T2-02 integration address")
                         .param("description", "T2-02 integration request")
                         .param("userId", ADMIN_ID.toString())
