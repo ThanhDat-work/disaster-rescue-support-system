@@ -4,7 +4,7 @@
   xmlns:th="http://www.thymeleaf.org"
   th:replace="~{layouts/main-layout :: layout('Hồ sơ cá nhân', ~{::section})}"
 >
-  <section class="container py-4 py-lg-5">
+  <section class="container py-4 py-lg-5 drss-profile-page">
     <div
       class="alert alert-success"
       role="status"
@@ -140,7 +140,7 @@
             </p>
             <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3">
               <div class="col" th:each="card : ${statistics.cards.entrySet()}">
-                <div class="border rounded-3 p-3 h-100">
+                <div class="border rounded-3 p-3 h-100 drss-profile-stat-card">
                   <div class="text-secondary small" th:text="${card.key}">
                     Chỉ số
                   </div>
@@ -165,16 +165,21 @@
                 >
                   Phân bố
                 </h3>
-                <div id="profileDistribution" class="chart-host" role="group" aria-label="Biểu đồ thanh phân bố trạng thái"></div>
+                <div
+                  id="profileDistribution"
+                  class="chart-host"
+                  role="group"
+                  aria-label="Biểu đồ thanh phân bố trạng thái"
+                ></div>
                 <details class="chart-data-disclosure">
                   <summary>Xem số liệu chi tiết</summary>
                   <ul class="small mb-0 mt-2">
-                  <li
-                    th:each="entry : ${statistics.distribution.entrySet()}"
-                    th:text="${entry.key + ': ' + entry.value}"
-                  >
-                    Nhãn: 0
-                  </li>
+                    <li
+                      th:each="entry : ${statistics.distribution.entrySet()}"
+                      th:text="${entry.key + ': ' + entry.value}"
+                    >
+                      Nhãn: 0
+                    </li>
                   </ul>
                 </details>
               </div>
@@ -194,7 +199,12 @@
                 >
                   Xu hướng
                 </h3>
-                <div id="profileTrend" class="chart-host chart-host-trend" role="group" aria-label="Biểu đồ xu hướng theo thời gian"></div>
+                <div
+                  id="profileTrend"
+                  class="chart-host chart-host-trend"
+                  role="group"
+                  aria-label="Biểu đồ xu hướng theo thời gian"
+                ></div>
                 <p class="small text-secondary mb-0">
                   Dữ liệu từ lịch sử nghiệp vụ thực tế; 6 tháng hoặc 8 tuần gần
                   nhất.

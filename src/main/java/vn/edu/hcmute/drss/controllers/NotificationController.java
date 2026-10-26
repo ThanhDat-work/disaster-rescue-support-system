@@ -1,5 +1,6 @@
 package vn.edu.hcmute.drss.controllers;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -7,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import vn.edu.hcmute.drss.dtos.NotificationInbox;
 import vn.edu.hcmute.drss.dtos.NotificationItem;
 import vn.edu.hcmute.drss.security.AuthenticatedUserPrincipal;
@@ -18,6 +20,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/notifications")
 public class NotificationController {
+
+    private static final int MAX_SELECTED_NOTIFICATIONS = 50;
 
     private final NotificationAccessService notificationAccess;
 
@@ -61,6 +65,15 @@ public class NotificationController {
             @AuthenticationPrincipal
             AuthenticatedUserPrincipal principal
     ) {
+        if (notificationIds == null
+                || notificationIds.size() > MAX_SELECTED_NOTIFICATIONS
+                || notificationIds.stream().anyMatch(id -> id == null)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Danh sách thông báo không hợp lệ."
+            );
+        }
+
         return notificationAccess.markSelectedRead(
                 notificationIds,
                 principal.userId()

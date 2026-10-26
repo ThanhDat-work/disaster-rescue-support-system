@@ -267,7 +267,11 @@ document.addEventListener("DOMContentLoaded", function () {
         selectionToggle.setAttribute("aria-pressed", String(selectionMode));
       }
       list.querySelectorAll(".notification-item").forEach((row) => {
-        row.querySelector("[data-notification-select], .notification-select-spacer")?.remove();
+        row
+          .querySelector(
+            "[data-notification-select], .notification-select-spacer",
+          )
+          ?.remove();
         if (!selectionMode) return;
 
         let selector = document.createElement("span");
@@ -318,14 +322,16 @@ document.addEventListener("DOMContentLoaded", function () {
       const referenceId = String(item.referenceId || "");
       if (!validUuid.test(referenceId)) return null;
       if (item.referenceType === "RESCUE_REQUEST") {
-        const targetRole = item.eventType === "REQUEST_CREATED"
-          ? "ROLE_COORDINATOR"
-          : "ROLE_CITIZEN";
+        const targetRole =
+          item.eventType === "REQUEST_CREATED"
+            ? "ROLE_COORDINATOR"
+            : "ROLE_CITIZEN";
         return {
           role: targetRole,
-          url: targetRole === "ROLE_COORDINATOR"
-            ? `/coordinator/requests/${referenceId}`
-            : `/requests/${referenceId}`,
+          url:
+            targetRole === "ROLE_COORDINATOR"
+              ? `/coordinator/requests/${referenceId}`
+              : `/requests/${referenceId}`,
         };
       }
       if (item.referenceType === "RESCUE_ASSIGNMENT") {
@@ -366,10 +372,19 @@ document.addEventListener("DOMContentLoaded", function () {
       const action = document.createElement("button");
       action.type = "button";
       action.textContent = "Xem thông báo";
-      action.addEventListener("click", () => {
+      action.addEventListener("click", async () => {
         toast.remove();
-        if (notificationPanel.hidden) toggle?.click();
-        else loadInbox();
+        notificationPanel.hidden = false;
+        toggle?.setAttribute("aria-expanded", "true");
+        const loaded = await loadInbox();
+        const notificationId = String(payload.notificationId || "");
+        if (!loaded || !validUuid.test(notificationId)) return;
+        const row = [
+          ...notificationPanel.querySelectorAll("[data-notification-id]"),
+        ].find(
+          (candidate) => candidate.dataset.notificationId === notificationId,
+        );
+        row?.querySelector(".notification-content-link")?.click();
       });
       toast.append(title, action);
       host.append(toast);
@@ -426,9 +441,10 @@ document.addEventListener("DOMContentLoaded", function () {
           const destination = notificationDestination(item);
           const content = document.createElement(destination ? "a" : "div");
           if (destination) {
-            content.href = destination.role === role
-              ? destination.url
-              : `/account/role-switch?targetRole=${encodeURIComponent(destination.role)}&returnTo=${encodeURIComponent(destination.url)}`;
+            content.href =
+              destination.role === role
+                ? destination.url
+                : `/account/role-switch?targetRole=${encodeURIComponent(destination.role)}&returnTo=${encodeURIComponent(destination.url)}`;
             content.className = "notification-content-link";
           }
           const title = document.createElement("h3");

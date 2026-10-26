@@ -29,13 +29,9 @@
       </div>
     </section>
 
-    <section
-      class="card table-card"
-      th:unless="${#lists.isEmpty(assignments)}"
-    >
+    <section class="card table-card" th:unless="${#lists.isEmpty(assignments)}">
       <div
-        class="card-header d-flex align-items-center
-               justify-content-between gap-3"
+        class="card-header d-flex align-items-center justify-content-between gap-3"
       >
         <div>
           <h2 class="h5 mb-1">Danh sách phân công</h2>
@@ -53,7 +49,9 @@
       </div>
 
       <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+        <table
+          class="table table-hover align-middle mb-0 drss-rescuer-task-table"
+        >
           <thead class="table-light">
             <tr>
               <th scope="col">Mã phân công</th>
@@ -70,16 +68,11 @@
 
           <tbody>
             <tr th:each="assignment : ${assignments}">
-
-
-                <td
-                class="fw-semibold"
-                th:text="${assignment.displayCode}"
-              >
+              <td class="fw-semibold" th:text="${assignment.displayCode}">
                 ASN-0001
               </td>
 
-<td>
+              <td>
                 <div
                   class="fw-semibold"
                   th:text="${assignment.request.displayCode}"
@@ -94,20 +87,17 @@
                 </small>
               </td>
 
- <td>
-  <div
-    class="fw-semibold"
-    th:text="${assignment.team.teamName}"
-  >
-                    Đội cứu hộ
+              <td>
+                <div class="fw-semibold" th:text="${assignment.team.teamName}">
+                  Đội cứu hộ
                 </div>
                 <small
-                    class="text-secondary"
-                    th:text="${assignment.team.displayCode}"
+                  class="text-secondary"
+                  th:text="${assignment.team.displayCode}"
                 >
-                    TEAM-001
+                  TEAM-001
                 </small>
-                </td>
+              </td>
 
               <td>
                 <span

@@ -17,6 +17,8 @@ import java.util.UUID;
 @Service
 public class NotificationAccessService {
 
+    private static final int MAX_SELECTED_NOTIFICATIONS = 50;
+
     private final NotificationRepository notifications;
     private final Clock clock;
 
@@ -102,11 +104,22 @@ public class NotificationAccessService {
                 recipientUserId,
                 "Recipient user ID is required"
         );
-        List<UUID> safeIds = Objects.requireNonNull(
-                notificationIds,
-                "Notification IDs are required"
-        ).stream().filter(Objects::nonNull).distinct().toList();
-        if (safeIds.isEmpty()) return 0;
+
+        if (notificationIds == null
+                || notificationIds.size() > MAX_SELECTED_NOTIFICATIONS
+                || notificationIds.stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException(
+                    "Notification ID list is invalid"
+            );
+        }
+
+        List<UUID> safeIds = notificationIds.stream()
+                .distinct()
+                .toList();
+
+        if (safeIds.isEmpty()) {
+            return 0;
+        }
 
         return notifications.markSelectedUnreadAsRead(
                 safeRecipientId,

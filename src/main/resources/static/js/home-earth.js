@@ -1,16 +1,105 @@
-import * as THREE from 'three';
+import * as THREE from "three";
 
-const canvas = document.querySelector('#home-earth-canvas');
-const fallback = document.querySelector('[data-earth-fallback]');
-const home = document.querySelector('[data-home-page]');
+const canvas = document.querySelector("#home-earth-canvas");
+const fallback = document.querySelector("[data-earth-fallback]");
+const home = document.querySelector("[data-home-page]");
 const FALLBACK_LANDMASSES = [
-  [[-168, 70], [-145, 73], [-127, 57], [-115, 50], [-124, 39], [-111, 30], [-98, 18], [-83, 25], [-78, 34], [-61, 47], [-66, 59], [-91, 70], [-120, 74]],
-  [[-79, 12], [-62, 10], [-48, -2], [-36, -10], [-43, -24], [-52, -39], [-68, -56], [-76, -37], [-81, -10]],
-  [[-53, 82], [-28, 78], [-20, 66], [-41, 59], [-58, 68]],
-  [[-12, 36], [0, 43], [16, 47], [32, 57], [51, 56], [60, 68], [95, 74], [130, 59], [155, 53], [178, 58], [164, 42], [143, 37], [130, 29], [120, 18], [107, 8], [94, 9], [82, 22], [68, 8], [54, 26], [43, 39], [28, 34], [13, 37], [2, 39], [-8, 35]],
-  [[-18, 35], [2, 37], [18, 30], [34, 28], [48, 10], [43, -12], [34, -28], [18, -35], [2, -28], [-8, -17], [-17, 2], [-5, 14], [-17, 23]],
-  [[113, -11], [131, -10], [146, -16], [154, -28], [143, -40], [128, -35], [115, -25]],
-  [[95, 21], [105, 20], [111, 12], [105, 5], [102, -2], [107, -7], [118, -8], [123, 2], [115, 8], [112, 17], [104, 20]]
+  [
+    [-168, 70],
+    [-145, 73],
+    [-127, 57],
+    [-115, 50],
+    [-124, 39],
+    [-111, 30],
+    [-98, 18],
+    [-83, 25],
+    [-78, 34],
+    [-61, 47],
+    [-66, 59],
+    [-91, 70],
+    [-120, 74],
+  ],
+  [
+    [-79, 12],
+    [-62, 10],
+    [-48, -2],
+    [-36, -10],
+    [-43, -24],
+    [-52, -39],
+    [-68, -56],
+    [-76, -37],
+    [-81, -10],
+  ],
+  [
+    [-53, 82],
+    [-28, 78],
+    [-20, 66],
+    [-41, 59],
+    [-58, 68],
+  ],
+  [
+    [-12, 36],
+    [0, 43],
+    [16, 47],
+    [32, 57],
+    [51, 56],
+    [60, 68],
+    [95, 74],
+    [130, 59],
+    [155, 53],
+    [178, 58],
+    [164, 42],
+    [143, 37],
+    [130, 29],
+    [120, 18],
+    [107, 8],
+    [94, 9],
+    [82, 22],
+    [68, 8],
+    [54, 26],
+    [43, 39],
+    [28, 34],
+    [13, 37],
+    [2, 39],
+    [-8, 35],
+  ],
+  [
+    [-18, 35],
+    [2, 37],
+    [18, 30],
+    [34, 28],
+    [48, 10],
+    [43, -12],
+    [34, -28],
+    [18, -35],
+    [2, -28],
+    [-8, -17],
+    [-17, 2],
+    [-5, 14],
+    [-17, 23],
+  ],
+  [
+    [113, -11],
+    [131, -10],
+    [146, -16],
+    [154, -28],
+    [143, -40],
+    [128, -35],
+    [115, -25],
+  ],
+  [
+    [95, 21],
+    [105, 20],
+    [111, 12],
+    [105, 5],
+    [102, -2],
+    [107, -7],
+    [118, -8],
+    [123, 2],
+    [115, 8],
+    [112, 17],
+    [104, 20],
+  ],
 ];
 
 if (canvas && home) {
@@ -19,7 +108,7 @@ if (canvas && home) {
       canvas,
       alpha: true,
       antialias: true,
-      powerPreference: 'low-power'
+      powerPreference: "low-power",
     });
     if (fallback) fallback.hidden = true;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -39,11 +128,11 @@ if (canvas && home) {
     const earthSurface = new THREE.Mesh(
       new THREE.SphereGeometry(1.365, 128, 96),
       new THREE.MeshBasicMaterial({
-        color: '#d8edf7',
+        color: "#d8edf7",
         transparent: true,
         opacity: 0.48,
-        depthWrite: true
-      })
+        depthWrite: true,
+      }),
     );
     earthSurface.renderOrder = 0;
     earth.add(earthSurface);
@@ -67,7 +156,7 @@ if (canvas && home) {
     let travelStartX = 0;
     let travelMiddleX = 0;
     let travelEndX = 0;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const clock = new THREE.Clock();
     const smoothedPosition = new THREE.Vector3();
     let rotationOffset = 0;
@@ -91,9 +180,12 @@ if (canvas && home) {
       const radius = mobile
         ? Math.min(width * 0.37, 150)
         : Math.min(width * 0.29, height * 0.39, 340);
-      const viewHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * baseCameraZ;
-      viewWidth = viewHeight * width / Math.max(height, 1);
-      earth.scale.setScalar(radius * viewHeight / Math.max(height, 1) / 1.365);
+      const viewHeight =
+        2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * baseCameraZ;
+      viewWidth = (viewHeight * width) / Math.max(height, 1);
+      earth.scale.setScalar(
+        (radius * viewHeight) / Math.max(height, 1) / 1.365,
+      );
 
       // Place the globe by viewport coordinates so the scroll path truly crosses the screen.
       const startRatio = mobile ? 0.78 : 0.7;
@@ -115,116 +207,175 @@ if (canvas && home) {
       elapsed += delta;
       if (!reducedMotion.matches) {
         const damping = 1 - Math.exp(-3.6 * delta);
-        scrollProgress += (scrollTarget - scrollProgress) * (1 - Math.exp(-4.4 * delta));
-        pointer.x += (pointer.targetX - pointer.x) * (1 - Math.exp(-4.8 * delta));
-        pointer.y += (pointer.targetY - pointer.y) * (1 - Math.exp(-4.8 * delta));
+        scrollProgress +=
+          (scrollTarget - scrollProgress) * (1 - Math.exp(-4.4 * delta));
+        pointer.x +=
+          (pointer.targetX - pointer.x) * (1 - Math.exp(-4.8 * delta));
+        pointer.y +=
+          (pointer.targetY - pointer.y) * (1 - Math.exp(-4.8 * delta));
 
         dragRotation += dragVelocity * delta;
         dragVelocity *= Math.exp(-5.5 * delta);
-        const targetRotationOffset = scrollProgress * 0.34 + dragRotation + pointer.x * 0.12;
+        const targetRotationOffset =
+          scrollProgress * 0.34 + dragRotation + pointer.x * 0.12;
         rotationOffset += (targetRotationOffset - rotationOffset) * damping;
         earth.rotation.y = elapsed * 0.08 + rotationOffset;
-        const targetTilt = 0.06 + Math.sin(scrollProgress * Math.PI * 1.4) * 0.12 + pointer.y * 0.055;
+        const targetTilt =
+          0.06 +
+          Math.sin(scrollProgress * Math.PI * 1.4) * 0.12 +
+          pointer.y * 0.055;
         earth.rotation.x += (targetTilt * 0.6 - earth.rotation.x) * damping;
 
         const firstLegEnd = 0.56;
-        const pathProgress = scrollProgress < firstLegEnd
-          ? THREE.MathUtils.smoothstep(scrollProgress / firstLegEnd, 0, 1) * 0.56
-          : 0.56 + THREE.MathUtils.smoothstep((scrollProgress - firstLegEnd) / (1 - firstLegEnd), 0, 1) * 0.44;
-        const screenPathX = pathProgress < 0.56
-          ? THREE.MathUtils.lerp(travelStartX, travelMiddleX, pathProgress / 0.56)
-          : THREE.MathUtils.lerp(travelMiddleX, travelEndX, (pathProgress - 0.56) / 0.44);
+        const pathProgress =
+          scrollProgress < firstLegEnd
+            ? THREE.MathUtils.smoothstep(scrollProgress / firstLegEnd, 0, 1) *
+              0.56
+            : 0.56 +
+              THREE.MathUtils.smoothstep(
+                (scrollProgress - firstLegEnd) / (1 - firstLegEnd),
+                0,
+                1,
+              ) *
+                0.44;
+        const screenPathX =
+          pathProgress < 0.56
+            ? THREE.MathUtils.lerp(
+                travelStartX,
+                travelMiddleX,
+                pathProgress / 0.56,
+              )
+            : THREE.MathUtils.lerp(
+                travelMiddleX,
+                travelEndX,
+                (pathProgress - 0.56) / 0.44,
+              );
         const vertical = Math.sin(scrollProgress * Math.PI) * 0.5;
         smoothedPosition.set(
           screenPathX + pointer.x * viewWidth * 0.025,
           homePositionY - vertical + pointer.y * 0.09,
-          0
+          0,
         );
         earth.position.lerp(smoothedPosition, damping);
 
-        const targetCameraZ = baseCameraZ - Math.sin(scrollProgress * Math.PI) * 0.55;
+        const targetCameraZ =
+          baseCameraZ - Math.sin(scrollProgress * Math.PI) * 0.55;
         camera.position.z += (targetCameraZ - camera.position.z) * damping;
-        const footerFade = THREE.MathUtils.smoothstep(scrollProgress, 0.72, 0.94);
+        const footerFade = THREE.MathUtils.smoothstep(
+          scrollProgress,
+          0.72,
+          0.94,
+        );
         canvas.style.opacity = (1 - footerFade * 0.9).toFixed(3);
-        pulses.forEach(({ curve, marker, glow, beamMaterial, impactRings, speed, phase }) => {
-          const cycle = (elapsed * speed + phase) % 1;
-          const active = cycle < 0.46;
-          const progress = active ? cycle / 0.46 : 0;
-          beamMaterial.uniforms.uHead.value = progress;
-          beamMaterial.uniforms.uActive.value = active ? 1 : 0;
-          marker.visible = active;
-          glow.visible = active;
-          if (active) {
-            impactRings.forEach(({ ring }) => { ring.visible = false; });
-            const point = curve.getPointAt(progress);
-            marker.position.copy(point);
-            glow.position.copy(point);
-            const glowSize = 0.1 + Math.sin(progress * Math.PI) * 0.05;
-            glow.scale.set(glowSize, glowSize, 1);
-            marker.scale.setScalar(0.72 + Math.sin(progress * Math.PI) * 0.3);
-            return;
-          }
+        pulses.forEach(
+          ({
+            curve,
+            marker,
+            glow,
+            beamMaterial,
+            impactRings,
+            speed,
+            phase,
+          }) => {
+            const cycle = (elapsed * speed + phase) % 1;
+            const active = cycle < 0.46;
+            const progress = active ? cycle / 0.46 : 0;
+            beamMaterial.uniforms.uHead.value = progress;
+            beamMaterial.uniforms.uActive.value = active ? 1 : 0;
+            marker.visible = active;
+            glow.visible = active;
+            if (active) {
+              impactRings.forEach(({ ring }) => {
+                ring.visible = false;
+              });
+              const point = curve.getPointAt(progress);
+              marker.position.copy(point);
+              glow.position.copy(point);
+              const glowSize = 0.1 + Math.sin(progress * Math.PI) * 0.05;
+              glow.scale.set(glowSize, glowSize, 1);
+              marker.scale.setScalar(0.72 + Math.sin(progress * Math.PI) * 0.3);
+              return;
+            }
 
-          const impactProgress = (cycle - 0.46) / 0.34;
-          impactRings.forEach(({ ring, delay }) => {
-            const rippleProgress = (impactProgress - delay) / (1 - delay);
-            const visible = rippleProgress >= 0 && rippleProgress < 1;
-            ring.visible = visible;
-            if (!visible) return;
-            ring.scale.setScalar(1 + rippleProgress * 6.5);
-            ring.material.opacity = Math.sin(rippleProgress * Math.PI) * 0.22;
-          });
-        });
+            const impactProgress = (cycle - 0.46) / 0.34;
+            impactRings.forEach(({ ring, delay }) => {
+              const rippleProgress = (impactProgress - delay) / (1 - delay);
+              const visible = rippleProgress >= 0 && rippleProgress < 1;
+              ring.visible = visible;
+              if (!visible) return;
+              ring.scale.setScalar(1 + rippleProgress * 6.5);
+              ring.material.opacity = Math.sin(rippleProgress * Math.PI) * 0.22;
+            });
+          },
+        );
       }
       renderer.render(scene, camera);
-      if (!reducedMotion.matches && !document.hidden) animationFrame = requestAnimationFrame(render);
+      if (!reducedMotion.matches && !document.hidden)
+        animationFrame = requestAnimationFrame(render);
     }
 
     function updateScrollProgress() {
-      const scrollRange = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      const scrollRange = Math.max(
+        document.documentElement.scrollHeight - window.innerHeight,
+        1,
+      );
       scrollTarget = THREE.MathUtils.clamp(window.scrollY / scrollRange, 0, 1);
       const footerFade = THREE.MathUtils.smoothstep(scrollTarget, 0.72, 0.94);
       canvas.style.opacity = (1 - footerFade * 0.9).toFixed(3);
     }
 
     function isInteractiveTarget(target) {
-      return target instanceof Element && Boolean(target.closest('a, button, input, select, textarea, [role="button"]'));
+      return (
+        target instanceof Element &&
+        Boolean(
+          target.closest('a, button, input, select, textarea, [role="button"]'),
+        )
+      );
     }
 
-    const hero = home.querySelector('.home-hero');
-    hero?.addEventListener('pointermove', (event) => {
+    const hero = home.querySelector(".home-hero");
+    hero?.addEventListener("pointermove", (event) => {
       const bounds = hero.getBoundingClientRect();
-      pointer.targetX = THREE.MathUtils.clamp(((event.clientX - bounds.left) / bounds.width - 0.5) * 2, -1, 1);
-      pointer.targetY = THREE.MathUtils.clamp(((event.clientY - bounds.top) / bounds.height - 0.5) * 2, -1, 1);
+      pointer.targetX = THREE.MathUtils.clamp(
+        ((event.clientX - bounds.left) / bounds.width - 0.5) * 2,
+        -1,
+        1,
+      );
+      pointer.targetY = THREE.MathUtils.clamp(
+        ((event.clientY - bounds.top) / bounds.height - 0.5) * 2,
+        -1,
+        1,
+      );
       if (!isDragging || event.pointerId !== pointerId) return;
       const movement = event.clientX - lastPointerX;
       lastPointerX = event.clientX;
       dragVelocity = movement * 0.012;
       dragRotation += movement * 0.004;
     });
-    hero?.addEventListener('pointerdown', (event) => {
+    hero?.addEventListener("pointerdown", (event) => {
       if (isInteractiveTarget(event.target)) return;
-      if (event.target !== hero && !event.target.closest('.earth-caption')) return;
+      if (event.target !== hero && !event.target.closest(".earth-caption"))
+        return;
       isDragging = true;
       pointerId = event.pointerId;
       lastPointerX = event.clientX;
       hero.setPointerCapture?.(pointerId);
-      hero.classList.add('is-earth-dragging');
+      hero.classList.add("is-earth-dragging");
     });
-    hero?.addEventListener('pointerleave', () => {
+    hero?.addEventListener("pointerleave", () => {
       pointer.targetX = 0;
       pointer.targetY = 0;
     });
     const stopDragging = () => {
       isDragging = false;
       pointerId = null;
-      hero?.classList.remove('is-earth-dragging');
+      hero?.classList.remove("is-earth-dragging");
     };
-    hero?.addEventListener('pointerup', stopDragging);
-    hero?.addEventListener('pointercancel', stopDragging);
-    hero?.addEventListener('lostpointercapture', stopDragging);
+    hero?.addEventListener("pointerup", stopDragging);
+    hero?.addEventListener("pointercancel", stopDragging);
+    hero?.addEventListener("lostpointercapture", stopDragging);
 
-    document.addEventListener('visibilitychange', () => {
+    document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         cancelAnimationFrame(animationFrame);
         return;
@@ -232,18 +383,21 @@ if (canvas && home) {
       clock.start();
       render();
     });
-    reducedMotion.addEventListener('change', () => {
+    reducedMotion.addEventListener("change", () => {
       if (reducedMotion.matches) cancelAnimationFrame(animationFrame);
       else render();
     });
-    window.addEventListener('scroll', updateScrollProgress, { passive: true });
-    window.addEventListener('resize', resize, { passive: true });
+    window.addEventListener("scroll", updateScrollProgress, { passive: true });
+    window.addEventListener("resize", resize, { passive: true });
     resize();
     render();
   } catch (error) {
     canvas.hidden = true;
     if (fallback) fallback.hidden = false;
-    console.warn('DRSS earth scene could not start; using the static globe fallback.', error);
+    console.warn(
+      "DRSS earth scene could not start; using the static globe fallback.",
+      error,
+    );
   }
 }
 
@@ -253,9 +407,9 @@ function createEarthPointCloud() {
   const colors = new Float32Array(count * 3);
   const sizes = new Float32Array(count);
   const alphas = new Float32Array(count);
-  const oceanBlue = new THREE.Color('#13b9ec');
-  const highlight = new THREE.Color('#9cf3ff');
-  const deepBlue = new THREE.Color('#087fae');
+  const oceanBlue = new THREE.Color("#13b9ec");
+  const highlight = new THREE.Color("#9cf3ff");
+  const deepBlue = new THREE.Color("#087fae");
   let seed = 7193;
   const random = () => {
     seed = (seed * 16807) % 2147483647;
@@ -272,34 +426,47 @@ function createEarthPointCloud() {
     positions[offset + 1] = y * pointRadius;
     positions[offset + 2] = Math.sin(theta) * radius * pointRadius;
     const latitude = Math.asin(y) * THREE.MathUtils.RAD2DEG;
-    const longitude = Math.atan2(Math.cos(theta) * radius, Math.sin(theta) * radius) * THREE.MathUtils.RAD2DEG;
+    const longitude =
+      Math.atan2(Math.cos(theta) * radius, Math.sin(theta) * radius) *
+      THREE.MathUtils.RAD2DEG;
     const land = isLandPoint(latitude, longitude);
     const tone = random();
     const color = land
-      ? (tone > 0.97 ? highlight : (tone > 0.74 ? oceanBlue : deepBlue))
+      ? tone > 0.97
+        ? highlight
+        : tone > 0.74
+          ? oceanBlue
+          : deepBlue
       : deepBlue;
     colors[offset] = color.r;
     colors[offset + 1] = color.g;
     colors[offset + 2] = color.b;
     const sizeSeed = random();
     sizes[index] = land
-      ? (sizeSeed > 0.99 ? 0.07 + random() * 0.028 : 0.022 + sizeSeed * 0.023)
+      ? sizeSeed > 0.99
+        ? 0.07 + random() * 0.028
+        : 0.022 + sizeSeed * 0.023
       : 0.009 + sizeSeed * 0.009;
     alphas[index] = land ? 0.92 : 0.12;
   }
 
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  geometry.setAttribute('aSize', new THREE.Float32BufferAttribute(sizes, 1));
-  geometry.setAttribute('aAlpha', new THREE.Float32BufferAttribute(alphas, 1));
-  return new THREE.Points(geometry, new THREE.ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    vertexColors: true,
-    blending: THREE.AdditiveBlending,
-    uniforms: { time: { value: 0 } },
-    vertexShader: `
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3),
+  );
+  geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setAttribute("aSize", new THREE.Float32BufferAttribute(sizes, 1));
+  geometry.setAttribute("aAlpha", new THREE.Float32BufferAttribute(alphas, 1));
+  return new THREE.Points(
+    geometry,
+    new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+      uniforms: { time: { value: 0 } },
+      vertexShader: `
       attribute float aSize;
       attribute float aAlpha;
       varying vec3 vColor;
@@ -314,7 +481,7 @@ function createEarthPointCloud() {
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
-    fragmentShader: `
+      fragmentShader: `
       varying vec3 vColor;
       varying float vAlpha;
       void main() {
@@ -322,25 +489,26 @@ function createEarthPointCloud() {
         float dotShape = 1.0 - smoothstep(0.34, 0.5, distanceToCenter);
         gl_FragColor = vec4(vColor, dotShape * vAlpha);
       }
-    `
-  }));
+    `,
+    }),
+  );
 }
 
 function createEarthWireframe() {
   const grid = new THREE.Group();
   const latitudeMaterial = new THREE.LineBasicMaterial({
-    color: '#14a9d4',
+    color: "#14a9d4",
     transparent: true,
     opacity: 0.22,
     blending: THREE.AdditiveBlending,
-    depthWrite: false
+    depthWrite: false,
   });
   const longitudeMaterial = new THREE.LineBasicMaterial({
-    color: '#5be3ff',
+    color: "#5be3ff",
     transparent: true,
     opacity: 0.18,
     blending: THREE.AdditiveBlending,
-    depthWrite: false
+    depthWrite: false,
   });
 
   for (let latitude = -80; latitude <= 80; latitude += 20) {
@@ -348,7 +516,10 @@ function createEarthWireframe() {
     for (let longitude = -180; longitude <= 180; longitude += 3) {
       points.push(earthPoint(latitude, longitude, 1.374));
     }
-    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), latitudeMaterial);
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(points),
+      latitudeMaterial,
+    );
     line.renderOrder = 0.5;
     grid.add(line);
   }
@@ -358,7 +529,10 @@ function createEarthWireframe() {
     for (let latitude = -87; latitude <= 87; latitude += 3) {
       points.push(earthPoint(latitude, longitude, 1.374));
     }
-    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), longitudeMaterial);
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(points),
+      longitudeMaterial,
+    );
     line.renderOrder = 0.5;
     grid.add(line);
   }
@@ -368,23 +542,118 @@ function createEarthWireframe() {
 
 function isLandPoint(latitude, longitude) {
   const continents = [
-    [[-168, 70], [-145, 73], [-127, 57], [-115, 50], [-124, 39], [-111, 30], [-98, 18], [-83, 25], [-78, 34], [-61, 47], [-66, 59], [-91, 70], [-120, 74]],
-    [[-79, 12], [-62, 10], [-48, -2], [-36, -10], [-43, -24], [-52, -39], [-68, -56], [-76, -37], [-81, -10]],
-    [[-53, 82], [-28, 78], [-20, 66], [-41, 59], [-58, 68]],
-    [[-12, 36], [0, 43], [16, 47], [32, 57], [51, 56], [60, 68], [95, 74], [130, 59], [155, 53], [178, 58], [164, 42], [143, 37], [130, 29], [120, 18], [107, 8], [94, 9], [82, 22], [68, 8], [54, 26], [43, 39], [28, 34], [13, 37], [2, 39], [-8, 35]],
-    [[-18, 35], [2, 37], [18, 30], [34, 28], [48, 10], [43, -12], [34, -28], [18, -35], [2, -28], [-8, -17], [-17, 2], [-5, 14], [-17, 23]],
-    [[113, -11], [131, -10], [146, -16], [154, -28], [143, -40], [128, -35], [115, -25]],
-    [[95, 21], [105, 20], [111, 12], [105, 5], [102, -2], [107, -7], [118, -8], [123, 2], [115, 8], [112, 17], [104, 20]]
+    [
+      [-168, 70],
+      [-145, 73],
+      [-127, 57],
+      [-115, 50],
+      [-124, 39],
+      [-111, 30],
+      [-98, 18],
+      [-83, 25],
+      [-78, 34],
+      [-61, 47],
+      [-66, 59],
+      [-91, 70],
+      [-120, 74],
+    ],
+    [
+      [-79, 12],
+      [-62, 10],
+      [-48, -2],
+      [-36, -10],
+      [-43, -24],
+      [-52, -39],
+      [-68, -56],
+      [-76, -37],
+      [-81, -10],
+    ],
+    [
+      [-53, 82],
+      [-28, 78],
+      [-20, 66],
+      [-41, 59],
+      [-58, 68],
+    ],
+    [
+      [-12, 36],
+      [0, 43],
+      [16, 47],
+      [32, 57],
+      [51, 56],
+      [60, 68],
+      [95, 74],
+      [130, 59],
+      [155, 53],
+      [178, 58],
+      [164, 42],
+      [143, 37],
+      [130, 29],
+      [120, 18],
+      [107, 8],
+      [94, 9],
+      [82, 22],
+      [68, 8],
+      [54, 26],
+      [43, 39],
+      [28, 34],
+      [13, 37],
+      [2, 39],
+      [-8, 35],
+    ],
+    [
+      [-18, 35],
+      [2, 37],
+      [18, 30],
+      [34, 28],
+      [48, 10],
+      [43, -12],
+      [34, -28],
+      [18, -35],
+      [2, -28],
+      [-8, -17],
+      [-17, 2],
+      [-5, 14],
+      [-17, 23],
+    ],
+    [
+      [113, -11],
+      [131, -10],
+      [146, -16],
+      [154, -28],
+      [143, -40],
+      [128, -35],
+      [115, -25],
+    ],
+    [
+      [95, 21],
+      [105, 20],
+      [111, 12],
+      [105, 5],
+      [102, -2],
+      [107, -7],
+      [118, -8],
+      [123, 2],
+      [115, 8],
+      [112, 17],
+      [104, 20],
+    ],
   ];
 
   return continents.some((polygon) => {
     let inside = false;
-    for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current, current += 1) {
+    for (
+      let current = 0, previous = polygon.length - 1;
+      current < polygon.length;
+      previous = current, current += 1
+    ) {
       const [currentLon, currentLat] = polygon[current];
       const [previousLon, previousLat] = polygon[previous];
-      const crossesLatitude = (currentLat > latitude) !== (previousLat > latitude);
-      const crossingLongitude = ((previousLon - currentLon) * (latitude - currentLat)) /
-        (previousLat - currentLat) + currentLon;
+      const crossesLatitude = currentLat > latitude !== previousLat > latitude;
+      const crossingLongitude =
+        ((previousLon - currentLon) * (latitude - currentLat)) /
+          (previousLat - currentLat) +
+        currentLon;
       if (crossesLatitude && longitude < crossingLongitude) inside = !inside;
     }
     return inside;
@@ -392,7 +661,10 @@ function isLandPoint(latitude, longitude) {
 }
 
 function createLandDots(earth, rings) {
-  const dots = new THREE.Points(createLandDotGeometry(rings), createRoundPointMaterial('#078dff', 3.5, 1));
+  const dots = new THREE.Points(
+    createLandDotGeometry(rings),
+    createRoundPointMaterial("#078dff", 3.5, 1),
+  );
   dots.renderOrder = 2;
   earth.add(dots);
   return dots;
@@ -415,17 +687,20 @@ function createLandDotGeometry(rings) {
       minLongitude,
       maxLongitude,
       minLatitude,
-      maxLatitude
+      maxLatitude,
     };
   });
   const positions = [];
   const step = 2.15;
   for (let latitude = -78; latitude <= 82; latitude += step) {
     for (let longitude = -180; longitude < 180; longitude += step) {
-      const onLand = preparedRings.some((entry) =>
-        longitude >= entry.minLongitude && longitude <= entry.maxLongitude &&
-        latitude >= entry.minLatitude && latitude <= entry.maxLatitude &&
-        isPointInGeoRing(longitude, latitude, entry.ring)
+      const onLand = preparedRings.some(
+        (entry) =>
+          longitude >= entry.minLongitude &&
+          longitude <= entry.maxLongitude &&
+          latitude >= entry.minLatitude &&
+          latitude <= entry.maxLatitude &&
+          isPointInGeoRing(longitude, latitude, entry.ring),
       );
       if (!onLand) continue;
       const point = earthPoint(latitude, longitude, 1.376);
@@ -433,7 +708,10 @@ function createLandDotGeometry(rings) {
     }
   }
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3),
+  );
   return geometry;
 }
 
@@ -442,15 +720,22 @@ function isPointInGeoRing(longitude, latitude, ring) {
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i, i += 1) {
     const [xi, yi] = ring[i];
     const [xj, yj] = ring[j];
-    const crossesLatitude = (yi > latitude) !== (yj > latitude);
-    if (crossesLatitude && longitude < ((xj - xi) * (latitude - yi)) / (yj - yi) + xi) inside = !inside;
+    const crossesLatitude = yi > latitude !== yj > latitude;
+    if (
+      crossesLatitude &&
+      longitude < ((xj - xi) * (latitude - yi)) / (yj - yi) + xi
+    )
+      inside = !inside;
   }
   return inside;
 }
 
 function createGraticule(earth) {
   const lineMaterial = new THREE.LineBasicMaterial({
-    color: '#737b80', transparent: true, opacity: 0.34, depthWrite: false
+    color: "#737b80",
+    transparent: true,
+    opacity: 0.34,
+    depthWrite: false,
   });
   const lineGroup = new THREE.Group();
   const lineSteps = 144;
@@ -459,14 +744,24 @@ function createGraticule(earth) {
     for (let step = 0; step < lineSteps; step += 1) {
       points.push(earthPoint(latitude, -180 + (step / lineSteps) * 360, 1.382));
     }
-    lineGroup.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points), lineMaterial));
+    lineGroup.add(
+      new THREE.LineLoop(
+        new THREE.BufferGeometry().setFromPoints(points),
+        lineMaterial,
+      ),
+    );
   }
   for (let longitude = -180; longitude < 180; longitude += 15) {
     const points = [];
     for (let step = 0; step <= lineSteps; step += 1) {
       points.push(earthPoint(-89 + (step / lineSteps) * 178, longitude, 1.382));
     }
-    lineGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), lineMaterial));
+    lineGroup.add(
+      new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(points),
+        lineMaterial,
+      ),
+    );
   }
   lineGroup.renderOrder = 1;
   earth.add(lineGroup);
@@ -479,8 +774,14 @@ function createGraticule(earth) {
     }
   }
   const nodeGeometry = new THREE.BufferGeometry();
-  nodeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(nodes, 3));
-  const intersections = new THREE.Points(nodeGeometry, createRoundPointMaterial('#55c6ff', 6.2, 0.94));
+  nodeGeometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(nodes, 3),
+  );
+  const intersections = new THREE.Points(
+    nodeGeometry,
+    createRoundPointMaterial("#55c6ff", 6.2, 0.94),
+  );
   intersections.renderOrder = 3;
   earth.add(intersections);
 }
@@ -492,7 +793,7 @@ function createRoundPointMaterial(color, size, opacity) {
     uniforms: {
       pointColor: { value: new THREE.Color(color) },
       pointSize: { value: size },
-      pointOpacity: { value: opacity }
+      pointOpacity: { value: opacity },
     },
     vertexShader: `
       uniform float pointSize;
@@ -517,42 +818,64 @@ function createRoundPointMaterial(color, size, opacity) {
         gl_FragColor = vec4(pointColor * (1.0 + halo * 1.8), alpha * pointOpacity * vFade);
         #include <colorspace_fragment>
       }
-    `
+    `,
   });
 }
 
 function createNetwork(earth) {
   const nodes = [
-    earthPoint(48, -125, 1.4), earthPoint(35, -72, 1.4),
-    earthPoint(12, -42, 1.4), earthPoint(52, 18, 1.4),
-    earthPoint(8, 72, 1.4), earthPoint(38, 112, 1.4),
-    earthPoint(-24, 135, 1.4), earthPoint(-34, 18, 1.4),
-    earthPoint(62, 95, 1.4)
+    earthPoint(48, -125, 1.4),
+    earthPoint(35, -72, 1.4),
+    earthPoint(12, -42, 1.4),
+    earthPoint(52, 18, 1.4),
+    earthPoint(8, 72, 1.4),
+    earthPoint(38, 112, 1.4),
+    earthPoint(-24, 135, 1.4),
+    earthPoint(-34, 18, 1.4),
+    earthPoint(62, 95, 1.4),
   ];
   const edges = [
-    [0, 1], [1, 2], [1, 3], [3, 4], [4, 5], [5, 6], [4, 8], [2, 7], [7, 3],
-    [0, 3], [2, 3], [2, 4], [3, 5], [5, 8], [6, 7], [1, 7], [8, 6], [0, 7]
+    [0, 1],
+    [1, 2],
+    [1, 3],
+    [3, 4],
+    [4, 5],
+    [5, 6],
+    [4, 8],
+    [2, 7],
+    [7, 3],
+    [0, 3],
+    [2, 3],
+    [2, 4],
+    [3, 5],
+    [5, 8],
+    [6, 7],
+    [1, 7],
+    [8, 6],
+    [0, 7],
   ];
   const pulses = [];
   const glowTexture = createParticleGlow();
 
   nodes.forEach((point, index) => {
     const isSos = index === 4;
-    const color = isSos ? '#078dff' : '#168fff';
+    const color = isSos ? "#078dff" : "#168fff";
     const marker = new THREE.Mesh(
       new THREE.SphereGeometry(isSos ? 0.028 : 0.018, 12, 10),
-      new THREE.MeshBasicMaterial({ color, depthWrite: false })
+      new THREE.MeshBasicMaterial({ color, depthWrite: false }),
     );
     marker.position.copy(point);
     earth.add(marker);
-    const nodeGlow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: glowTexture,
-      color,
-      transparent: true,
-      opacity: isSos ? 0.3 : 0.18,
-      blending: THREE.NormalBlending,
-      depthWrite: false
-    }));
+    const nodeGlow = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: glowTexture,
+        color,
+        transparent: true,
+        opacity: isSos ? 0.3 : 0.18,
+        blending: THREE.NormalBlending,
+        depthWrite: false,
+      }),
+    );
     nodeGlow.position.copy(point);
     nodeGlow.scale.setScalar(isSos ? 0.105 : 0.075);
     earth.add(nodeGlow);
@@ -571,7 +894,9 @@ function createNetwork(earth) {
         uHead: { value: 0 },
         uActive: { value: 0 },
         uTrailLength: { value: 0.24 },
-        uColor: { value: new THREE.Color(index % 3 === 0 ? '#e9f8ff' : '#299bff') }
+        uColor: {
+          value: new THREE.Color(index % 3 === 0 ? "#e9f8ff" : "#299bff"),
+        },
       },
       vertexShader: `
         varying float vAlong;
@@ -597,23 +922,32 @@ function createNetwork(earth) {
           gl_FragColor = vec4(uColor * (1.0 + tailFade * 0.8), alpha);
           #include <colorspace_fragment>
         }
-      `
+      `,
     });
-    const beam = new THREE.Mesh(new THREE.TubeGeometry(curve, 96, 0.0035, 6, false), beamMaterial);
+    const beam = new THREE.Mesh(
+      new THREE.TubeGeometry(curve, 96, 0.0035, 6, false),
+      beamMaterial,
+    );
     beam.renderOrder = 4;
     earth.add(beam);
     const pulse = new THREE.Mesh(
       new THREE.SphereGeometry(0.018, 10, 8),
-      new THREE.MeshBasicMaterial({ color: '#dff5ff', transparent: true, depthWrite: false })
+      new THREE.MeshBasicMaterial({
+        color: "#dff5ff",
+        transparent: true,
+        depthWrite: false,
+      }),
     );
-    const pulseGlow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: glowTexture,
-      color: '#16a6ff',
-      transparent: true,
-      opacity: 0.48,
-      blending: THREE.NormalBlending,
-      depthWrite: false
-    }));
+    const pulseGlow = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: glowTexture,
+        color: "#16a6ff",
+        transparent: true,
+        opacity: 0.48,
+        blending: THREE.NormalBlending,
+        depthWrite: false,
+      }),
+    );
     earth.add(pulse);
     earth.add(pulseGlow);
     pulse.visible = false;
@@ -622,16 +956,19 @@ function createNetwork(earth) {
       const ring = new THREE.Mesh(
         new THREE.RingGeometry(0.025, 0.032, 48),
         new THREE.MeshBasicMaterial({
-          color: ringIndex === 0 ? '#92b5c7' : '#789ab4',
+          color: ringIndex === 0 ? "#92b5c7" : "#789ab4",
           transparent: true,
           opacity: 0,
           side: THREE.DoubleSide,
           blending: THREE.NormalBlending,
-          depthWrite: false
-        })
+          depthWrite: false,
+        }),
       );
       ring.position.copy(end.clone().multiplyScalar(1.006));
-      ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), end.clone().normalize());
+      ring.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        end.clone().normalize(),
+      );
       ring.visible = false;
       ring.renderOrder = 5;
       earth.add(ring);
@@ -644,7 +981,7 @@ function createNetwork(earth) {
       glow: pulseGlow,
       impactRings,
       speed: 0.14 + (index % 4) * 0.022,
-      phase: index / edges.length
+      phase: index / edges.length,
     });
   });
 
@@ -654,7 +991,10 @@ function createNetwork(earth) {
 function createEarthMaterial() {
   const fallbackMap = createFallbackEarthTexture();
   const fallbackNight = new THREE.DataTexture(
-    new Uint8Array([0, 0, 0, 255]), 1, 1, THREE.RGBAFormat
+    new Uint8Array([0, 0, 0, 255]),
+    1,
+    1,
+    THREE.RGBAFormat,
   );
   fallbackNight.needsUpdate = true;
 
@@ -662,7 +1002,7 @@ function createEarthMaterial() {
     uniforms: {
       dayMap: { value: fallbackMap },
       nightMap: { value: fallbackNight },
-      sunDirection: { value: new THREE.Vector3(-0.3, 0.24, 1).normalize() }
+      sunDirection: { value: new THREE.Vector3(-0.3, 0.24, 1).normalize() },
     },
     vertexShader: `
       varying vec2 vUv;
@@ -700,14 +1040,15 @@ function createEarthMaterial() {
         #include <colorspace_fragment>
       }
     `,
-    lights: false
+    lights: false,
   });
 }
 
 function loadEarthMaps(earthMaterial, cloudMaterial) {
   const loader = new THREE.TextureLoader();
-  loader.setCrossOrigin('anonymous');
-  const mapRoot = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r186/examples/textures/planets/';
+  loader.setCrossOrigin("anonymous");
+  const mapRoot =
+    "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r186/examples/textures/planets/";
   const configure = (texture, isColor = false) => {
     if (isColor) texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = THREE.RepeatWrapping;
@@ -731,30 +1072,30 @@ function loadEarthMaps(earthMaterial, cloudMaterial) {
 function createFallbackEarthTexture() {
   const width = 1024;
   const height = 512;
-  const textureCanvas = document.createElement('canvas');
+  const textureCanvas = document.createElement("canvas");
   textureCanvas.width = width;
   textureCanvas.height = height;
-  const context = textureCanvas.getContext('2d');
+  const context = textureCanvas.getContext("2d");
   const ocean = context.createLinearGradient(0, 0, 0, height);
-  ocean.addColorStop(0, '#091629');
-  ocean.addColorStop(0.5, '#123554');
-  ocean.addColorStop(1, '#071323');
+  ocean.addColorStop(0, "#091629");
+  ocean.addColorStop(0.5, "#123554");
+  ocean.addColorStop(1, "#071323");
   context.fillStyle = ocean;
   context.fillRect(0, 0, width, height);
 
   FALLBACK_LANDMASSES.forEach((polygon) => {
     context.beginPath();
     polygon.forEach(([longitude, latitude], index) => {
-      const x = (longitude + 180) / 360 * width;
-      const y = (90 - latitude) / 180 * height;
+      const x = ((longitude + 180) / 360) * width;
+      const y = ((90 - latitude) / 180) * height;
       if (index === 0) context.moveTo(x, y);
       else context.lineTo(x, y);
     });
     context.closePath();
-    context.fillStyle = '#31576d';
-    context.strokeStyle = 'rgba(78, 216, 255, 0.78)';
+    context.fillStyle = "#31576d";
+    context.strokeStyle = "rgba(78, 216, 255, 0.78)";
     context.lineWidth = 2;
-    context.shadowColor = '#11c9ff';
+    context.shadowColor = "#11c9ff";
     context.shadowBlur = 9;
     context.fill();
     context.stroke();
@@ -768,11 +1109,11 @@ function createFallbackEarthTexture() {
 }
 
 function createFallbackCloudTexture() {
-  const cloudCanvas = document.createElement('canvas');
+  const cloudCanvas = document.createElement("canvas");
   cloudCanvas.width = 512;
   cloudCanvas.height = 256;
-  const context = cloudCanvas.getContext('2d');
-  context.fillStyle = '#000';
+  const context = cloudCanvas.getContext("2d");
+  context.fillStyle = "#000";
   context.fillRect(0, 0, cloudCanvas.width, cloudCanvas.height);
   let seed = 4831;
   for (let index = 0; index < 170; index += 1) {
@@ -782,8 +1123,8 @@ function createFallbackCloudTexture() {
     const y = (seed / 2147483647) * cloudCanvas.height;
     const radius = 5 + (seed % 22);
     const cloud = context.createRadialGradient(x, y, 0, x, y, radius);
-    cloud.addColorStop(0, 'rgba(255,255,255,0.34)');
-    cloud.addColorStop(1, 'rgba(255,255,255,0)');
+    cloud.addColorStop(0, "rgba(255,255,255,0.34)");
+    cloud.addColorStop(1, "rgba(255,255,255,0)");
     context.fillStyle = cloud;
     context.beginPath();
     context.arc(x, y, radius, 0, Math.PI * 2);
@@ -794,15 +1135,18 @@ function createFallbackCloudTexture() {
 
 function createFallbackCountryLines() {
   const positions = [];
-  FALLBACK_LANDMASSES.forEach((polygon) => appendBoundaryRing(positions, polygon, 1.394));
+  FALLBACK_LANDMASSES.forEach((polygon) =>
+    appendBoundaryRing(positions, polygon, 1.394),
+  );
   return createBoundaryLayers(new Float32Array(positions));
 }
 
 function loadCountryBoundaries(group, landDots) {
-  const url = 'https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_110m_admin_0_countries.geojson';
-  fetch(url, { mode: 'cors' })
+  const url = "/images/maps/ne_110m_admin_0_countries.geojson";
+  fetch(url, { mode: "cors" })
     .then((response) => {
-      if (!response.ok) throw new Error(`Country boundary map returned ${response.status}`);
+      if (!response.ok)
+        throw new Error(`Country boundary map returned ${response.status}`);
       return response.json();
     })
     .then((geoJson) => {
@@ -810,7 +1154,10 @@ function loadCountryBoundaries(group, landDots) {
       const landRings = [];
       geoJson.features.forEach(({ geometry }) => {
         if (!geometry) return;
-        const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+        const polygons =
+          geometry.type === "Polygon"
+            ? [geometry.coordinates]
+            : geometry.coordinates;
         polygons.forEach((polygon) => {
           if (polygon[0]) landRings.push(polygon[0]);
           polygon.forEach((ring) => appendBoundaryRing(positions, ring, 1.394));
@@ -819,7 +1166,8 @@ function loadCountryBoundaries(group, landDots) {
       if (positions.length < 1000) return;
       group.children.forEach((child) => {
         child.geometry?.dispose();
-        if (Array.isArray(child.material)) child.material.forEach((material) => material.dispose());
+        if (Array.isArray(child.material))
+          child.material.forEach((material) => material.dispose());
         else child.material?.dispose();
       });
       group.clear();
@@ -827,7 +1175,9 @@ function loadCountryBoundaries(group, landDots) {
       landDots.geometry.dispose();
       landDots.geometry = createLandDotGeometry(landRings);
     })
-    .catch((error) => console.info('DRSS earth is using its built-in boundary map.', error));
+    .catch((error) =>
+      console.info("DRSS earth is using its built-in boundary map.", error),
+    );
 }
 
 function appendBoundaryRing(target, ring, radius) {
@@ -835,7 +1185,13 @@ function appendBoundaryRing(target, ring, radius) {
     const start = ring[index];
     const end = ring[index + 1];
     if (Math.abs(end[0] - start[0]) > 180) continue;
-    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(end[0] - start[0]), Math.abs(end[1] - start[1])) / 1.8));
+    const steps = Math.max(
+      1,
+      Math.ceil(
+        Math.max(Math.abs(end[0] - start[0]), Math.abs(end[1] - start[1])) /
+          1.8,
+      ),
+    );
     let previous = earthPoint(start[1], start[0], radius);
     for (let step = 1; step <= steps; step += 1) {
       const progress = step / steps;
@@ -850,26 +1206,35 @@ function appendBoundaryRing(target, ring, radius) {
 
 function createBoundaryLayers(positions) {
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3),
+  );
   const group = new THREE.Group();
-  const borders = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({
-    color: '#667177', transparent: true, opacity: 0.24, depthWrite: false
-  }));
+  const borders = new THREE.LineSegments(
+    geometry,
+    new THREE.LineBasicMaterial({
+      color: "#667177",
+      transparent: true,
+      opacity: 0.24,
+      depthWrite: false,
+    }),
+  );
   borders.renderOrder = 2;
   group.add(borders);
   return group;
 }
 
 function createSpaceGlow() {
-  const glowCanvas = document.createElement('canvas');
+  const glowCanvas = document.createElement("canvas");
   glowCanvas.width = 256;
   glowCanvas.height = 256;
-  const context = glowCanvas.getContext('2d');
+  const context = glowCanvas.getContext("2d");
   const gradient = context.createRadialGradient(128, 128, 24, 128, 128, 128);
-  gradient.addColorStop(0, 'rgba(83, 94, 100, 0.18)');
-  gradient.addColorStop(0.48, 'rgba(107, 119, 125, 0.10)');
-  gradient.addColorStop(0.74, 'rgba(136, 148, 153, 0.035)');
-  gradient.addColorStop(1, 'rgba(158, 168, 172, 0)');
+  gradient.addColorStop(0, "rgba(83, 94, 100, 0.18)");
+  gradient.addColorStop(0.48, "rgba(107, 119, 125, 0.10)");
+  gradient.addColorStop(0.74, "rgba(136, 148, 153, 0.035)");
+  gradient.addColorStop(1, "rgba(158, 168, 172, 0)");
   context.fillStyle = gradient;
   context.fillRect(0, 0, glowCanvas.width, glowCanvas.height);
   const texture = new THREE.CanvasTexture(glowCanvas);
@@ -878,17 +1243,17 @@ function createSpaceGlow() {
 }
 
 function createAtmosphereGlowTexture() {
-  const glowCanvas = document.createElement('canvas');
+  const glowCanvas = document.createElement("canvas");
   glowCanvas.width = 256;
   glowCanvas.height = 256;
-  const context = glowCanvas.getContext('2d');
+  const context = glowCanvas.getContext("2d");
   const gradient = context.createRadialGradient(128, 128, 64, 128, 128, 128);
-  gradient.addColorStop(0, 'rgba(91, 151, 184, 0)');
-  gradient.addColorStop(0.64, 'rgba(111, 170, 198, 0)');
-  gradient.addColorStop(0.7, 'rgba(133, 194, 218, 0.78)');
-  gradient.addColorStop(0.77, 'rgba(145, 199, 218, 0.34)');
-  gradient.addColorStop(0.88, 'rgba(165, 205, 220, 0.1)');
-  gradient.addColorStop(1, 'rgba(165, 205, 220, 0)');
+  gradient.addColorStop(0, "rgba(91, 151, 184, 0)");
+  gradient.addColorStop(0.64, "rgba(111, 170, 198, 0)");
+  gradient.addColorStop(0.7, "rgba(133, 194, 218, 0.78)");
+  gradient.addColorStop(0.77, "rgba(145, 199, 218, 0.34)");
+  gradient.addColorStop(0.88, "rgba(165, 205, 220, 0.1)");
+  gradient.addColorStop(1, "rgba(165, 205, 220, 0)");
   context.fillStyle = gradient;
   context.fillRect(0, 0, glowCanvas.width, glowCanvas.height);
   const texture = new THREE.CanvasTexture(glowCanvas);
@@ -897,15 +1262,15 @@ function createAtmosphereGlowTexture() {
 }
 
 function createParticleGlow() {
-  const glowCanvas = document.createElement('canvas');
+  const glowCanvas = document.createElement("canvas");
   glowCanvas.width = 128;
   glowCanvas.height = 128;
-  const context = glowCanvas.getContext('2d');
+  const context = glowCanvas.getContext("2d");
   const gradient = context.createRadialGradient(64, 64, 2, 64, 64, 64);
-  gradient.addColorStop(0, 'rgba(225, 253, 255, 0.95)');
-  gradient.addColorStop(0.12, 'rgba(79, 231, 255, 0.8)');
-  gradient.addColorStop(0.38, 'rgba(18, 183, 232, 0.3)');
-  gradient.addColorStop(1, 'rgba(18, 183, 232, 0)');
+  gradient.addColorStop(0, "rgba(225, 253, 255, 0.95)");
+  gradient.addColorStop(0.12, "rgba(79, 231, 255, 0.8)");
+  gradient.addColorStop(0.38, "rgba(18, 183, 232, 0.3)");
+  gradient.addColorStop(1, "rgba(18, 183, 232, 0)");
   context.fillStyle = gradient;
   context.fillRect(0, 0, glowCanvas.width, glowCanvas.height);
   const texture = new THREE.CanvasTexture(glowCanvas);
@@ -933,14 +1298,19 @@ function createStarField() {
     phases[index] = random() * Math.PI * 2;
   }
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('aSize', new THREE.Float32BufferAttribute(sizes, 1));
-  geometry.setAttribute('aPhase', new THREE.Float32BufferAttribute(phases, 1));
-  return new THREE.Points(geometry, new THREE.ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    uniforms: { time: { value: 0 } },
-    vertexShader: `
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3),
+  );
+  geometry.setAttribute("aSize", new THREE.Float32BufferAttribute(sizes, 1));
+  geometry.setAttribute("aPhase", new THREE.Float32BufferAttribute(phases, 1));
+  return new THREE.Points(
+    geometry,
+    new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      uniforms: { time: { value: 0 } },
+      vertexShader: `
       attribute float aSize;
       attribute float aPhase;
       uniform float time;
@@ -955,15 +1325,16 @@ function createStarField() {
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
-    fragmentShader: `
+      fragmentShader: `
       varying float vAlpha;
       void main() {
         float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
         float dotShape = 1.0 - smoothstep(0.25, 0.5, distanceToCenter);
         gl_FragColor = vec4(vec3(0.28, 0.78, 0.94), dotShape * vAlpha);
       }
-    `
-  }));
+    `,
+    }),
+  );
 }
 
 function earthPoint(latitude, longitude, radius) {
@@ -972,6 +1343,6 @@ function earthPoint(latitude, longitude, radius) {
   return new THREE.Vector3(
     radius * Math.cos(lat) * Math.sin(lon),
     radius * Math.sin(lat),
-    radius * Math.cos(lat) * Math.cos(lon)
+    radius * Math.cos(lat) * Math.cos(lon),
   );
 }

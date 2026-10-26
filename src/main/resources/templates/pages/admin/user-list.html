@@ -23,7 +23,11 @@
         th:text="${errorMessage}"
       ></div>
 
-      <form class="card card-body mb-4" method="get" th:action="@{/admin/users}">
+      <form
+        class="card card-body mb-4"
+        method="get"
+        th:action="@{/admin/users}"
+      >
         <div class="row g-3 align-items-end">
           <div class="col-12 col-lg-4">
             <label class="form-label" for="keyword">Tìm kiếm</label>
@@ -40,9 +44,15 @@
             <label class="form-label" for="status">Trạng thái</label>
             <select class="form-select" id="status" name="status">
               <option value="">Tất cả</option>
-              <option value="ACTIVE" th:selected="${status == 'ACTIVE'}">ACTIVE</option>
-              <option value="INACTIVE" th:selected="${status == 'INACTIVE'}">INACTIVE</option>
-              <option value="BANNED" th:selected="${status == 'BANNED'}">BANNED</option>
+              <option value="ACTIVE" th:selected="${status == 'ACTIVE'}">
+                ACTIVE
+              </option>
+              <option value="INACTIVE" th:selected="${status == 'INACTIVE'}">
+                INACTIVE
+              </option>
+              <option value="BANNED" th:selected="${status == 'BANNED'}">
+                BANNED
+              </option>
             </select>
           </div>
           <div class="col-12 col-sm-6 col-lg-2">
@@ -69,15 +79,21 @@
             </select>
           </div>
           <div class="col-12 col-sm-6 col-lg-2 d-flex gap-2">
-            <button class="btn btn-primary flex-grow-1" type="submit">Lọc</button>
-            <a class="btn btn-outline-secondary" th:href="@{/admin/users}">Xóa lọc</a>
+            <button class="btn btn-primary flex-grow-1" type="submit">
+              Lọc
+            </button>
+            <a class="btn btn-outline-secondary" th:href="@{/admin/users}"
+              >Xóa lọc</a
+            >
           </div>
         </div>
       </form>
 
       <div class="card" th:if="${!result.empty}">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table
+            class="table table-hover align-middle mb-0 drss-admin-user-table"
+          >
             <thead>
               <tr>
                 <th>Người dùng</th>
@@ -92,14 +108,29 @@
               <tr th:each="item : ${result.content}">
                 <td>
                   <div class="d-flex align-items-center gap-2">
-                    <span class="avatar-wrap"><img data-avatar-fallback th:if="${item.avatarSecureUrl != null}" th:src="${item.avatarSecureUrl}" alt=""/><span data-avatar-initial th:classappend="${item.avatarSecureUrl != null} ? ' d-none'" th:text="${#strings.substring(item.fullName,0,1)}">A</span></span>
+                    <span class="avatar-wrap"
+                      ><img
+                        data-avatar-fallback
+                        th:if="${item.avatarSecureUrl != null}"
+                        th:src="${item.avatarSecureUrl}"
+                        alt=""
+                      /><span
+                        data-avatar-initial
+                        th:classappend="${item.avatarSecureUrl != null} ? ' d-none'"
+                        th:text="${#strings.substring(item.fullName,0,1)}"
+                        >A</span
+                      ></span
+                    >
                     <span th:text="${item.fullName}"></span>
                   </div>
                 </td>
                 <td class="fw-semibold" th:text="${item.displayCode}"></td>
                 <td>
                   <div th:text="${item.email}"></div>
-                  <small class="text-secondary" th:text="${item.phoneNumber}"></small>
+                  <small
+                    class="text-secondary"
+                    th:text="${item.phoneNumber}"
+                  ></small>
                 </td>
                 <td>
                   <span
@@ -115,14 +146,17 @@
                       th:each="assignedRole : ${item.roles}"
                       th:text="${assignedRole}"
                     ></span>
-                    <span class="text-secondary" th:if="${item.roles.empty}">Không có vai trò</span>
+                    <span class="text-secondary" th:if="${item.roles.empty}"
+                      >Không có vai trò</span
+                    >
                   </div>
                 </td>
                 <td class="text-end">
                   <a
                     class="btn btn-sm btn-outline-primary"
                     th:href="@{/admin/users/{id}(id=${item.id})}"
-                  >Chi tiết</a>
+                    >Chi tiết</a
+                  >
                 </td>
               </tr>
             </tbody>
@@ -135,13 +169,18 @@
         <p class="text-secondary mb-0">Hãy thay đổi từ khóa hoặc bộ lọc.</p>
       </div>
 
-      <nav class="mt-4" aria-label="Phân trang" th:if="${result.totalPages > 1}">
+      <nav
+        class="mt-4"
+        aria-label="Phân trang"
+        th:if="${result.totalPages > 1}"
+      >
         <ul class="pagination flex-wrap">
           <li class="page-item" th:classappend="${result.first} ? 'disabled'">
             <a
               class="page-link"
               th:href="@{/admin/users(keyword=${keyword},status=${status},role=${role},page=${result.number - 1},size=${size})}"
-            >Trước</a>
+              >Trước</a
+            >
           </li>
           <li class="page-item disabled">
             <span
@@ -153,7 +192,8 @@
             <a
               class="page-link"
               th:href="@{/admin/users(keyword=${keyword},status=${status},role=${role},page=${result.number + 1},size=${size})}"
-            >Sau</a>
+              >Sau</a
+            >
           </li>
         </ul>
       </nav>
