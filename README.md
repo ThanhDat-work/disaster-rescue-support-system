@@ -1,301 +1,176 @@
 # Disaster Rescue Support System (DRSS)
 
-DRSS là ứng dụng web hỗ trợ tiếp nhận, điều phối và theo dõi yêu cầu cứu hộ trong tình huống thiên tai.
+DRSS là ứng dụng web hỗ trợ người dân gửi yêu cầu cứu nạn, điều phối viên xác minh và phân công, đội cứu hộ xử lý nhiệm vụ, và quản trị viên quản lý dữ liệu hệ thống. Ứng dụng chạy trên trình duyệt, được xây dựng bằng Java 17, Spring Boot, Thymeleaf và MySQL.
 
-Dự án được xây dựng theo layered MVC với Spring Boot, Thymeleaf, Spring Data JPA, MySQL và Flyway. Repository này dùng chung cho quá trình phát triển, kiểm thử và tổng hợp tài liệu của nhóm.
+- **Bản demo:** https://drss-demo-dat.onrender.com/
+- **Source:** https://github.com/ThanhDat-work/disaster-rescue-support-system
+- **Mốc source dùng để cập nhật tài liệu:** `0cf27f89fc583a36305b67699edb32d6e0884563` (SHA do nhóm cung cấp; đối chiếu `git rev-parse HEAD` trên bản nộp cuối).
 
-## Trạng thái hiện tại
+> URL demo là địa chỉ nhóm cung cấp, không phải cam kết uptime. Dịch vụ miễn phí có thể cần thời gian khởi động sau khi không có truy cập. Không đưa tài khoản, mật khẩu hay dữ liệu người dùng thật vào README hoặc GitHub công khai.
 
-Foundation của dự án đã được thiết lập:
+## 1. Chức năng hiện có
 
-- Java và Maven Wrapper đã được khóa phiên bản.
-- Spring Boot có thể build và chạy bằng executable JAR.
-- MySQL, JPA, Flyway và HikariCP đã được kiểm chứng khi chạy thật.
-- Cấu hình bí mật được cung cấp bằng biến môi trường.
-- Smoke test không yêu cầu database secret.
-- Layered package structure và ADR kiến trúc đã được thiết lập.
+| Vai trò/khu vực | Chức năng chính | Trang bắt đầu |
+| --- | --- | --- |
+| Khách | Trang chủ, đăng ký, xác minh OTP, đăng nhập, quên/đặt lại mật khẩu | `/`, `/auth/register`, `/auth/login` |
+| Người dân | Tạo, xem, theo dõi và hủy yêu cầu trong điều kiện cho phép; đính kèm ảnh/video | `/requests`, `/requests/new` |
+| Điều phối viên | Xác minh/từ chối, phân công đội, theo dõi tiến độ và đóng yêu cầu | `/coordinator/pending`, `/coordinator/tracking` |
+| Cứu hộ | Xem đội tham gia, nhận nhiệm vụ theo đội, bắt đầu và hoàn thành cứu hộ | `/team/my-teams`, `/team/tasks` |
+| Quản trị viên | Quản lý loại thiên tai, tài khoản/vai trò, đội cứu hộ và thành viên | `/admin/disasters`, `/admin/users`, `/admin/teams` |
+| Tài khoản đã đăng nhập | Hồ sơ, avatar, thống kê theo vai trò, chuyển vai trò được cấp, hộp thư thông báo | `/account/profile`, `/account/role-switch` |
 
-Các chức năng nghiệp vụ, JWT, WebSocket và Cloudinary được triển khai trong những task riêng.
+Mỗi phiên xác thực chỉ có **một vai trò đang hoạt động**. Chuyển vai trò yêu cầu xác nhận mật khẩu; kiểm tra quyền ở backend không phụ thuộc vào việc ẩn nút trên giao diện. Hệ thống chặn người gửi tự điều phối/tự cứu hộ yêu cầu của mình và chặn admin tự thay đổi trạng thái hoặc quyền của chính mình. Hiện trạng giữ quy tắc **một đội được phân công cho một yêu cầu**; không mô tả hệ thống như một mạng lưới phân công nhiều đội.
 
-## Công nghệ
+## 2. Công nghệ và luồng xử lý
 
-| Thành phần | Phiên bản/trạng thái |
-|---|---|
-| Java | 17 |
-| Spring Boot | 4.0.8 |
-| Maven Wrapper | 3.9.16 |
-| Spring MVC | Đã thêm dependency |
-| Thymeleaf | Đã thêm dependency |
-| Spring Data JPA | Đã thêm dependency |
-| MySQL | 8.x |
-| Flyway | Đã cấu hình |
-| Spring Security | Foundation dependency |
-| OAuth2 Resource Server | Foundation dependency cho JWT |
-| WebSocket | Foundation dependency |
-| Cloudinary | Triển khai trong task riêng |
-| Bootstrap | Dùng cho UI trong task giao diện |
+| Thành phần | Sử dụng trong hệ thống |
+| --- | --- |
+| Java 17, Spring Boot 4.0.9, Spring MVC | Controller nhận HTTP request; service xử lý nghiệp vụ/transaction; repository truy vấn dữ liệu. |
+| Thymeleaf, Bootstrap 5.3.2, JavaScript | Render trang phía server; form, responsive, biểu đồ, điều hướng và các trạng thái loading/retry ở trình duyệt. |
+| Spring Security, JWT, CSRF | JWT ký HS256 nằm trong cookie `HttpOnly`; server dựng lại xác thực theo từng request và kiểm tra active role, trạng thái tài khoản, version/quyền hiện hành. CSRF token gắn với HTTP session riêng; session không lưu trạng thái đăng nhập. |
+| Spring Data JPA, MySQL, Flyway | Entity/repository lưu dữ liệu; Flyway quản lý schema bằng migration; Hibernate chỉ `validate`, không tự tạo bảng. |
+| WebSocket + STOMP | `/ws` đẩy thông báo đúng người/vai trò/đội, cập nhật toast và badge; hộp thư trong MySQL là nguồn đọc lại sau reconnect. |
+| Cloudinary | Lưu ảnh/video yêu cầu và avatar; MySQL lưu metadata. Upload ngoài DB transaction nên có luồng bù trừ/dọn dẹp khi thất bại. |
+| Gmail SMTP hoặc Brevo HTTPS | Gửi OTP kích hoạt/đặt lại mật khẩu. Local mặc định dùng SMTP; bản deploy dùng Brevo API qua HTTPS. |
+| Render + Aiven MySQL | Render chạy ứng dụng bằng `Dockerfile`; Aiven lưu MySQL của môi trường deploy. |
 
-## Yêu cầu môi trường
+Tạo yêu cầu dùng operation key theo tài khoản, kiểm tra fingerprint nội dung và hạn mức tạo mới (mặc định 5/60 giây/user). Sau khi mất phản hồi, client tra cứu trạng thái cùng key thay vì tạo key mới tùy tiện. Đây **không phải** cơ chế xóa mọi yêu cầu có nội dung giống nhau nhưng là các ý định tạo khác nhau. Thao tác POST khác không mặc nhiên có tính idempotent.
 
-Máy phát triển cần có:
+Thông báo realtime dùng STOMP heartbeat/reconnect; khi mất kết nối, client đọc lại hộp thư. Việc thấy `CONNECT` trong DevTools chưa đủ để khẳng định đã nhận `CONNECTED` hoặc nhận được tin. Simple broker hiện dùng không phải message broker bền vững. Mã `X-Request-ID` hỗ trợ tra log; audit lưu thay đổi nhạy cảm của quản trị viên, nhưng không thay thế cơ chế phân quyền.
 
-- Git.
-- JDK 17.
-- MySQL 8.x.
-- PowerShell trên Windows.
-- DBeaver hoặc MySQL client tương đương.
+## 3. Chuẩn bị chạy trên máy Windows
 
-Không cần cài Maven toàn cục vì repository đã có Maven Wrapper.
+Cần có Git, **JDK 17**, MySQL 8.x, PowerShell và trình duyệt. Có thể dùng DBeaver/MySQL client để tạo schema; không cần cài Maven toàn cục vì đã có Maven Wrapper 3.9.16. Node.js chỉ cần khi chạy script kiểm tra JavaScript/STOMP.
 
-Kiểm tra Java:
+```powershell
+git clone https://github.com/ThanhDat-work/disaster-rescue-support-system.git
+cd disaster-rescue-support-system
+java -version
+.\mvnw.cmd -version
+git log -1 --oneline
+```
 
-    java -version
+Nếu cần tái tạo đúng bản nộp thay vì lấy `main` mới nhất, kiểm tra commit đã chốt và checkout commit đó trong một bản clone riêng. Không tự reset một working tree có thay đổi.
 
-Kết quả phải hiển thị Java 17.
+### 3.1. Tạo schema local
 
-## Clone repository
+Trong MySQL client bằng tài khoản quản trị **trên máy local**, chạy:
 
-    git clone https://github.com/ThanhDat-work/disaster-rescue-support-system.git
-    cd disaster-rescue-support-system
+```sql
+CREATE DATABASE IF NOT EXISTS drss_local
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE DATABASE IF NOT EXISTS drss_ltw_qa
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+```
 
-Kiểm tra remote và branch:
+`drss_local` để chạy ứng dụng/manual; `drss_ltw_qa` là schema riêng cho integration tests. Cấp quyền trên đúng hai schema cho user MySQL local của bạn; không dùng user hoặc dữ liệu Aiven để test tự động. Hai lệnh trên **không xóa dữ liệu đang có**. Nếu muốn một lần chạy từ trạng thái trống, tạo schema mới với tên khác và chỉnh `DB_URL` tương ứng, đừng `DROP DATABASE` khi chưa backup/xác nhận đích.
 
-    git remote -v
-    git branch --show-current
-    git status --short
+### 3.2. Cấu hình biến môi trường
 
-## Khởi tạo MySQL cục bộ
+Copy `scripts/local-env.ps1.example` thành `scripts/local-env.ps1`, sửa **trên máy cá nhân**. File đích được `.gitignore` loại trừ. Mẫu hiện có tên schema cũ của một thành viên, vì vậy bắt buộc đổi `DB_URL` thành schema local thật của bạn. Tối thiểu:
 
-Mở SQL Editor bằng tài khoản MySQL quản trị và chạy các lệnh sau. Thay `YOUR_LOCAL_PASSWORD` bằng mật khẩu riêng trên máy; không commit hoặc gửi mật khẩu này cho người khác.
+| Biến | Local | Ghi chú |
+| --- | --- | --- |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | JDBC URL như `jdbc:mysql://127.0.0.1:3306/drss_local`, tài khoản MySQL local | `DB_URL` phải bắt đầu bằng `jdbc:mysql://`, không dùng URL `mysql://`. |
+| `SERVER_PORT`, `APP_BASE_URL` | `8080`, `http://localhost:8080` | Đổi cả hai nếu đổi port. |
+| `JWT_SECRET`, `OTP_HMAC_SECRET`, `RATE_LIMIT_HMAC_SECRET` | Ba chuỗi ngẫu nhiên **khác nhau**, mỗi chuỗi ít nhất 32 byte UTF-8 | Không dùng giá trị ví dụ hoặc commit chúng. |
+| `AUTH_COOKIE_SECURE` | `false` khi chỉ dùng HTTP localhost | Dùng `true` khi chạy HTTPS. |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Credential server-side riêng | Không đưa API secret vào JavaScript. `CLOUDINARY_FOLDER` nên tách khỏi folder production. |
+| `MAIL_FROM` | Địa chỉ gửi hợp lệ | Xem lựa chọn SMTP/Brevo dưới đây. |
 
-    CREATE DATABASE IF NOT EXISTS drss
-        CHARACTER SET utf8mb4
-        COLLATE utf8mb4_0900_ai_ci;
+Local mặc định `OTP_MAIL_PROVIDER=smtp`: cấu hình `MAIL_USERNAME` và `MAIL_APP_PASSWORD` (Gmail App Password), `MAIL_FROM` tương ứng. Nếu chủ động dùng Brevo ở local, đặt `OTP_MAIL_PROVIDER=brevo`, `BREVO_API_KEY` và `MAIL_FROM` đã được xác nhận ở Brevo; mã vẫn có các placeholder `MAIL_USERNAME`/`MAIL_APP_PASSWORD` trong `application.yaml`, nên giữ hai biến được khai báo trong cấu hình môi trường nhưng không cần sử dụng mật khẩu Gmail thật cho nhánh Brevo. Không đưa key/password vào ảnh chụp, issue, log hoặc file nộp.
 
-    CREATE USER IF NOT EXISTS 'drss_app'@'localhost'
-        IDENTIFIED BY 'YOUR_LOCAL_PASSWORD';
+Trong **cùng terminal** dùng để chạy app:
 
-    ALTER USER 'drss_app'@'localhost'
-        IDENTIFIED BY 'YOUR_LOCAL_PASSWORD';
+```powershell
+. .\scripts\local-env.ps1
+$env:DB_URL
+.\mvnw.cmd spring-boot:run
+```
 
-    GRANT ALL PRIVILEGES ON drss.*
-        TO 'drss_app'@'localhost';
+Nếu PowerShell chặn nạp script, sau khi kiểm tra nội dung file, có thể đặt execution policy **chỉ trong phiên terminal hiện tại** bằng `Set-ExecutionPolicy -Scope Process RemoteSigned`, rồi nạp lại; không đổi policy toàn hệ thống. Truy cập `http://localhost:8080/` hoặc `/auth/login`. Dừng bằng `Ctrl+C`. Một terminal mới phải nạp lại biến môi trường.
 
-    SHOW GRANTS FOR 'drss_app'@'localhost';
+### 3.3. Migration và dữ liệu mẫu
 
-Tài khoản `drss_app` chỉ được cấp quyền trên schema `drss`, không được cấp quyền quản trị toàn bộ MySQL server.
+Ứng dụng chạy Flyway từ `src/main/resources/db/migration/V1__Init_Schema.sql` đến `V14__Add_Admin_User_Audits.sql`. Có **14 migration**; không có một file schema `.sql` độc lập bắt buộc phải import trước. `V1` tạo schema, `V2__Insert_Seed_Data.sql` chèn roles, loại thiên tai và **một số user/team/request demo cũ**; V3–V14 bổ sung cấu trúc, constraint và index. Trên schema trống, Flyway chạy khi app khởi động, sau đó Hibernate `ddl-auto=validate` đối chiếu schema.
 
-## Cấu hình biến môi trường trên PowerShell
+Vì `V2` có dữ liệu demo, **schema vừa migrate chưa thể gọi là dữ liệu sạch để mở public**. Gói `DATA_SEED_SACH` nhóm chuẩn bị riêng gồm `00_preflight.sql`, `01_replace_with_clean_demo.sql`, `02_verify_read_only.sql`, `DRSS-tai-khoan-va-luong-demo.md` và `validation.json`; gói này **không nằm trong source ZIP**. Chỉ người phụ trách dữ liệu dùng gói đó trên đúng database đã xác nhận, sau khi có backup, đọc preflight và nắm rõ tác động của bước `replace`. Không chạy `01_replace_with_clean_demo.sql` trong lúc có người dùng hoặc trên database không rõ đích.
 
-Thiết lập URL và cổng:
+File **dump** là bản xuất dữ liệu/schema tại một thời điểm, có thể tái tạo một snapshot trên database trống khi cần bàn giao/khôi phục. Đây là **phương án riêng** với khởi tạo bằng Flyway: phải kiểm tra dump có đủ bảng, dữ liệu và `flyway_schema_history` tương thích trước khi khởi động ứng dụng; không import chồng lên schema đã migrate/đang chạy. Không commit dump chứa thông tin tài khoản hoặc dữ liệu nhạy cảm lên repository public. Khi nộp bài, nhóm bàn giao migration `.sql`, dump phù hợp và hướng dẫn seed ở kênh nộp được kiểm soát; kiểm tra dump không chứa secret/PII không cần thiết.
 
-    $env:DB_URL = "jdbc:mysql://localhost:3306/drss"
-    $env:SERVER_PORT = "8080"
+## 4. Kiểm thử
 
-Nhập username/password thông qua credential prompt để password không nằm trong lịch sử lệnh:
+Unit/MVC test có thể chạy trước:
 
-    $credential = Get-Credential `
-      -UserName "drss_app" `
-      -Message "Nhập mật khẩu MySQL cục bộ"
+```powershell
+.\mvnw.cmd clean test
+```
 
-    $env:DB_USERNAME = $credential.UserName
-    $env:DB_PASSWORD = $credential.GetNetworkCredential().Password
+Integration test cần **MySQL local riêng** (ví dụ `drss_ltw_qa`) và biến môi trường DB trong terminal hiện tại. Sau khi nạp `local-env.ps1`, đổi `DB_URL` của terminal test để trỏ đúng schema test, xác nhận rồi chạy:
 
-Kiểm tra các biến không nhạy cảm:
+```powershell
+$env:DB_URL = 'jdbc:mysql://127.0.0.1:3306/drss_ltw_qa'
+if ($env:DB_URL -notmatch '^jdbc:mysql://(127\.0\.0\.1|localhost)(:\d+)?/drss_ltw_qa(\?|$)') {
+    throw 'Integration DB phải là drss_ltw_qa trên MySQL local.'
+}
+.\mvnw.cmd clean verify '-Dspring.profiles.active=it'
+```
 
-    $env:DB_URL
-    $env:DB_USERNAME
-    $env:SERVER_PORT
+Không chạy integration test trên `drss_local`, database manual QA, Aiven deploy hay bản dump cần giữ nguyên: test có thể thêm/sửa/xóa fixture. Kết luận theo `BUILD SUCCESS` và report Surefire/Failsafe, không chỉ theo `clean test`. Các test với profile `it` dùng cấu hình thử nghiệm trong `src/test/resources/application-it.yaml`, nhưng vẫn cần MySQL thật qua `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`.
 
-Không in hoặc chụp màn hình giá trị `$env:DB_PASSWORD`.
+Smoke thủ công tối thiểu: đăng ký → nhận OTP → đăng nhập người dân → gửi yêu cầu → điều phối xác minh/phân công → cứu hộ bắt đầu/hoàn thành → điều phối đóng → người dân xem trạng thái. Kiểm tra riêng chuyển vai trò và cách ly quyền, media Cloudinary, thông báo realtime **không F5**, badge/toast và đọc lại hộp thư sau reconnect. Dùng tài khoản/fixture demo được bàn giao ngoài README, không dùng người thật.
 
-Các biến trên chỉ tồn tại trong phiên PowerShell hiện tại. Khi mở terminal mới, cần thiết lập lại trước khi chạy ứng dụng.
+Chạy kiểm tra bổ sung khi cần:
 
-Tệp `.env.example` mô tả hợp đồng cấu hình nhưng Spring Boot không tự động đọc tệp `.env`. Tệp `.env` thật bị Git ignore.
+```powershell
+node .\scripts\check-realtime-client.cjs
+.\scripts\scan-dependencies.ps1 -InventoryOnly
+git diff --check
+```
 
-## Build và test
+`scan-dependencies.ps1` cần Docker khi quét OSV thực tế; `-InventoryOnly` chỉ liệt kê thành phần. Kết quả OSV theo POM không đồng nghĩa đã quét toàn bộ JS/CSS/CDN. CI ở `.github/workflows/ci.yml` dùng MySQL 8.0 riêng và chạy `clean verify`.
 
-Chạy smoke test không cần MySQL secret:
+## 5. Bản deploy Render + Aiven
 
-    .\mvnw.cmd clean test
+Bản triển khai do nhóm xác nhận chạy **Render (Dockerfile) + Aiven MySQL + Cloudinary + Brevo HTTPS**. Đây là cấu hình khác local SMTP. Không có endpoint Actuator/health chuyên dụng được khai báo trong source; kiểm tra trang chủ và một luồng có truy cập DB/đăng nhập thực tế, không coi HTTP 200 của trang chủ là bằng chứng toàn bộ dịch vụ ngoài đều khỏe.
 
-Build executable JAR:
+Biến môi trường cần cấu hình **trong dashboard deploy/secret store**, không đặt giá trị thật trong Git:
 
-    .\mvnw.cmd clean package
+| Nhóm | Tên biến/cách đặt |
+| --- | --- |
+| MySQL | `DB_URL=jdbc:mysql://<AIVEN_HOST>:<PORT>/<DB_NAME>?sslMode=REQUIRED`, `DB_USERNAME`, `DB_PASSWORD`. Không nhúng user/password vào URL. |
+| URL/HTTPS | `APP_BASE_URL=https://drss-demo-dat.onrender.com`, `AUTH_COOKIE_SECURE=true`, `SERVER_PORT` khớp port web service (Dockerfile khai báo `10000`). |
+| Auth | `JWT_SECRET`, `OTP_HMAC_SECRET`, `RATE_LIMIT_HMAC_SECRET` là ba secret khác nhau, mỗi secret ít nhất 32 byte. |
+| OTP deploy | `OTP_MAIL_PROVIDER=brevo`, `BREVO_API_KEY`, `MAIL_FROM` là sender đã xác nhận. YAML vẫn tham chiếu `MAIL_USERNAME` và `MAIL_APP_PASSWORD`; cấu hình hai biến này theo môi trường đang chạy, không dùng Gmail SMTP để gửi trên Render. |
+| Media | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, folder riêng qua `CLOUDINARY_FOLDER` nếu cấu hình. |
+| Tùy chọn | `REQUEST_CREATE_MAX_PER_MINUTE` (mặc định 5), `CLOUDINARY_HTTP_TIMEOUT_SECONDS` (mặc định 60), các `MEDIA_CLEANUP_*` trong `application.yaml`. |
 
-Artifact được tạo tại:
+Trước khi redeploy: chốt SHA/image, lưu backup DB có thời điểm rõ, kiểm tra migration mới và khả năng tương thích của bản app trước đó; chạy CI/full test trên DB thử nghiệm. Sau deploy: xem log Flyway, kiểm tra `flyway_schema_history`, smoke login/OTP/Brevo, request, ảnh/video, hộp thư STOMP từ hai trình duyệt và role isolation từ một mạng khác. Không đăng log có secret/OTP lên issue.
 
-    target/drss-0.0.1-SNAPSHOT.jar
+Nếu deploy lỗi, cân nhắc quay lại image/commit trước **chỉ khi** app cũ tương thích schema hiện tại. Không xóa migration đã chạy, không import dump hoặc restore đè production đang có dữ liệu mới một cách tự động. Dừng thao tác ghi, backup trạng thái hiện tại, đánh giá sự cố rồi mới quyết định khôi phục. Render/Aiven/Cloudinary/Brevo là các dịch vụ tách biệt: khôi phục DB không tự khôi phục media trên Cloudinary.
 
-Smoke test sử dụng profile `test` và loại DataSource, Hibernate JPA, Flyway khỏi ApplicationContext. Nó chỉ kiểm tra foundation context; không thay thế integration test database.
+## 6. Cấu trúc và tài liệu
 
-## Chạy ứng dụng
+```text
+src/main/java/vn/edu/hcmute/drss/
+  configs/ controllers/ dtos/ entities/ repositories/
+  security/ services/ realtime/ media/ trace/
+src/main/resources/
+  db/migration/    # Flyway V1–V14
+  templates/       # Thymeleaf pages, layouts, fragments
+  static/          # CSS, JS, ảnh và vendor asset
+src/test/           # Unit, MVC và integration tests
+scripts/            # Kiểm tra client/dependencies, env example
+docs/               # ADR, contract, handoff, guideline, evidence
+```
 
-Sau khi MySQL hoạt động và các biến môi trường đã được thiết lập:
+Source giải thích luồng ở các `controllers` → `services` → `repositories` và `entities`; phần quyền nằm ở `ApplicationSecurityConfig`, `JwtAuthenticationService` và interceptor STOMP. Đọc `docs/architecture/ADR-001-architecture-foundation.md` để biết quyết định nền tảng và `docs/context/` cho contract/handoff theo từng chức năng. Tài liệu handoff cũ ghi trạng thái **tại thời điểm viết**, có thể không phản ánh merge/deploy cuối; khi mâu thuẫn, đối chiếu source ở commit bàn giao và kết quả kiểm thử cuối.
 
-    .\mvnw.cmd spring-boot:run
+## 7. Bảo mật và đóng góp
 
-Kết quả đạt khi log có nội dung tương đương:
+- Không commit `.env`, `scripts/local-env.ps1`, cookie/JWT, OTP, Brevo/Cloudinary key, DB password hoặc bản dump có dữ liệu nhạy cảm. Lộ secret thì thu hồi/đổi secret; xóa dòng trong Git không đủ.
+- Không sửa migration đã chạy trên môi trường dùng chung; thêm migration phiên bản kế tiếp và kiểm tra trên MySQL thật.
+- Không tự nâng quyền theo thông tin do trình duyệt gửi. Quyền vai trò và quyền truy cập bản ghi phải được backend kiểm tra.
+- Thay đổi source qua branch/PR; trước khi merge chạy `clean verify` trên DB test riêng, kiểm tra `git diff --check`, review và smoke luồng bị tác động.
 
-    Tomcat started on port 8080
-    Started DrssApplication
-
-Mở trình duyệt tại:
-
-    http://localhost:8080/login
-
-Ở giai đoạn foundation, Spring Security có thể tạo tài khoản và password tạm trong log. Đây không phải tài khoản MySQL và không phải cơ chế đăng nhập chính thức của DRSS.
-
-Dừng ứng dụng bằng `Ctrl+C`.
-
-## Cấu trúc package
-
-Package gốc: `vn.edu.hcmute.drss`.
-
-- `configs`: cấu hình framework và infrastructure.
-- `controllers`: điểm vào Spring MVC/REST.
-- `dtos`: request và response data transfer objects.
-- `entities`: JPA persistence entities.
-- `exceptions`: application exceptions và centralized exception handling.
-- `repositories`: Spring Data repositories.
-- `security`: authentication, authorization, JWT và current-user access.
-- `services`: use case, nghiệp vụ, transaction và chuyển trạng thái.
-
-Quy tắc chính:
-
-- Controller gọi service, không gọi trực tiếp repository.
-- Service sở hữu nghiệp vụ và transaction.
-- Repository chỉ truy cập dữ liệu.
-- Entity không dùng trực tiếp làm request hoặc response.
-- DTO không chứa annotation JPA.
-- Không tạo package `utils` khi chưa xác định trách nhiệm rõ ràng.
-
-Chi tiết quyết định kiến trúc xem tại [ADR-001](docs/architecture/ADR-001-architecture-foundation.md).
-
-## Database migration
-
-Flyway là thành phần duy nhất được phép thay đổi cấu trúc database.
-
-Migration được đặt tại:
-
-    src/main/resources/db/migration
-
-Quy tắc đặt tên:
-
-    V<version>__<description>.sql
-
-Ví dụ:
-
-    V1__create_users_and_roles.sql
-
-Không chỉnh sửa migration đã được merge và chạy trên môi trường dùng chung. Khi cần thay đổi schema, tạo migration mới.
-
-Hibernate sử dụng `ddl-auto=validate`, vì vậy Hibernate không tự tạo hoặc tự sửa bảng.
-
-## Git workflow
-
-### Branch
-
-Không commit trực tiếp lên `main`.
-
-Quy ước branch:
-
-- `feat/<task-id>-<scope>` cho tính năng.
-- `fix/<task-id>-<scope>` cho sửa lỗi.
-- `docs/<task-id>-<scope>` cho tài liệu.
-- `test/<task-id>-<scope>` cho kiểm thử.
-- `chore/<task-id>-<scope>` cho foundation, build hoặc cấu hình.
-
-Ví dụ:
-
-    feat/t2-01-authentication
-    docs/t1-06-readme
-    chore/t1-06-foundation
-
-### Commit
-
-Sử dụng Conventional Commits:
-
-- `feat:` tính năng mới.
-- `fix:` sửa lỗi.
-- `docs:` tài liệu.
-- `test:` kiểm thử.
-- `refactor:` tái cấu trúc không đổi hành vi.
-- `chore:` build, dependency hoặc cấu hình.
-
-Một commit chỉ nên chứa một mục đích có thể review được.
-
-### Pull Request
-
-Trước khi mở hoặc cập nhật Pull Request:
-
-    .\mvnw.cmd clean test
-    git diff --check
-    git status --short
-
-Pull Request cần ghi rõ:
-
-- Task ID và phạm vi.
-- Nội dung đã thay đổi.
-- Cách kiểm tra.
-- Kết quả build/test.
-- Migration hoặc biến môi trường mới, nếu có.
-- Screenshot hoặc evidence liên quan.
-- Rủi ro, blocker hoặc phần chưa làm.
-
-Không force-push branch của thành viên khác. Nếu nhiều người làm cùng task, phải thống nhất file owner và cập nhật context bàn giao trên Notion.
-
-## Quy tắc bảo mật
-
-- Không commit `.env`.
-- Không commit password, token, cookie, JWT secret, Cloudinary secret hoặc GitHub PAT.
-- Không ghi secret vào README, ADR, issue, Pull Request hoặc ảnh chụp màn hình.
-- Nếu secret bị commit, phải thu hồi hoặc đổi secret; chỉ xóa khỏi commit là chưa đủ.
-- Dùng biến môi trường hoặc secret store của nền tảng triển khai.
-
-## Troubleshooting
-
-### `Failed to determine a suitable driver class`
-
-Nguyên nhân thường gặp: chưa thiết lập `DB_URL` hoặc đang chạy application context thật mà không có cấu hình database.
-
-Kiểm tra:
-
-    $env:DB_URL
-    $env:DB_USERNAME
-
-### `Access denied for user 'drss_app'`
-
-Kiểm tra lại password, host `localhost` và quyền trên `drss.*`. Có thể đặt lại password bằng tài khoản quản trị:
-
-    ALTER USER 'drss_app'@'localhost'
-        IDENTIFIED BY 'NEW_LOCAL_PASSWORD';
-
-### Cổng 8080 đang được sử dụng
-
-Đổi cổng trong phiên PowerShell:
-
-    $env:SERVER_PORT = "8081"
-
-Sau đó chạy lại ứng dụng và truy cập `http://localhost:8081/login`.
-
-### PowerShell hiển thị `LF will be replaced by CRLF`
-
-Đây là cảnh báo chuẩn xuống dòng trên Windows, không phải lỗi build. Vẫn phải chạy `git diff --check` để phát hiện whitespace error thực tế.
-
-### JVM hiển thị cảnh báo class sharing khi test
-
-Cảnh báo `Sharing is only supported for boot loader classes...` không làm test thất bại. Kết luận dựa trên số test, failures, errors và trạng thái `BUILD SUCCESS`.
-
-## Thành viên
-
-- Đỗ Thành Đạt — Lead.
-- Phan Nhật Vy — UI/responsive và phần backend được phân công.
-- Bùi Đức Duy — frontend/backend có giới hạn, test và tài liệu được phân công.
-
-## Bối cảnh môn học
-
-- Công nghệ phần mềm: Nhóm 7.
-- Lập trình web: Nhóm 3.
-
-Tên repository, artifact và package được giữ trung lập để dùng chung cho cả hai môn.
+**Thành viên:** Đỗ Thành Đạt (nhóm trưởng, backend/triển khai), Phan Nhật Vy (giao diện/UX), Bùi Đức Duy (kiểm thử và các phần được phân công). Repository dùng cho môn Công nghệ phần mềm (Nhóm 7) và Lập trình web (Nhóm 3).
